@@ -1,0 +1,96 @@
+# Primary DataSource config
+datasource:
+  primary:
+    type: com.zaxxer.hikari.HikariDataSource
+    jdbc-url: jdbc:postgresql://localhost:5432/projectx?currentSchema=projectx&reWriteBatchedInserts=true
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+    pool-name: PrimaryDataSourceJPAHikariCP
+    connection-timeout: 30000
+    minimum-idle: 5
+    maximum-pool-size: 10
+    idle-timeout: 30000
+    max-lifetime: 2000000
+    connection-test-query: SELECT 1
+
+spring:
+  config:
+    activate:
+      on-profile: dev
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate   # Ensure entity ↔ schema consistency early
+    properties:
+      hibernate:
+
+        # -------------------------------
+        # SQL visibility (DEV ONLY)
+        # -------------------------------
+        show_sql: true               # Print executed SQL
+        format_sql: true             # Human-readable SQL
+        use_sql_comments: false       # Adds comments like /* criteria query */
+        highlight_sql: true #ANSI colors for sql queries(IDE-dependent)
+
+        # -------------------------------
+        # JDBC performance (DEV mirrors PROD)
+        # -------------------------------
+        jdbc:
+          batch_size: 50             # Enables JDBC batching for saveAll / bulk ops
+          fetch_size: 50             # Hint for result streaming (Postgres-friendly)
+          time_zone: Asia/Rangoon    # Prevent JVM ↔ DB timezone drift
+
+        order_inserts: true          # Groups inserts by entity type
+        order_updates: true          # Groups updates by entity type
+
+        # -------------------------------
+        # Lazy loading safety
+        # -------------------------------
+        enable_lazy_load_no_trans: false
+        # Forces correct @Transactional usage
+        # Prevents "hidden queries" outside service layer
+
+        # -------------------------------
+        # Query safety & diagnostics
+        # -------------------------------
+        query:
+          fail_on_pagination_over_collection_fetch: false
+          # Allows pagination even if a collection fetch join exists
+          # (You consciously manage joins via QueryDSL)
+
+          in_clause_parameter_padding: true
+          # Improves query plan caching for IN (:ids)
+
+        # -------------------------------
+        # Time handling
+        # -------------------------------
+        timezone.default_storage: NORMALIZE
+        # Normalizes timestamps internally to avoid DST / TZ bugs
+
+        # -------------------------------
+        # Naming strategy
+        # -------------------------------
+        physical_naming_strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
+        # Ensures createdDate → created_date mapping
+
+        # -------------------------------
+        # Caching (explicitly disabled)
+        # -------------------------------
+        cache:
+          use_second_level_cache: false
+          use_query_cache: false
+        # Avoids hidden state during development
+
+        # -------------------------------
+        # Criteria / QueryDSL safety
+        # -------------------------------
+        criteria:
+          literal_handling_mode: BIND
+        # Forces parameter binding (safe & cache-friendly)
+
+        # -------------------------------
+        # DEV diagnostics
+        # -------------------------------
+        generate_statistics: true
+        # Enables Hibernate statistics (N+1 detection, query count)

@@ -1,0 +1,284 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="37083405-755f-454c-afbe-506d59f23326" name="Changes" comment="" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Class" />
+      </list>
+    </option>
+  </component>
+  <component name="FormatOnSaveOptions">
+    <option name="myRunOnSave" value="true" />
+  </component>
+  <component name="OptimizeOnSaveOptions">
+    <option name="myRunOnSave" value="true" />
+  </component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="DEPENDENCY_CHECKER_PROBLEMS_TAB" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 3
+}</component>
+  <component name="ProjectId" id="36jTntfxD0ZA6qVSnQiujTZa9m3" />
+  <component name="ProjectViewState">
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "JUnit.RoleServiceTest.executor": "Run",
+    "JUnit.RoleServiceTest.findById_found.executor": "Run",
+    "Maven. [org.apache.maven.plugins:maven-archetype-plugin:RELEASE:generate].executor": "Run",
+    "Maven.projectx [clean,compile].executor": "Run",
+    "Maven.projectx [clean,package].executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "TestNG.ActionUnitTest.bulkUpdate_shouldUpdateMultipleRows.executor": "Run",
+    "TestNG.ActionUnitTest.deleteByCriteria_shouldDeleteMatchingRecords.executor": "Run",
+    "TestNG.ActionUnitTest.executor": "Run",
+    "TestNG.ActionUnitTest.exists_bySpecificAction_shouldReturnTrue.executor": "Run",
+    "TestNG.ActionUnitTest.findAll_byActionType_MAIN_shouldReturnMainPages.executor": "Run",
+    "TestNG.ActionUnitTest.findAll_byRoleId_shouldReturnOnlyActionsMappedToRole.executor": "Run",
+    "TestNG.ActionUnitTest.findAll_shouldReturnResults.executor": "Run",
+    "TestNG.ActionUnitTest.findAll_withKeyword_usingCriteria_shouldSearchAcrossFields.executor": "Run",
+    "TestNG.ActionUnitTest.findAll_withLimitAndOffset_usingCriteria_shouldReturnSubset.executor": "Run",
+    "TestNG.ActionUnitTest.findAll_withPageNumber_usingCriteria_shouldReturnCorrectPage.executor": "Run",
+    "TestNG.ActionUnitTest.findIds_shouldReturnOnlyIds.executor": "Run",
+    "TestNG.ActionUnitTest.findOne_byActionName_shouldReturnDashboard.executor": "Run",
+    "TestNG.ActionUnitTest.insertAction_shouldPersistSuccessfully.executor": "Run",
+    "TestNG.ActionUnitTest.saveAll_shouldInsertMultipleActions.executor": "Run",
+    "TestNG.ActionUnitTest.updateAction_shouldUpdateExistingRecord.executor": "Run",
+    "TestNG.AdministratorRoleUnitTest.executor": "Run",
+    "TestNG.AdministratorUnitTest.bulkUpdate_shouldUpdateMultipleAdmins.executor": "Run",
+    "TestNG.AdministratorUnitTest.executor": "Run",
+    "TestNG.AdministratorUnitTest.findAll_byRoleName_shouldReturnAdminsWithThatRole.executor": "Run",
+    "TestNG.RoleActionUnitTest.count_byRoleCriteria_shouldUseJoinAndDistinct.executor": "Run",
+    "TestNG.RoleActionUnitTest.executor": "Run",
+    "TestNG.RoleActionUnitTest.exists_byActionCriteria_shouldReturnTrue.executor": "Run",
+    "TestNG.RoleActionUnitTest.findAll_byActionCriteriaName_shouldJoinActionAndFilter.executor": "Run",
+    "TestNG.RoleActionUnitTest.findAll_byRoleAndActionCriteria_shouldJoinBothSides.executor": "Run",
+    "TestNG.RoleActionUnitTest.findAll_byRoleCriteriaName_shouldJoinRoleAndFilter.executor": "Run",
+    "TestNG.RoleActionUnitTest.findAll_withPaginationAndJoin_shouldReturnLimitedResults.executor": "Run",
+    "TestNG.RoleServiceIT.create_persistsEntity.executor": "Run",
+    "TestNG.RoleServiceIT.create_persistsRole.executor": "Run",
+    "TestNG.RoleServiceIT.delete_removesRole.executor": "Run",
+    "TestNG.RoleServiceIT.executor": "Run",
+    "TestNG.RoleServiceIT.findAll_byAppName.executor": "Run",
+    "TestNG.RoleServiceIT.findById_existingRole.executor": "Run",
+    "TestNG.RoleServiceIT.findById_hitsDatabase.executor": "Run",
+    "TestNG.RoleServiceIT.findByPaging_withLimitOnly_defaultsToFirstPage.executor": "Run",
+    "TestNG.RoleServiceIT.findByPaging_withNestedCriteria_multiSort_andOffsetLimit.executor": "Run",
+    "TestNG.RoleServiceIT.findByPaging_withoutPageNumberOrOffset_shouldFail.executor": "Run",
+    "TestNG.RoleServiceIT.findOne_byCriteria.executor": "Run",
+    "TestNG.RoleServiceIT.findRole_byActionCriteria.executor": "Run",
+    "TestNG.RoleServiceIT.findRole_byActionCriteria_returnsRoleWithActions.executor": "Run",
+    "TestNG.RoleServiceIT.findRole_withRoleActions.executor": "Run",
+    "TestNG.RoleServiceIT.update_updatesRoleName.executor": "Run",
+    "TestNG.RoleServiceTest.findById.executor": "Run",
+    "TestNG.RoleServiceTest.findById_found.executor": "Run",
+    "TestNG.RoleServiceTest.findById_shouldReturnRole.executor": "Run",
+    "TestNG.RoleServiceTest.findOne.executor": "Run",
+    "TestNG.RoleServiceTest.findOne_byName_shouldReturnAdministrator.executor": "Run",
+    "TestNG.RoleServiceTest.findOne_withActions_shouldReturnAdministratorWithActions.executor": "Run",
+    "TestNG.RoleUnitTest.addActionToRole_shouldPersistRoleAction.executor": "Run",
+    "TestNG.RoleUnitTest.bulkUpdate_shouldUpdateMultipleRoles.executor": "Run",
+    "TestNG.RoleUnitTest.deleteByCriteria_shouldDeleteMatchingRoles.executor": "Run",
+    "TestNG.RoleUnitTest.deleteRoleAction_shouldNotDeleteRoleOrAction.executor": "Run",
+    "TestNG.RoleUnitTest.duplicateRoleAction_shouldFail.executor": "Run",
+    "TestNG.RoleUnitTest.executor": "Run",
+    "TestNG.RoleUnitTest.findAll_byRoleType_CUSTOM_shouldReturnCustomRoles.executor": "Run",
+    "TestNG.RoleUnitTest.findAll_shouldReturnAllRoles.executor": "Run",
+    "TestNG.RoleUnitTest.findIds_shouldReturnOnlyIds.executor": "Run",
+    "TestNG.RoleUnitTest.findOne_byRoleName_shouldReturnAdminRole.executor": "Run",
+    "TestNG.RoleUnitTest.saveAll_shouldInsertMultipleRoles.executor": "Run",
+    "TestNG.RoleUnitTest.updateRole_shouldUpdateExistingRecord.executor": "Run",
+    "ignore.virus.scanning.warn.message": "true",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "D:/projects/projectx/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/mapper",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "preferences.sourceCode.Java"
+  }
+}]]></component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="D:\projects\projectx\projectx-persistence\src\main\java\com\tamantaw\projectx\persistence\mapper" />
+      <recent name="D:\projects\projectx\projectx-persistence\src\main\java\com\tamantaw\projectx\persistence\criteria" />
+      <recent name="D:\projects\projectx\projectx-persistence\src\main\java\com\tamantaw\projectx\persistence\dto" />
+      <recent name="D:\projects\projectx\projectx-persistence\src\main\java\com\tamantaw\projectx\persistence\entity" />
+      <recent name="D:\projects\projectx\projectx-persistence\src\main\resources\migration" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="D:\projects\projectx\src" />
+    </key>
+    <key name="MoveClassesOrPackagesDialog.RECENTS_KEY">
+      <recent name="com.tamantaw.projectx.persistence.mapper" />
+      <recent name="com.tamantaw.projectx" />
+    </key>
+    <key name="CopyClassDialog.RECENTS_KEY">
+      <recent name="com.tamantaw.projectx.persistence.mapper.utils" />
+      <recent name="com.tamantaw.projectx.persistence.mapper.decorator" />
+      <recent name="com.tamantaw.projectx.persistence.dto" />
+      <recent name="com.tamantaw.projectx.serviceTests" />
+      <recent name="com.tamantaw.projectx.persistence.service" />
+    </key>
+  </component>
+  <component name="RunAnythingCache">
+    <option name="myCommands">
+      <command value="mvn  clean package" />
+      <command value="mvn clean compile" />
+    </option>
+  </component>
+  <component name="RunManager" selected="TestNG.RoleServiceIT.findAll_multiSort_roleTypeAsc_nameAsc">
+    <configuration name="RoleServiceIT" type="TestNG" temporary="true" nameIsGenerated="true">
+      <module name="projectx-persistence" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.tamantaw.projectx.integrationTests.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="com.tamantaw.projectx.integrationTests" />
+      <option name="MAIN_CLASS_NAME" value="com.tamantaw.projectx.integrationTests.RoleServiceIT" />
+      <option name="TEST_OBJECT" value="CLASS" />
+      <properties />
+      <listeners />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="RoleServiceIT.findAll_multiSort_roleTypeAsc_nameAsc" type="TestNG" temporary="true" nameIsGenerated="true">
+      <module name="projectx-persistence" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.tamantaw.projectx.integrationTests.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="com.tamantaw.projectx.integrationTests" />
+      <option name="MAIN_CLASS_NAME" value="com.tamantaw.projectx.integrationTests.RoleServiceIT" />
+      <option name="METHOD_NAME" value="findAll_multiSort_roleTypeAsc_nameAsc" />
+      <option name="TEST_OBJECT" value="METHOD" />
+      <properties />
+      <listeners />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="RoleServiceIT.findByPaging_withNestedCriteria_multiSort_andOffsetLimit" type="TestNG" temporary="true" nameIsGenerated="true">
+      <module name="projectx-persistence" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.tamantaw.projectx.integrationTests.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="com.tamantaw.projectx.integrationTests" />
+      <option name="MAIN_CLASS_NAME" value="com.tamantaw.projectx.integrationTests.RoleServiceIT" />
+      <option name="METHOD_NAME" value="findByPaging_withNestedCriteria_multiSort_andOffsetLimit" />
+      <option name="TEST_OBJECT" value="METHOD" />
+      <properties />
+      <listeners />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="RoleServiceIT.findRole_byActionCriteria" type="TestNG" temporary="true" nameIsGenerated="true">
+      <module name="projectx-persistence" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.tamantaw.projectx.integrationTests.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="com.tamantaw.projectx.integrationTests" />
+      <option name="MAIN_CLASS_NAME" value="com.tamantaw.projectx.integrationTests.RoleServiceIT" />
+      <option name="METHOD_NAME" value="findRole_byActionCriteria" />
+      <option name="TEST_OBJECT" value="METHOD" />
+      <properties />
+      <listeners />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="RoleServiceIT.findRole_byActionCriteria_returnsRoleWithActions" type="TestNG" temporary="true" nameIsGenerated="true">
+      <module name="projectx-persistence" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.tamantaw.projectx.integrationTests.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="com.tamantaw.projectx.integrationTests" />
+      <option name="MAIN_CLASS_NAME" value="com.tamantaw.projectx.integrationTests.RoleServiceIT" />
+      <option name="METHOD_NAME" value="findRole_byActionCriteria_returnsRoleWithActions" />
+      <option name="TEST_OBJECT" value="METHOD" />
+      <properties />
+      <listeners />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="TestNG.RoleServiceIT.findAll_multiSort_roleTypeAsc_nameAsc" />
+        <item itemvalue="TestNG.RoleServiceIT" />
+        <item itemvalue="TestNG.RoleServiceIT.findByPaging_withNestedCriteria_multiSort_andOffsetLimit" />
+        <item itemvalue="TestNG.RoleServiceIT.findRole_byActionCriteria_returnsRoleWithActions" />
+        <item itemvalue="TestNG.RoleServiceIT.findRole_byActionCriteria" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-9823dce3aa75-fdfe4dae3a2d-intellij.indexing.shared.core-IU-243.21565.193" />
+        <option value="bundled-js-predefined-d6986cc7102b-e768b9ed790e-JavaScript-IU-243.21565.193" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="SpringGeneralSettings">
+    <option name="showProfilesPanel" value="false" />
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="37083405-755f-454c-afbe-506d59f23326" name="Changes" comment="" />
+      <created>1765519151013</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1765519151013</updated>
+      <workItem from="1765519151946" duration="6075000" />
+      <workItem from="1765528548104" duration="107000" />
+      <workItem from="1765528663958" duration="12646000" />
+      <workItem from="1765601348744" duration="11867000" />
+      <workItem from="1765615411513" duration="16645000" />
+      <workItem from="1765633462608" duration="865000" />
+      <workItem from="1765634736680" duration="168000" />
+      <workItem from="1765690807682" duration="15633000" />
+      <workItem from="1765709520871" duration="3163000" />
+      <workItem from="1765774953047" duration="20206000" />
+      <workItem from="1765860907160" duration="26062000" />
+      <workItem from="1765945292304" duration="20679000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="XSLT-Support.FileAssociations.UIState">
+    <expand />
+    <select />
+  </component>
+</project>

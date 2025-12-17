@@ -1,0 +1,135 @@
+Configutation:
+  status: warn # log level for configuration errors
+  shutdownHook: disable
+  ##### Variables #####
+  Properties:
+    Property:
+      - name: default-msg-pattern
+        value: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5p %c{10}:%L %m%n"
+
+  ##### Define logging appenders #####
+  Appenders:
+    # loggers for console
+    Console:
+      - name: root_logger
+        target: SYSTEM_OUT
+        PatternLayout:
+          Pattern: "%style{%-5p}{bold,yellow} %style{%c{10}}{bold,cyan}:%L %m%n"
+          disableAnsi: false
+
+      - name: console_test_logger
+        target: SYSTEM_OUT
+        PatternLayout:
+          Pattern: "%style{%-5p}{bold,yellow} %style{%c{10}}{bold,cyan}%highlight{:%L %m%n}{FATAL=red blink, ERROR=red, WARN=yellow bold, INFO=magenta bold, DEBUG=magenta, TRACE=magenta}"
+          disableAnsi: false
+
+      - name: console_error_logger
+        target: SYSTEM_OUT
+        PatternLayout:
+          Pattern: "%style{%-5p}{bold,yellow} %style{%c{10}}{bold,cyan}%highlight{:%L %m%n}{FATAL=red blink, ERROR=red, WARN=red bold, INFO=red bold, DEBUG=red, TRACE=red}"
+          disableAnsi: false
+
+      - name: console_service_logger
+        target: SYSTEM_OUT
+        PatternLayout:
+          Pattern: "%style{%-5p}{bold,yellow} %style{%c{10}}{bold,cyan}%highlight{:%L %m%n}{FATAL=red blink, ERROR=red, WARN=yellow bold, INFO=blue bold, DEBUG=blue, TRACE=blue}"
+          disableAnsi: false
+
+  ##### Define loggers #####
+  Loggers:
+    Root: # This is root logger. Every logs with catch up.
+      level: INFO
+      AppenderRef:
+        - ref: root_logger
+
+    Logger: # User defined loggers go here
+
+      - name: testLogs   # test Logger
+        additivity: false # don't conflicts with root logger
+        level: DEBUG
+        AppenderRef:
+          - ref: console_test_logger
+
+      - name: errorLogs  # error Logger
+        additivity: false
+        level: DEBUG
+        AppenderRef:
+          - ref: console_error_logger
+
+      - name: serviceLogs  # service Logger
+        additivity: false
+        level: DEBUG
+        AppenderRef:
+          - ref: console_service_logger
+
+        ### Spring framework ###
+      - name: org.springframework
+        level: DEBUG
+      - name: org.springframework.test.context.support
+        level: WARN
+      - name: org.springframework.beans.factory.support
+        level: WARN
+      - name: org.springframework.context.annotation
+        level: WARN
+      - name: org.springframework.core.env
+        level: WARN
+      - name: org.springframework.core.io.support
+        level: WARN
+      - name: org.springframework.aop.framework
+        level: WARN
+      - name: org.springframework.beans.factory.annotation
+        level: WARN
+      - name: org.springframework.test.context.cache
+        level: WARN
+      - name: org.springframework.boot.actuate
+        level: WARN
+      - name: org.springframework.boot.autoconfigure
+        level: WARN
+      - name: org.springframework.boot.context
+        level: WARN
+      - name: org.springframework.jdbc.datasource.DataSourceUtils
+        level: WARN
+      - name: org.springframework.transaction.annotation
+        level: WARN
+      - name: org.apache.commons
+        level: ERROR
+      - name: org.springframework.beans.BeanUtils
+        level: ERROR
+      - name: org.springframework.core.LocalVariableTableParameterNameDiscoverer
+        level: ERROR
+      - name: org.springframework.orm.jpa.SharedEntityManagerCreator$SharedEntityManagerInvocationHandler
+        level: ERROR
+      - name: org.springframework.data.repository.config # Spring data configurations
+        level: WARN
+      - name: org.springframework.orm.jpa.EntityManagerFactoryUtils # JPA EntityManager Status
+        level: WARN
+        ### JPA ###
+      - name: org.springframework.orm.jpa.SharedEntityManagerCreator$SharedEntityManagerInvocationHandler
+        level: INFO
+        ### Hibernate ###
+      - name: org.hibernate
+        level: INFO
+      - name: org.hibernate.type.BasicTypeRegistry
+        level: ERROR
+        # SQL statements and parameters
+      - name: org.hibernate.orm.jdbc.bind
+        level: TRACE
+      - name: org.hibernate.type.descriptor.sql.BasicBinder
+        level: TRACE
+      # Statistics and slow queries
+      - name: org.hibernate.stat
+        level: DEBUG
+      - name: org.hibernate.SQL_SLOW
+        level: INFO
+      # 2nd Level Cache
+      - name: org.hibernate.cache
+        level: DEBUG
+        ### Others ###
+      - name: com.tamantaw.projectx.persistence
+        level: DEBUG
+      - name: org.springframework.data.convert
+        level: WARN
+      - name: com.zaxxer # change below to DEBUG if you want to see connection pool properties
+        level: WARN
+      - name: org.flywaydb.core # flyway SQL scripts
+        level: DEBUG

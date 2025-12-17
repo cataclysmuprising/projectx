@@ -1,0 +1,87 @@
+# Primary DataSource config
+datasource:
+  primary:
+    type: com.zaxxer.hikari.HikariDataSource
+    jdbc-url: jdbc:postgresql://localhost:5432/projectx?currentSchema=projectx&reWriteBatchedInserts=true
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+    pool-name: PrimaryDataSourceJPAHikariCP
+    connection-timeout: 30000
+    minimum-idle: 5
+    maximum-pool-size: 10
+    idle-timeout: 30000
+    max-lifetime: 2000000
+    connection-test-query: SELECT 1
+
+spring:
+  config:
+    activate:
+      on-profile: prd
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate   # NEVER auto-create or update schema in prod
+    properties:
+      hibernate:
+
+        # -------------------------------
+        # SQL logging (PROD SAFE)
+        # -------------------------------
+        show_sql: false            # Avoid log noise & data leakage
+        format_sql: false
+        use_sql_comments: false
+
+        # -------------------------------
+        # JDBC performance (CRITICAL)
+        # -------------------------------
+        jdbc:
+          batch_size: 50           # Enables high-throughput batch writes
+          fetch_size: 50           # Prevents loading huge result sets
+          time_zone: Asia/Rangoon
+
+        order_inserts: true
+        order_updates: true
+
+        # -------------------------------
+        # Transaction discipline
+        # -------------------------------
+        enable_lazy_load_no_trans: false
+        # Enforces service-layer transaction boundaries
+
+        # -------------------------------
+        # Query behavior (safe defaults)
+        # -------------------------------
+        query:
+          fail_on_pagination_over_collection_fetch: false
+          in_clause_parameter_padding: true
+
+        # -------------------------------
+        # Time handling
+        # -------------------------------
+        timezone.default_storage: NORMALIZE
+
+        # -------------------------------
+        # Naming strategy
+        # -------------------------------
+        physical_naming_strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
+
+        # -------------------------------
+        # Caching (explicit decision)
+        # -------------------------------
+        cache:
+          use_second_level_cache: false
+          use_query_cache: false
+        # Enable later ONLY if you have eviction strategy
+
+        # -------------------------------
+        # Criteria / QueryDSL safety
+        # -------------------------------
+        criteria:
+          literal_handling_mode: BIND
+
+        # -------------------------------
+        # PROD hardening
+        # -------------------------------
+        generate_statistics: false
+        # Stats add overhead and are not needed in prod
