@@ -48,8 +48,8 @@ public class Administrator extends AbstractEntity implements Serializable {
 	// ------------------------------------------------------
 
 	@NotNull
-	@Enumerated(EnumType.ORDINAL)
-	@Column(name = "status", nullable = false)
+	@Enumerated(EnumType.STRING)
+	@Column(name = "status", nullable = false, length = 20)
 	private Status status = Status.ACTIVE;
 
 	// ------------------------------------------------------
@@ -58,9 +58,7 @@ public class Administrator extends AbstractEntity implements Serializable {
 
 	/**
 	 * Administrator account status.
-	 * Stored as ORDINAL:
-	 * 0 = ACTIVE
-	 * 1 = SUSPENDED
+	 * Stored as STRING for schema stability.
 	 */
 	public enum Status {
 		ACTIVE, SUSPENDED
@@ -70,4 +68,3 @@ public class Administrator extends AbstractEntity implements Serializable {
 	@ToString.Exclude
 	private List<AdministratorRole> administratorRoles = new ArrayList<>();
 }
-

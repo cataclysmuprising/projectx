@@ -35,8 +35,8 @@ public class Role extends AbstractEntity implements Serializable {
 	private String name;
 
 	@NotNull
-	@Enumerated(EnumType.ORDINAL)
-	@Column(name = "type", nullable = false)
+	@Enumerated(EnumType.STRING)
+	@Column(name = "type", nullable = false, length = 20)
 	private RoleType roleType;
 
 	@Length(max = 200)

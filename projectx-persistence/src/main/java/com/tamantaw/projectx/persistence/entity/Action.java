@@ -44,8 +44,8 @@ public class Action extends AbstractEntity implements Serializable {
 	private String displayName;
 
 	@NotNull
-	@Enumerated(EnumType.ORDINAL)
-	@Column(name = "action_type", nullable = false)
+	@Enumerated(EnumType.STRING)
+	@Column(name = "action_type", nullable = false, length = 20)
 	private ActionType actionType;
 
 	@NotBlank
