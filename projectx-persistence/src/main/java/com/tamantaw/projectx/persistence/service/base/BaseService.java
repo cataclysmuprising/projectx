@@ -175,18 +175,16 @@ public abstract class BaseService<
 			log.info("{} FIND_PAGE success total={} size={}",
 					c, dtoPage.getTotalElements(), dtoPage.getNumberOfElements());
 
-			List<DTO> data = page.getContent().stream()
-					.map(e -> mapper.toDto(e, mappingContext))
-					.toList();
+			List<DTO> data = dtoPage.getContent();
 
 			return new PaginatedResult<>(
-					page.getTotalElements(),
-					page.getTotalElements(),
-					page.getTotalPages(),
-					page.getSize(),
-					page.getNumber(),
-					page.getNumberOfElements(),
-					page.getSort(),
+					dtoPage.getTotalElements(),
+					dtoPage.getTotalElements(),
+					dtoPage.getTotalPages(),
+					dtoPage.getSize(),
+					dtoPage.getNumber(),
+					dtoPage.getNumberOfElements(),
+					dtoPage.getSort(),
 					data
 			);
 		}
