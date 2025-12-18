@@ -16,7 +16,7 @@ CREATE TABLE mjr_action (
     page            VARCHAR(50)  NOT NULL,
     action_name     VARCHAR(50)  NOT NULL,
     display_name    VARCHAR(100) NOT NULL,
-    action_type     SMALLINT     NOT NULL, -- 0 = main page, 1 = sub-action
+    action_type     VARCHAR(20)  NOT NULL, -- MAIN, SUB
     url             VARCHAR(250) NOT NULL,
     description VARCHAR(200) NOT NULL,
 
@@ -50,7 +50,7 @@ CREATE TABLE mjr_role (
 
     app_name        VARCHAR(30) NOT NULL,
     name            VARCHAR(20) NOT NULL,
-    type            SMALLINT    NOT NULL DEFAULT 1,
+    type            VARCHAR(20) NOT NULL DEFAULT 'BUILT_IN',
     description     VARCHAR(200),
 
     created_date      TIMESTAMP NOT NULL,
@@ -105,7 +105,7 @@ CREATE TABLE mjr_admin (
     name            VARCHAR(50) NOT NULL,
     login_id        VARCHAR(50) NOT NULL,
     password        VARCHAR(200) NOT NULL,
-    status          SMALLINT NOT NULL DEFAULT 0, -- 0=ACTIVE, 1=SUSPENDED, etc.
+    status          VARCHAR(20) NOT NULL DEFAULT 'ACTIVE', -- ACTIVE, SUSPENDED
 
     created_date      TIMESTAMP NOT NULL,
     created_by      BIGINT NOT NULL,
