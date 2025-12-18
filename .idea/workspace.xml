@@ -5,7 +5,6 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="37083405-755f-454c-afbe-506d59f23326" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/codex.patch" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -295,7 +294,7 @@
       <workItem from="1765774953047" duration="20206000" />
       <workItem from="1765860907160" duration="26062000" />
       <workItem from="1765945292304" duration="21049000" />
-      <workItem from="1766039021704" duration="4287000" />
+      <workItem from="1766039021704" duration="4364000" />
     </task>
     <servers />
   </component>
