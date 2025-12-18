@@ -4,7 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="37083405-755f-454c-afbe-506d59f23326" name="Changes" comment="" />
+    <list default="true" id="37083405-755f-454c-afbe-506d59f23326" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/codex.patch" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -20,6 +23,21 @@
   <component name="FormatOnSaveOptions">
     <option name="myRunOnSave" value="true" />
   </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;cataclysmuprising&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;git@github.com:cataclysmuprising/projectx.git&quot;,
+    &quot;accountId&quot;: &quot;541fd620-9d84-4a91-b27a-8a5d58c525f7&quot;
+  }
+}</component>
   <component name="OptimizeOnSaveOptions">
     <option name="myRunOnSave" value="true" />
   </component>
@@ -30,6 +48,9 @@
   &quot;associatedIndex&quot;: 3
 }</component>
   <component name="ProjectId" id="36jTntfxD0ZA6qVSnQiujTZa9m3" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
   <component name="ProjectViewState">
     <option name="showLibraryContents" value="true" />
   </component>
@@ -41,6 +62,7 @@
     "Maven.projectx [clean,compile].executor": "Run",
     "Maven.projectx [clean,package].executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
     "TestNG.ActionUnitTest.bulkUpdate_shouldUpdateMultipleRows.executor": "Run",
     "TestNG.ActionUnitTest.deleteByCriteria_shouldDeleteMatchingRecords.executor": "Run",
     "TestNG.ActionUnitTest.executor": "Run",
@@ -72,6 +94,7 @@
     "TestNG.RoleServiceIT.delete_removesRole.executor": "Run",
     "TestNG.RoleServiceIT.executor": "Run",
     "TestNG.RoleServiceIT.findAll_byAppName.executor": "Run",
+    "TestNG.RoleServiceIT.findAll_multiSort_roleTypeAsc_nameAsc.executor": "Run",
     "TestNG.RoleServiceIT.findById_existingRole.executor": "Run",
     "TestNG.RoleServiceIT.findById_hitsDatabase.executor": "Run",
     "TestNG.RoleServiceIT.findByPaging_withLimitOnly_defaultsToFirstPage.executor": "Run",
@@ -100,6 +123,7 @@
     "TestNG.RoleUnitTest.findOne_byRoleName_shouldReturnAdminRole.executor": "Run",
     "TestNG.RoleUnitTest.saveAll_shouldInsertMultipleRoles.executor": "Run",
     "TestNG.RoleUnitTest.updateRole_shouldUpdateExistingRecord.executor": "Run",
+    "git-widget-placeholder": "main",
     "ignore.virus.scanning.warn.message": "true",
     "kotlin-language-version-configured": "true",
     "last_opened_file_path": "D:/projects/projectx/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/mapper",
@@ -270,12 +294,24 @@
       <workItem from="1765709520871" duration="3163000" />
       <workItem from="1765774953047" duration="20206000" />
       <workItem from="1765860907160" duration="26062000" />
-      <workItem from="1765945292304" duration="20679000" />
+      <workItem from="1765945292304" duration="21049000" />
+      <workItem from="1766039021704" duration="4287000" />
     </task>
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />
