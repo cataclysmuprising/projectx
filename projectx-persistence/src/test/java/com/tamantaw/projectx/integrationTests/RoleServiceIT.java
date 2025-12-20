@@ -260,7 +260,7 @@ public class RoleServiceIT extends CommonTestBase {
 	public void findAll_sortedByIdDesc() throws Exception {
 		RoleCriteria criteria = new RoleCriteria();
 		criteria.setAppName("projectx");
-		criteria.addSort("id", Sort.Direction.DESC);
+		criteria.addSort(QRole.role.id, Sort.Direction.DESC);
 
 		List<RoleDTO> roles = roleService.findAll(criteria);
 
@@ -273,8 +273,8 @@ public class RoleServiceIT extends CommonTestBase {
 		RoleCriteria criteria = new RoleCriteria();
 		criteria.setAppName("projectx");
 
-		criteria.addSort("roleType", Sort.Direction.ASC);
-		criteria.addSort("name", Sort.Direction.ASC);
+		criteria.addSort(QRole.role.roleType, Sort.Direction.ASC);
+		criteria.addSort(QRole.role.name, Sort.Direction.ASC);
 
 		List<RoleDTO> roles = roleService.findAll(criteria);
 
@@ -342,8 +342,8 @@ public class RoleServiceIT extends CommonTestBase {
 		// ORDER BY roleType ASC, id DESC
 		// ------------------------------------------------------------------
 
-		criteria.addSort("roleType", Sort.Direction.ASC);
-		criteria.addSort("id", Sort.Direction.DESC);
+		criteria.addSort(QRole.role.roleType, Sort.Direction.ASC);
+		criteria.addSort(QRole.role.id, Sort.Direction.DESC);
 
 		// ------------------------------------------------------------------
 		// GIVEN: paging via offset + limit

@@ -1,6 +1,7 @@
 package com.tamantaw.projectx.persistence.repository.base;
 
 import com.querydsl.core.types.EntityPath;
+import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.Predicate;
 import com.querydsl.core.types.dsl.*;
 import com.querydsl.jpa.JPQLQuery;
@@ -17,7 +18,6 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.support.*;
 import org.springframework.data.querydsl.EntityPathResolver;
 import org.springframework.data.querydsl.SimpleEntityPathResolver;
@@ -473,32 +473,14 @@ public abstract class AbstractRepositoryImpl<
 	 */
 	protected void applySort(JPQLQuery<?> query, CRITERIA criteria) {
 
-		Sort sort = criteria.resolveSort();
-		if (sort == null || !sort.isSorted()) {
+		List<OrderSpecifier<?>> orderSpecifiers =
+				criteria.resolveOrderSpecifiers(path);
+
+		if (orderSpecifiers == null || orderSpecifiers.isEmpty()) {
 			return;
 		}
 
-		PathBuilder<?> pb =
-				new PathBuilder<>(path.getType(), path.getMetadata());
-
-		for (Sort.Order o : sort) {
-			try {
-				ComparableExpressionBase<?> exp =
-						pb.getComparable(o.getProperty(), Comparable.class);
-
-				query.orderBy(
-						o.isAscending() ? exp.asc() : exp.desc()
-				);
-			}
-			catch (IllegalArgumentException ex) {
-				throw new IllegalArgumentException(
-						"Invalid sort property '" + o.getProperty() + "' for entity "
-								+ path.getType().getSimpleName()
-								+ ". Ensure the field exists and is Comparable.",
-						ex
-				);
-			}
-		}
+		query.orderBy(orderSpecifiers.toArray(new OrderSpecifier<?>[0]));
 	}
 
 	protected int bulkInChunkSize() {
@@ -598,4 +580,3 @@ public abstract class AbstractRepositoryImpl<
 		return out;
 	}
 }
-

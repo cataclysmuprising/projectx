@@ -1,11 +1,15 @@
 package com.tamantaw.projectx.persistence.criteria.base;
 
 import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.types.Order;
+import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.Predicate;
+import com.querydsl.core.types.Path;
 import com.querydsl.core.types.dsl.EntityPathBase;
+import com.querydsl.core.types.dsl.ComparableExpressionBase;
+import com.querydsl.core.types.dsl.PathBuilder;
 import com.tamantaw.projectx.persistence.entity.base.QAbstractEntity;
 import lombok.Data;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -55,7 +59,7 @@ public abstract class AbstractCriteria<A extends EntityPathBase<?>> {
 	 * id -> DESC
 	 * name -> ASC
 	 */
-	protected final LinkedHashMap<String, Sort.Direction> sortOrders = new LinkedHashMap<>();
+	protected final List<OrderSpecifier<?>> orderSpecifiers = new ArrayList<>();
 
 	// ----------------------------------------------------------------------
 	// PAGING INPUTS
@@ -123,23 +127,68 @@ public abstract class AbstractCriteria<A extends EntityPathBase<?>> {
 	// SORTING
 	// ----------------------------------------------------------------------
 
-	public void addSort(String property, Sort.Direction direction) {
-		if (StringUtils.isNotBlank(property) && direction != null) {
-			sortOrders.put(property, direction);
+	public void addSort(
+			ComparableExpressionBase<? extends Comparable<?>> property,
+			Sort.Direction direction) {
+
+		if (property == null || direction == null) {
+			return;
 		}
+
+		Order order = direction.isAscending() ? Order.ASC : Order.DESC;
+		orderSpecifiers.add(new OrderSpecifier<>(order, property));
+	}
+
+	public List<OrderSpecifier<?>> resolveOrderSpecifiers(EntityPathBase<?> root) {
+
+		if (!CollectionUtils.isEmpty(orderSpecifiers)) {
+			return List.copyOf(orderSpecifiers);
+		}
+
+		if (root == null) {
+			return Collections.emptyList();
+		}
+
+		PathBuilder<?> pb =
+				new PathBuilder<>(root.getType(), root.getMetadata());
+
+		return List.of(new OrderSpecifier<>(Order.DESC, pb.getComparable("id", Comparable.class)));
 	}
 
 	public Sort resolveSort() {
 
-		if (sortOrders.isEmpty()) {
+		List<OrderSpecifier<?>> orders = resolveOrderSpecifiers(null);
+		if (CollectionUtils.isEmpty(orders)) {
 			return Sort.by(Sort.Direction.DESC, "id");
 		}
 
-		List<Sort.Order> orders = new ArrayList<>();
-		for (Map.Entry<String, Sort.Direction> e : sortOrders.entrySet()) {
-			orders.add(new Sort.Order(e.getValue(), e.getKey()));
+		List<Sort.Order> sortOrders = new ArrayList<>();
+		for (OrderSpecifier<?> o : orders) {
+			Sort.Direction direction =
+					o.getOrder() == Order.ASC ? Sort.Direction.ASC : Sort.Direction.DESC;
+
+			String propertyName = resolvePropertyName(o);
+			if (propertyName == null) {
+				throw new IllegalArgumentException(
+						"Unable to resolve property name from order specifier: " + o
+				);
+			}
+
+			sortOrders.add(new Sort.Order(direction, propertyName));
 		}
-		return Sort.by(orders);
+		return Sort.by(sortOrders);
+	}
+
+	private String resolvePropertyName(OrderSpecifier<?> orderSpecifier) {
+		if (orderSpecifier == null || orderSpecifier.getTarget() == null) {
+			return null;
+		}
+
+		if (orderSpecifier.getTarget() instanceof Path<?> path) {
+			return path.getMetadata().getName();
+		}
+
+		return null;
 	}
 
 	// ----------------------------------------------------------------------

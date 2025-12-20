@@ -165,8 +165,8 @@ findByPaging(criteria, "Role(roleActions(action))");
 
 Example:
 ```java
-criteria.addSort("roleType", Sort.Direction.ASC);
-criteria.addSort("id", Sort.Direction.DESC);
+criteria.addSort(QRole.role.roleType, Sort.Direction.ASC);
+criteria.addSort(QRole.role.id, Sort.Direction.DESC);
 ```
 
 ---
@@ -237,4 +237,3 @@ This is a **carefully designed persistence foundation** intended to scale safely
 - New entities are added
 - New nested criteria are introduced
 - Dataset size grows
-
