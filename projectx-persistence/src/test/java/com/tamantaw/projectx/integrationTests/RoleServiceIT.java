@@ -5,8 +5,10 @@ import com.tamantaw.projectx.persistence.criteria.ActionCriteria;
 import com.tamantaw.projectx.persistence.criteria.RoleCriteria;
 import com.tamantaw.projectx.persistence.dto.RoleDTO;
 import com.tamantaw.projectx.persistence.dto.base.PaginatedResult;
+import com.tamantaw.projectx.persistence.entity.Action;
 import com.tamantaw.projectx.persistence.entity.QRole;
 import com.tamantaw.projectx.persistence.entity.Role;
+import com.tamantaw.projectx.persistence.entity.RoleAction;
 import com.tamantaw.projectx.persistence.exception.ConsistencyViolationException;
 import com.tamantaw.projectx.persistence.exception.PersistenceException;
 import com.tamantaw.projectx.persistence.repository.base.UpdateSpec;
@@ -18,6 +20,7 @@ import org.testng.annotations.Test;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
@@ -117,6 +120,46 @@ public class RoleServiceIT extends CommonTestBase {
 		assertEquals(saved.getName(), "TEMP_ROLE");
 		assertEquals(saved.getCreatedBy(), 100L);
 		assertEquals(saved.getUpdatedBy(), 100L);
+	}
+
+	@Test
+	public void create_withActions_persistsRoleAndActions() throws Exception {
+		RoleDTO dto = new RoleDTO();
+		dto.setAppName("projectx");
+		dto.setName("ROLE_WITH_ACTIONS");
+		dto.setRoleType(Role.RoleType.CUSTOM);
+
+		// include duplicate action ID to verify unique handling
+		List<Long> actionIds = List.of(10021L, 10022L, 10021L);
+
+		Role saved = roleService.create(dto, actionIds, 123L);
+
+		entityManager.flush();
+		entityManager.clear();
+
+		List<RoleAction> roleActions = entityManager
+				.createQuery(
+						"select ra from RoleAction ra join fetch ra.action where ra.role.id = :roleId",
+						RoleAction.class
+				)
+				.setParameter("roleId", saved.getId())
+				.getResultList();
+
+		assertNotNull(saved.getId());
+		assertEquals(roleActions.size(), 2); // duplicate action id should be ignored
+		assertEquals(saved.getCreatedBy(), 123L);
+		assertEquals(saved.getUpdatedBy(), 123L);
+		assertTrue(
+				roleActions.stream()
+						.map(RoleAction::getAction)
+						.map(Action::getId)
+						.collect(Collectors.toSet())
+						.containsAll(List.of(10021L, 10022L))
+		);
+		assertTrue(
+				roleActions.stream()
+						.allMatch(ra -> ra.getCreatedBy() == 123L && ra.getUpdatedBy() == 123L)
+		);
 	}
 
 	// ----------------------------------------------------------------------

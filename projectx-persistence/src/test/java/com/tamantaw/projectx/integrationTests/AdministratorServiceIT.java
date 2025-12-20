@@ -5,6 +5,7 @@ import com.tamantaw.projectx.persistence.criteria.AdministratorCriteria;
 import com.tamantaw.projectx.persistence.criteria.RoleCriteria;
 import com.tamantaw.projectx.persistence.dto.AdministratorDTO;
 import com.tamantaw.projectx.persistence.entity.Administrator;
+import com.tamantaw.projectx.persistence.entity.AdministratorRole;
 import com.tamantaw.projectx.persistence.entity.QAdministrator;
 import com.tamantaw.projectx.persistence.exception.ConsistencyViolationException;
 import com.tamantaw.projectx.persistence.exception.PersistenceException;
@@ -15,6 +16,7 @@ import org.testng.annotations.Test;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static org.testng.Assert.*;
 
@@ -22,6 +24,46 @@ public class AdministratorServiceIT extends CommonTestBase {
 
 	@Autowired
 	private AdministratorService administratorService;
+
+	@Test
+	public void create_withRoles_persistsAdministratorAndRoles() throws Exception {
+		AdministratorDTO dto = new AdministratorDTO();
+		dto.setName("Admin With Roles");
+		dto.setLoginId("admin-with-roles@example.com");
+		dto.setPassword("secret");
+		dto.setStatus(Administrator.Status.ACTIVE);
+
+		List<Long> roleIds = List.of(1L, 2L, 1L); // include duplicate to ensure uniqueness handling
+
+		Administrator saved = administratorService.create(dto, roleIds, TEST_CREATE_USER_ID);
+
+		entityManager.flush();
+		entityManager.clear();
+
+		List<AdministratorRole> roles = entityManager
+				.createQuery(
+						"select ar from AdministratorRole ar where ar.administrator.id = :adminId",
+						AdministratorRole.class
+				)
+				.setParameter("adminId", saved.getId())
+				.getResultList();
+
+		assertNotNull(saved.getId());
+		assertEquals(roles.size(), 2); // duplicate role id should be ignored
+		assertEquals(saved.getCreatedBy(), TEST_CREATE_USER_ID);
+		assertEquals(saved.getUpdatedBy(), TEST_CREATE_USER_ID);
+		assertTrue(
+				roles.stream()
+						.map(ar -> ar.getRole().getId())
+						.collect(Collectors.toSet())
+						.containsAll(List.of(1L, 2L))
+		);
+		assertTrue(
+				roles.stream()
+						.allMatch(ar -> ar.getCreatedBy() == TEST_CREATE_USER_ID &&
+								ar.getUpdatedBy() == TEST_CREATE_USER_ID)
+		);
+	}
 
 	@Test
 	public void findById_existingAdministrator() throws Exception {
