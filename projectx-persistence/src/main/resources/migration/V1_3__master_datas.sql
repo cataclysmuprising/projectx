@@ -60,12 +60,12 @@ SELECT setval(
 INSERT INTO mjr_admin
 (id,    name,                    login_id,                 password,                                                                           status,   created_by,updated_by,created_date,updated_date)
 VALUES
--- tha@SU#S3cR4t
-(1,     'Than Htike Aung',      'tha@superuser',        '$2a$10$0SHYaT.BiOxqW7pgipxop.J/B/3UJchWO9xmamSkZM3c8tFCNhjvK',            'ACTIVE',      0,0,current_timestamp,current_timestamp),
--- zeyar@SU#P@ssw0rd
-(2,     'Zeyar Phyo Maung',     'zeyar@superuser',        '$2a$10$P91DcVghJ4IzRMRPIUIz9uzsYt6GOhLfeUMTpx5YWsqKPbs7GJEGG',                'ACTIVE',      0,0,current_timestamp,current_timestamp),
--- hta@SU#H1dd3n
-(3,     'Hein Thet Aung',     'hta@superuser',            '$2a$10$oNzrXS2spZfIgvo97dnKle89ypZ7Q5LN6xjVorm8NoNySJmOtaVDi',                'ACTIVE',      0,0,current_timestamp,current_timestamp);
+-- alice@SU#P@ss1
+(1,     'Alice Carter',      'alice@superuser',        '$2b$12$Czy1Dzq9n5IqwCLVFq.Rye7hnyjUmwlipDFpCSwTxk6WEIkPdK.tq',            'ACTIVE',      0,0,current_timestamp,current_timestamp),
+-- bob@SU#P@ss2
+(2,     'Bob Nguyen',     'bob@superuser',        '$2b$12$Icajs9ImSzgyDdDpeUFyAuyx3U2h5//AFG1cLH5kaljqAfI8TetD.',                'ACTIVE',      0,0,current_timestamp,current_timestamp),
+-- carol@SU#P@ss3
+(3,     'Carol Smith',     'carol@superuser',            '$2b$12$.qmLchqedFNuVPUyJzMMKuKQEtqUpVKiIZx.t.qsfm0UjGoz6wNJG',                'ACTIVE',      0,0,current_timestamp,current_timestamp);
 
 SELECT setval(
   pg_get_serial_sequence('mjr_admin', 'id'),

@@ -1,81 +1,133 @@
-diff --git a/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/base/AbstractRepositoryImpl.java b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/base/AbstractRepositoryImpl.java
-index 752be83eae9c2db0ae839592d458bfc1843be879..19a22605f0d5ea05b4cb55ac01e40dc1d5523d0d 100644
---- a/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/base/AbstractRepositoryImpl.java
-+++ b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/base/AbstractRepositoryImpl.java
-@@ -390,72 +390,76 @@ public abstract class AbstractRepositoryImpl<
- 		Assert.notNull(criteria, "Criteria must not be null");
+diff --git a/projectx-persistence/src/main/resources/migration/V1_3__master_datas.sql b/projectx-persistence/src/main/resources/migration/V1_3__master_datas.sql
+index 1c99b198fae9812b7b7927c505d8671305c24671..e869b23e9285da93c7ff7b6b1e4c2da8bbbb866a 100644
+--- a/projectx-persistence/src/main/resources/migration/V1_3__master_datas.sql
++++ b/projectx-persistence/src/main/resources/migration/V1_3__master_datas.sql
+@@ -38,51 +38,51 @@ VALUES
+ (1, 1, 10011, 0, 0, current_timestamp, current_timestamp),
 
- 		@SuppressWarnings("unchecked")
- 		EntityPathBase<E> typedPath =
- 				(EntityPathBase<E>) path;
+ ----- User
+ (2, 1, 10021, 0, 0, current_timestamp, current_timestamp),
+ (3, 1, 10022, 0, 0, current_timestamp, current_timestamp),
+ (4, 1, 10023, 0, 0, current_timestamp, current_timestamp),
+ (5, 1, 10024, 0, 0, current_timestamp, current_timestamp),
+ (6, 1, 10025, 0, 0, current_timestamp, current_timestamp),
 
- 		List<Long> ids = findIds(criteria);
- 		if (ids.isEmpty()) {
- 			return 0;
- 		}
 
- 		long affected = 0;
+ ----- User
+ (7, 2, 10021, 0, 0, current_timestamp, current_timestamp),
+ (8, 2, 10023, 0, 0, current_timestamp, current_timestamp),
+ (9, 2, 10025, 0, 0, current_timestamp, current_timestamp);
 
- 		for (List<Long> chunk : chunk(ids, bulkInChunkSize())) {
+ SELECT setval(
+   pg_get_serial_sequence('mjr_role_x_action', 'id'),
+   (SELECT MAX(id) FROM mjr_role_x_action),
+   true
+ );
 
- 			JPAUpdateClause update =
- 					queryFactory.update(typedPath);
+ /******      Administrator        ******/
+ INSERT INTO mjr_admin
+ (id,    name,                    login_id,                 password,                                                                           status,   created_by,updated_by,created_date,updated_date)
+ VALUES
+--- tha@SU#S3cR4t
+-(1,     'Than Htike Aung',      'tha@superuser',        '$2a$10$0SHYaT.BiOxqW7pgipxop.J/B/3UJchWO9xmamSkZM3c8tFCNhjvK',            'ACTIVE',      0,0,current_timestamp,current_timestamp),
+--- zeyar@SU#P@ssw0rd
+-(2,     'Zeyar Phyo Maung',     'zeyar@superuser',        '$2a$10$P91DcVghJ4IzRMRPIUIz9uzsYt6GOhLfeUMTpx5YWsqKPbs7GJEGG',                'ACTIVE',      0,0,current_timestamp,current_timestamp),
+--- hta@SU#H1dd3n
+-(3,     'Hein Thet Aung',     'hta@superuser',            '$2a$10$oNzrXS2spZfIgvo97dnKle89ypZ7Q5LN6xjVorm8NoNySJmOtaVDi',                'ACTIVE',      0,0,current_timestamp,current_timestamp);
++-- alice@SU#P@ss1
++(1,     'Alice Carter',      'alice@superuser',        '$2b$12$Czy1Dzq9n5IqwCLVFq.Rye7hnyjUmwlipDFpCSwTxk6WEIkPdK.tq',            'ACTIVE',      0,0,current_timestamp,current_timestamp),
++-- bob@SU#P@ss2
++(2,     'Bob Nguyen',     'bob@superuser',        '$2b$12$Icajs9ImSzgyDdDpeUFyAuyx3U2h5//AFG1cLH5kaljqAfI8TetD.',                'ACTIVE',      0,0,current_timestamp,current_timestamp),
++-- carol@SU#P@ss3
++(3,     'Carol Smith',     'carol@superuser',            '$2b$12$.qmLchqedFNuVPUyJzMMKuKQEtqUpVKiIZx.t.qsfm0UjGoz6wNJG',                'ACTIVE',      0,0,current_timestamp,current_timestamp);
 
- 			applyAudit(update, updatedBy);
- 			spec.apply(update, typedPath);
+ SELECT setval(
+   pg_get_serial_sequence('mjr_admin', 'id'),
+   (SELECT MAX(id) FROM mjr_admin),
+   true
+ );
 
- 			affected +=
- 					update.where(audit.id.in(chunk)).execute();
- 		}
+ /******      Administrator x Roles      ******/
+ INSERT INTO mjr_admin_x_role
+ (id,    admin_id,           role_id,    created_by,updated_by,created_date,updated_date)
+ VALUES
+ (1,     1,            1,      0,0,current_timestamp,current_timestamp),
+ (2,     2,            1,      0,0,current_timestamp,current_timestamp),
+ (3,     3,            1,      0,0,current_timestamp,current_timestamp);
 
-+		entityManager.clear();
-+
- 		return affected;
+ SELECT setval(
+   pg_get_serial_sequence('mjr_admin_x_role', 'id'),
+   (SELECT MAX(id) FROM mjr_admin_x_role),
+   true
+ );
+diff --git a/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/AdministratorServiceIT.java b/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/AdministratorServiceIT.java
+index a41a373a80d2249e985caf15e6c1c59e11f152b9..19800d6cf443e87f4e2e77686e4fbbdedb023091 100644
+--- a/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/AdministratorServiceIT.java
++++ b/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/AdministratorServiceIT.java
+@@ -6,63 +6,63 @@ import com.tamantaw.projectx.persistence.criteria.RoleCriteria;
+ import com.tamantaw.projectx.persistence.dto.AdministratorDTO;
+ import com.tamantaw.projectx.persistence.entity.Administrator;
+ import com.tamantaw.projectx.persistence.entity.QAdministrator;
+ import com.tamantaw.projectx.persistence.exception.ConsistencyViolationException;
+ import com.tamantaw.projectx.persistence.exception.PersistenceException;
+ import com.tamantaw.projectx.persistence.repository.base.UpdateSpec;
+ import com.tamantaw.projectx.persistence.service.AdministratorService;
+ import org.springframework.beans.factory.annotation.Autowired;
+ import org.testng.annotations.Test;
+
+ import java.util.List;
+ import java.util.Optional;
+
+ import static org.testng.Assert.*;
+
+ public class AdministratorServiceIT extends CommonTestBase {
+
+ 	@Autowired
+ 	private AdministratorService administratorService;
+
+ 	@Test
+ 	public void findById_existingAdministrator() throws Exception {
+ 		Optional<AdministratorDTO> result = administratorService.findById(1L);
+
+ 		assertTrue(result.isPresent());
+-		assertEquals(result.get().getLoginId(), "tha@superuser");
++		assertEquals(result.get().getLoginId(), "alice@superuser");
+ 		assertEquals(result.get().getStatus(), Administrator.Status.ACTIVE);
  	}
 
- 	@Override
- 	public long deleteByCriteria(CRITERIA criteria) {
+ 	@Test
+ 	public void findOne_byLoginId() throws Exception {
+ 		AdministratorCriteria criteria = new AdministratorCriteria();
+-		criteria.setLoginId("zeyar@superuser");
++		criteria.setLoginId("bob@superuser");
 
- 		Assert.notNull(criteria, "Criteria must not be null");
+ 		Optional<AdministratorDTO> result = administratorService.findOne(criteria);
 
- 		List<Long> ids = findIds(criteria);
- 		if (ids.isEmpty()) {
- 			return 0;
- 		}
-
- 		long affected = 0;
-
- 		for (List<Long> chunk : chunk(ids, bulkInChunkSize())) {
- 			affected += queryFactory
- 					.delete(path)
- 					.where(audit.id.in(chunk))
- 					.execute();
- 		}
-
-+		entityManager.clear();
-+
- 		return affected;
+ 		assertTrue(result.isPresent());
+-		assertEquals(result.get().getName(), "Zeyar Phyo Maung");
++		assertEquals(result.get().getName(), "Bob Nguyen");
  	}
 
- 	// ----------------------------------------------------------------------
- 	// INTERNAL HELPERS
- 	// ----------------------------------------------------------------------
+ 	@Test
+ 	public void findAll_byRoleCriteria() throws Exception {
+ 		RoleCriteria roleCriteria = new RoleCriteria();
+ 		roleCriteria.setName("SUPER-USER");
 
- 	protected AbstractJPAQuery<?, ?> createQuery(
- 			Predicate predicate,
- 			String... hints) {
+ 		AdministratorCriteria criteria = new AdministratorCriteria();
+ 		criteria.setRole(roleCriteria);
 
- 		AbstractJPAQuery<?, ?> query =
- 				querydsl.createQuery(path);
+ 		List<AdministratorDTO> administrators = administratorService.findAll(criteria);
 
- 		if (predicate != null) {
- 			query.where(predicate);
- 		}
-
- 		QueryHints qh = getRelatedDataHints(hints);
- 		if (qh != null) {
- 			qh.forEach(query::setHint);
- 		}
-
- 		return query;
+ 		assertFalse(administrators.isEmpty());
+ 		assertTrue(
+ 				administrators.stream()
+ 						.allMatch(a -> a.getLoginId().contains("@superuser"))
+ 		);
  	}
+
+ 	@Test
+ 	public void create_persistsAdministrator() throws ConsistencyViolationException, PersistenceException {
+ 		AdministratorDTO dto = new AdministratorDTO();
+ 		dto.setName("Integration Admin");
+ 		dto.setLoginId("integration-admin@example.com");
+ 		dto.setPassword("secret");

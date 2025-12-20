@@ -28,19 +28,19 @@ public class AdministratorServiceIT extends CommonTestBase {
 		Optional<AdministratorDTO> result = administratorService.findById(1L);
 
 		assertTrue(result.isPresent());
-		assertEquals(result.get().getLoginId(), "tha@superuser");
+		assertEquals(result.get().getLoginId(), "alice@superuser");
 		assertEquals(result.get().getStatus(), Administrator.Status.ACTIVE);
 	}
 
 	@Test
 	public void findOne_byLoginId() throws Exception {
 		AdministratorCriteria criteria = new AdministratorCriteria();
-		criteria.setLoginId("zeyar@superuser");
+		criteria.setLoginId("bob@superuser");
 
 		Optional<AdministratorDTO> result = administratorService.findOne(criteria);
 
 		assertTrue(result.isPresent());
-		assertEquals(result.get().getName(), "Zeyar Phyo Maung");
+		assertEquals(result.get().getName(), "Bob Nguyen");
 	}
 
 	@Test
