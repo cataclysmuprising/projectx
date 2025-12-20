@@ -82,7 +82,7 @@ public class RoleActionServiceIT extends CommonTestBase {
 
 	@Test
 	public void delete_removesRoleAction() throws ConsistencyViolationException, PersistenceException {
-		Role newRole = createRole("TEMP_ROLE_ACTION_DELETE");
+		Role newRole = createRole("TEMP_ROLE");
 		Action newAction = createAction("deleteActionLink", "^/sec/actions/delete-link$");
 
 		RoleDTO roleRef = new RoleDTO();

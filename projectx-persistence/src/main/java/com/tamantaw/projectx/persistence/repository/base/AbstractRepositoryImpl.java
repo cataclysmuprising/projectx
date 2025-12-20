@@ -412,6 +412,8 @@ public abstract class AbstractRepositoryImpl<
 					update.where(audit.id.in(chunk)).execute();
 		}
 
+		entityManager.clear();
+
 		return affected;
 	}
 
@@ -433,6 +435,8 @@ public abstract class AbstractRepositoryImpl<
 					.where(audit.id.in(chunk))
 					.execute();
 		}
+
+		entityManager.clear();
 
 		return affected;
 	}
