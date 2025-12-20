@@ -1,617 +1,991 @@
 diff --git a/README.md b/README.md
-index cabff267f5629be1eee0db75613d3ccdca9d7369..6878caefb1b60c4ea518ad047d19afbac0492ee0 100644
+index 6878caefb1b60c4ea518ad047d19afbac0492ee0..b4ea6fff2f93d767fc0248469ea3d7aac72d3c8e 100644
 --- a/README.md
 +++ b/README.md
-@@ -143,52 +143,52 @@ findAll(criteria with paging);  // ❌ throws exception
- ### `findByPaging()`
- - ✅ The **only** paging entry point
- - Supports:
-   - Offset + limit
-   - Page number
-   - Multi-column sorting
-   - Nested criteria
-   - Fetch graphs
+@@ -1,118 +1,118 @@
+ # Persistence Layer Architecture (JPA + Hibernate + QueryDSL)
 
- ```java
- findByPaging(criteria, "Role(roleActions(action))");
+ This project implements a **deterministic, pagination-safe, and fetch-graph-safe persistence architecture** on top of **Spring Data JPA + Hibernate + QueryDSL**.
+
+ It is designed to handle:
+
+-- Complex nested filters
+-- Multi-column sorting
+-- Large datasets
+-- Collection fetch graphs
+-- Stable pagination without data corruption
++- Complex nested filters
++- Multi-column sorting
++- Large datasets
++- Collection fetch graphs
++- Stable pagination without data corruption
+
+ ---
+
+ ## 📌 Core Principles
+
+ ### 1. Deterministic Pagination (No Data Corruption)
+ Pagination **must always return the correct global ordering** for a given:
+
+-```
++```sql
+ WHERE + ORDER BY + OFFSET + LIMIT
+ ```
+
+ This repository **does not rely on JOIN-based pagination**, which is known to cause:
+ - Duplicate rows
+ - Missing records
+ - Incorrect page boundaries
+ - Hibernate in-memory paging warnings
+
+ ---
+
+ ### 2. EXISTS-Based Nested Filtering (No JOIN Filters)
+ All nested criteria are implemented using **`EXISTS` subqueries**, never JOINs.
+
+-✅ Correct
++✅ Correct
+ ```sql
+ WHERE EXISTS (
+   SELECT 1 FROM role_action ra
+   JOIN action a ON a.id = ra.action_id
+   WHERE ra.role_id = role.id
+     AND a.page = 'User'
+ )
+ ```
+
+-❌ Forbidden
++❌ Forbidden
+ ```sql
+ LEFT JOIN role_action ra ...
+ WHERE a.page = 'User'
+ ```
+
+ This guarantees:
+ - Correct counts
+ - Stable paging
+ - No accidental row multiplication
+
+ ---
+
+ ## 🧠 Query Execution Strategy
+
+ ### Fast Path (No Collection Fetch)
+ Used when:
+ - No collection fetch graphs are requested
+ - Only `@ManyToOne` / `@OneToOne` relations are fetched
+
+ Flow:
+-```
++```sql
+ SELECT entity
+ FROM table
+ WHERE filter
+ ORDER BY sort
+ OFFSET / LIMIT
  ```
 
  ---
 
- ## 🔀 Sorting Rules
+ ### ID-First Paging Path (Collection Fetch Safe)
+ Used when:
+ - Collection fetch graphs are requested
+ - Paging + sorting is required
 
- - Supports **multi-column sorting**
- - Sorting is always applied:
-   - Before paging (defines page membership)
-   - After entity fetch (when required)
- - Invalid sort properties fail fast with clear errors
-
- Example:
- ```java
--criteria.addSort("roleType", Sort.Direction.ASC);
--criteria.addSort("id", Sort.Direction.DESC);
-+criteria.addSort(QRole.role.roleType, Sort.Direction.ASC);
-+criteria.addSort(QRole.role.id, Sort.Direction.DESC);
+ #### Phase 1 — ID Selection
+-```
++```sql
+ SELECT id
+ FROM table
+ WHERE filter
+ ORDER BY sort
+ OFFSET / LIMIT
  ```
 
- ---
+ Defines **exact page membership**.
 
- ## 📊 Counting Strategy
+ #### Phase 2 — Entity Fetch
+-```
++```sql
+ SELECT entity
+ FROM table
+ LEFT JOIN collections
+ WHERE id IN (:ids)
+ ORDER BY <strategy>
+ ```
 
- - `count()` queries:
-   - Never use JOINs
-   - Use the same filter logic
-   - Always reflect true dataset size
-
- Guarantees:
- - `recordsTotal` is correct
- - No mismatch between content and total
-
- ---
-
- ## 🧪 Test Coverage
-
- The architecture is validated with integration tests covering:
-
- - Nested criteria with EXISTS
- - Multi-column sorting
- - Offset + limit paging
- - Fetch graphs with collections
-@@ -215,26 +215,25 @@ findByPaging_withNestedCriteria_multiSort_andOffsetLimit()
- ## 📐 Design Philosophy
-
- This persistence layer favors:
-
- - **Correctness over convenience**
- - **Explicit behavior over magic**
- - **Predictable SQL over ORM guesswork**
- - **Long-term stability over short-term shortcuts**
-
- It is suitable for:
- - Large datasets
- - Financial systems
- - Admin panels
- - Audited / regulated environments
+ Ensures:
+ - No Hibernate paging warnings
+ - No incorrect result sets
+ - No duplicated entities
 
  ---
 
- ## 🏁 Final Notes
+ ## 🐘 PostgreSQL Optimization
 
- This is not boilerplate CRUD.
+ ```java
+ public static final boolean IS_POSTGRES_DB = true;
+ ```
 
- This is a **carefully designed persistence foundation** intended to scale safely as:
- - New entities are added
- - New nested criteria are introduced
- - Dataset size grows
--
-diff --git a/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/criteria/base/AbstractCriteria.java b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/criteria/base/AbstractCriteria.java
-index 25e9b07031c44db76244833b26425233b964380f..77cd96e879e3ff63255813739246263b9f016080 100644
---- a/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/criteria/base/AbstractCriteria.java
-+++ b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/criteria/base/AbstractCriteria.java
-@@ -1,83 +1,87 @@
- package com.tamantaw.projectx.persistence.criteria.base;
+ ### Why this flag exists
+ - PostgreSQL guarantees **deterministic ORDER BY behavior**
+ - Allows safe reapplication of `ORDER BY` in Phase 2
+ - Avoids SQL hacks like `CASE` or `array_position`
 
- import com.querydsl.core.BooleanBuilder;
-+import com.querydsl.core.types.Order;
-+import com.querydsl.core.types.OrderSpecifier;
- import com.querydsl.core.types.Predicate;
-+import com.querydsl.core.types.Path;
- import com.querydsl.core.types.dsl.EntityPathBase;
-+import com.querydsl.core.types.dsl.ComparableExpressionBase;
-+import com.querydsl.core.types.dsl.PathBuilder;
- import com.tamantaw.projectx.persistence.entity.base.QAbstractEntity;
- import lombok.Data;
--import org.apache.commons.lang3.StringUtils;
- import org.springframework.data.domain.PageRequest;
- import org.springframework.data.domain.Pageable;
- import org.springframework.data.domain.Sort;
- import org.springframework.util.CollectionUtils;
-
- import java.time.LocalDateTime;
- import java.util.*;
-
- @Data
- public abstract class AbstractCriteria<A extends EntityPathBase<?>> {
-
- 	// ----------------------------------------------------------------------
- 	// DEFAULTS
- 	// ----------------------------------------------------------------------
-
- 	protected static final int DEFAULT_PAGE_SIZE = 20;
- 	protected static final int DEFAULT_MAX_ROWS = 100;
-
- 	// ----------------------------------------------------------------------
- 	// COMMON FILTER FIELDS
- 	// ----------------------------------------------------------------------
-
- 	protected Long id;
- 	protected Long fromId;
-
- 	protected Set<Long> includeIds;
- 	protected Set<Long> excludeIds;
-
- 	protected Long createdBy;
- 	protected Long updatedBy;
-
- 	protected LocalDateTime createdDateFrom;
- 	protected LocalDateTime createdDateTo;
- 	protected LocalDateTime updatedDateFrom;
- 	protected LocalDateTime updatedDateTo;
-
- 	// COMMON KEYWORD
- 	protected String keyword;
-
- 	// ----------------------------------------------------------------------
- 	// SORTING (MULTI-COLUMN)
- 	// ----------------------------------------------------------------------
-
- 	/**
- 	 * Ordered sort fields.
- 	 * Example:
- 	 * id -> DESC
- 	 * name -> ASC
- 	 */
--	protected final LinkedHashMap<String, Sort.Direction> sortOrders = new LinkedHashMap<>();
-+	protected final List<OrderSpecifier<?>> orderSpecifiers = new ArrayList<>();
-
- 	// ----------------------------------------------------------------------
- 	// PAGING INPUTS
- 	// ----------------------------------------------------------------------
-
- 	/**
- 	 * Page number (1-based, controller-friendly).
- 	 * If provided, offset is calculated automatically.
- 	 */
- 	protected Integer pageNumber;
-
- 	/**
- 	 * Zero-based offset (advanced usage).
- 	 */
- 	protected Integer offset;
-
- 	/**
- 	 * Page size / limit.
- 	 */
- 	protected Integer limit;
-
- 	// ----------------------------------------------------------------------
- 	// COMMON FILTER LOGIC
- 	// ----------------------------------------------------------------------
-
-@@ -101,67 +105,112 @@ public abstract class AbstractCriteria<A extends EntityPathBase<?>> {
- 			predicate.and(audit.createdDate.goe(createdDateFrom));
- 		}
- 		if (createdDateTo != null) {
- 			predicate.and(audit.createdDate.loe(createdDateTo));
- 		}
- 		if (updatedDateFrom != null) {
- 			predicate.and(audit.updatedDate.goe(updatedDateFrom));
- 		}
- 		if (updatedDateTo != null) {
- 			predicate.and(audit.updatedDate.loe(updatedDateTo));
- 		}
- 		if (!CollectionUtils.isEmpty(includeIds)) {
- 			predicate.and(audit.id.in(includeIds));
- 		}
- 		if (!CollectionUtils.isEmpty(excludeIds)) {
- 			predicate.and(audit.id.notIn(excludeIds));
- 		}
-
- 		return predicate;
- 	}
-
- 	// ----------------------------------------------------------------------
- 	// SORTING
- 	// ----------------------------------------------------------------------
-
--	public void addSort(String property, Sort.Direction direction) {
--		if (StringUtils.isNotBlank(property) && direction != null) {
--			sortOrders.put(property, direction);
-+	public void addSort(
-+			ComparableExpressionBase<? extends Comparable<?>> property,
-+			Sort.Direction direction) {
+diff --git a/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/service/ActionService.java b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/service/ActionService.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..8179015297d7f0257a4a9c6c9d050d41f8d09301
+--- /dev/null
++++ b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/service/ActionService.java
+@@ -0,0 +1,31 @@
++package com.tamantaw.projectx.persistence.service;
 +
-+		if (property == null || direction == null) {
-+			return;
-+		}
++import com.tamantaw.projectx.persistence.criteria.ActionCriteria;
++import com.tamantaw.projectx.persistence.dto.ActionDTO;
++import com.tamantaw.projectx.persistence.entity.Action;
++import com.tamantaw.projectx.persistence.entity.QAction;
++import com.tamantaw.projectx.persistence.mapper.ActionMapper;
++import com.tamantaw.projectx.persistence.repository.ActionRepository;
++import com.tamantaw.projectx.persistence.service.base.BaseService;
++import org.apache.logging.log4j.LogManager;
++import org.apache.logging.log4j.Logger;
++import org.springframework.beans.factory.annotation.Autowired;
++import org.springframework.stereotype.Service;
 +
-+		Order order = direction.isAscending() ? Order.ASC : Order.DESC;
-+		orderSpecifiers.add(new OrderSpecifier<>(order, property));
++@Service
++public class ActionService
++		extends BaseService<
++		Action,
++		QAction,
++		ActionCriteria,
++		ActionDTO,
++		ActionMapper> {
++
++	private static final Logger log =
++			LogManager.getLogger("serviceLogs." + ActionService.class.getSimpleName());
++
++	@Autowired
++	public ActionService(ActionRepository actionRepository, ActionMapper mapper) {
++		super(actionRepository, mapper);
++	}
++}
+diff --git a/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/service/AdministratorRoleService.java b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/service/AdministratorRoleService.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..c2e4f77faa8a34b0f753b08fd46e402ed1a75a7f
+--- /dev/null
++++ b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/service/AdministratorRoleService.java
+@@ -0,0 +1,99 @@
++package com.tamantaw.projectx.persistence.service;
++
++import com.tamantaw.projectx.persistence.criteria.AdministratorRoleCriteria;
++import com.tamantaw.projectx.persistence.dto.AdministratorRoleDTO;
++import com.tamantaw.projectx.persistence.entity.Administrator;
++import com.tamantaw.projectx.persistence.entity.AdministratorRole;
++import com.tamantaw.projectx.persistence.entity.QAdministratorRole;
++import com.tamantaw.projectx.persistence.entity.Role;
++import com.tamantaw.projectx.persistence.exception.ConsistencyViolationException;
++import com.tamantaw.projectx.persistence.exception.PersistenceException;
++import com.tamantaw.projectx.persistence.mapper.AdministratorRoleMapper;
++import com.tamantaw.projectx.persistence.repository.AdministratorRoleRepository;
++import com.tamantaw.projectx.persistence.service.base.BaseService;
++import jakarta.persistence.EntityManager;
++import org.apache.logging.log4j.LogManager;
++import org.apache.logging.log4j.Logger;
++import org.springframework.beans.factory.annotation.Autowired;
++import org.springframework.dao.DataIntegrityViolationException;
++import org.springframework.stereotype.Service;
++import org.springframework.util.Assert;
++
++import static com.tamantaw.projectx.persistence.utils.LoggerConstants.DATA_INTEGRITY_VIOLATION_MSG;
++
++@Service
++public class AdministratorRoleService
++		extends BaseService<
++		AdministratorRole,
++		QAdministratorRole,
++		AdministratorRoleCriteria,
++		AdministratorRoleDTO,
++		AdministratorRoleMapper> {
++
++	private static final Logger log =
++			LogManager.getLogger("serviceLogs." + AdministratorRoleService.class.getSimpleName());
++
++	private final EntityManager entityManager;
++
++	@Autowired
++	public AdministratorRoleService(
++			AdministratorRoleRepository administratorRoleRepository,
++			AdministratorRoleMapper mapper,
++			EntityManager entityManager
++	) {
++		super(administratorRoleRepository, mapper);
++		this.entityManager = entityManager;
 +	}
 +
-+	public List<OrderSpecifier<?>> resolveOrderSpecifiers(EntityPathBase<?> root) {
++	@Override
++	public AdministratorRole create(AdministratorRoleDTO dto, long createdBy)
++			throws PersistenceException, ConsistencyViolationException {
 +
-+		if (!CollectionUtils.isEmpty(orderSpecifiers)) {
-+			return List.copyOf(orderSpecifiers);
++		Assert.notNull(dto, "DTO must not be null");
++
++		String c = String.format(
++				"[service=%s][dto=%s]",
++				serviceName(),
++				dto.getClass().getSimpleName()
++		);
++
++		log.info("{} CREATE start createdBy={}", c, createdBy);
++
++		try {
++			AdministratorRole entity = mapper.toEntity(dto);
++			entity.setCreatedBy(createdBy);
++			entity.setUpdatedBy(createdBy);
++
++			applyRelations(entity, dto);
++
++			AdministratorRole saved = repository.saveRecord(entity);
++
++			log.info("{} CREATE success id={}", c, saved.getId());
++			return saved;
 +		}
-+
-+		if (root == null) {
-+			return Collections.emptyList();
- 		}
-+
-+		PathBuilder<?> pb =
-+				new PathBuilder<>(root.getType(), root.getMetadata());
-+
-+		return List.of(new OrderSpecifier<>(Order.DESC, pb.getComparable("id", Comparable.class)));
- 	}
-
- 	public Sort resolveSort() {
-
--		if (sortOrders.isEmpty()) {
-+		List<OrderSpecifier<?>> orders = resolveOrderSpecifiers(null);
-+		if (CollectionUtils.isEmpty(orders)) {
- 			return Sort.by(Sort.Direction.DESC, "id");
- 		}
-
--		List<Sort.Order> orders = new ArrayList<>();
--		for (Map.Entry<String, Sort.Direction> e : sortOrders.entrySet()) {
--			orders.add(new Sort.Order(e.getValue(), e.getKey()));
-+		List<Sort.Order> sortOrders = new ArrayList<>();
-+		for (OrderSpecifier<?> o : orders) {
-+			Sort.Direction direction =
-+					o.getOrder() == Order.ASC ? Sort.Direction.ASC : Sort.Direction.DESC;
-+
-+			String propertyName = resolvePropertyName(o);
-+			if (propertyName == null) {
-+				throw new IllegalArgumentException(
-+						"Unable to resolve property name from order specifier: " + o
-+				);
-+			}
-+
-+			sortOrders.add(new Sort.Order(direction, propertyName));
++		catch (DataIntegrityViolationException e) {
++			log.error("{} CREATE integrity violation dto={}", c, dto, e);
++			throw new ConsistencyViolationException(DATA_INTEGRITY_VIOLATION_MSG, e);
 +		}
-+		return Sort.by(sortOrders);
++		catch (Exception e) {
++			log.error("{} CREATE failed dto={}", c, dto, e);
++			throw new PersistenceException(
++					"Create failed dto=" + dto.getClass().getSimpleName(), e
++			);
++		}
 +	}
 +
-+	private String resolvePropertyName(OrderSpecifier<?> orderSpecifier) {
-+		if (orderSpecifier == null || orderSpecifier.getTarget() == null) {
-+			return null;
++	private void applyRelations(AdministratorRole entity, AdministratorRoleDTO dto) {
++		if (dto.getAdministrator() != null && dto.getAdministrator().getId() != null) {
++			entity.setAdministrator(
++					entityManager.getReference(Administrator.class, dto.getAdministrator().getId())
++			);
 +		}
 +
-+		if (orderSpecifier.getTarget() instanceof Path<?> path) {
-+			return path.getMetadata().getName();
- 		}
--		return Sort.by(orders);
++		if (dto.getRole() != null && dto.getRole().getId() != null) {
++			entity.setRole(
++					entityManager.getReference(Role.class, dto.getRole().getId())
++			);
++		}
++	}
++}
+diff --git a/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/service/AdministratorService.java b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/service/AdministratorService.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..0601720d14ffafa4d25c98fde4b0b7175dd5f9ca
+--- /dev/null
++++ b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/service/AdministratorService.java
+@@ -0,0 +1,34 @@
++package com.tamantaw.projectx.persistence.service;
 +
-+		return null;
- 	}
-
- 	// ----------------------------------------------------------------------
- 	// PAGING
- 	// ----------------------------------------------------------------------
-
- 	/**
- 	 * Computes {@link Pageable} dynamically based on controller inputs.
- 	 *
- 	 * <p><b>Supported controller input combinations</b>:
- 	 * <ul>
- 	 *   <li><b>pageNumber only</b> → offset is auto-calculated</li>
- 	 *   <li><b>pageNumber + limit</b> → offset is auto-calculated</li>
- 	 *   <li><b>offset + limit</b> → raw offset-based paging</li>
- 	 *   <li><b>nothing provided</b> → paging is NOT applied</li>
- 	 * </ul>
- 	 *
- 	 * <p><b>Important contract rule</b>:
- 	 * <ul>
- 	 *   <li>Paging is <b>opt-in</b>.</li>
- 	 *   <li>{@code limit} alone must NOT trigger paging.</li>
- 	 *   <li>{@code findAll()} must never silently truncate results.</li>
- 	 * </ul>
- 	 */
- 	public Pageable toPageable() {
-diff --git a/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/base/AbstractRepositoryImpl.java b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/base/AbstractRepositoryImpl.java
-index 30e99925aed2d9c5a10238d67aa1b972cb29394b..91774ff9789618aae49a163662dd5bc9dc97dee6 100644
---- a/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/base/AbstractRepositoryImpl.java
-+++ b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/base/AbstractRepositoryImpl.java
-@@ -1,45 +1,44 @@
- package com.tamantaw.projectx.persistence.repository.base;
-
- import com.querydsl.core.types.EntityPath;
- import com.querydsl.core.types.Predicate;
- import com.querydsl.core.types.dsl.*;
- import com.querydsl.jpa.JPQLQuery;
- import com.querydsl.jpa.impl.AbstractJPAQuery;
- import com.querydsl.jpa.impl.JPAQueryFactory;
- import com.querydsl.jpa.impl.JPAUpdateClause;
- import com.tamantaw.projectx.persistence.criteria.base.AbstractCriteria;
- import com.tamantaw.projectx.persistence.entity.base.AbstractEntity;
- import com.tamantaw.projectx.persistence.entity.base.QAbstractEntity;
- import jakarta.persistence.EntityManager;
- import org.apache.commons.lang3.ArrayUtils;
- import org.apache.logging.log4j.LogManager;
- import org.apache.logging.log4j.Logger;
- import org.springframework.data.domain.Page;
- import org.springframework.data.domain.PageImpl;
- import org.springframework.data.domain.Pageable;
--import org.springframework.data.domain.Sort;
- import org.springframework.data.jpa.repository.support.*;
- import org.springframework.data.querydsl.EntityPathResolver;
- import org.springframework.data.querydsl.SimpleEntityPathResolver;
- import org.springframework.util.Assert;
-
- import javax.annotation.Nonnull;
- import java.io.Serializable;
- import java.lang.reflect.Field;
- import java.time.LocalDateTime;
- import java.util.ArrayList;
- import java.util.List;
- import java.util.Optional;
-
- /**
-  * Base JPA repository implementation with:
-  * <p>
-  * - QueryDSL-based dynamic criteria
-  * - N+1-safe fetching
-  * - Pagination-safe ordering
-  * - Deterministic results across databases
-  * - Explicit API contracts
-  *
-  * <p>
-  * This class intentionally avoids “magic behavior”.
-  * Every performance-critical decision is explicit and documented.
-@@ -451,76 +450,58 @@ public abstract class AbstractRepositoryImpl<
- 		if (predicate != null) {
- 			query.where(predicate);
- 		}
-
- 		QueryHints qh = getRelatedDataHints(hints);
- 		if (qh != null) {
- 			qh.forEach(query::setHint);
- 		}
-
- 		return query;
- 	}
-
- 	protected void applyAudit(
- 			JPAUpdateClause update,
- 			Long updatedBy) {
-
- 		update.set(audit.updatedDate, LocalDateTime.now());
- 		update.set(audit.updatedBy, updatedBy);
- 	}
-
- 	/**
- 	 * Applies dynamic ORDER BY based on criteria.
- 	 */
- 	protected void applySort(JPQLQuery<?> query, CRITERIA criteria) {
-
--		Sort sort = criteria.resolveSort();
--		if (sort == null || !sort.isSorted()) {
-+		List<OrderSpecifier<?>> orderSpecifiers =
-+				criteria.resolveOrderSpecifiers(path);
++import com.tamantaw.projectx.persistence.criteria.AdministratorCriteria;
++import com.tamantaw.projectx.persistence.dto.AdministratorDTO;
++import com.tamantaw.projectx.persistence.entity.Administrator;
++import com.tamantaw.projectx.persistence.entity.QAdministrator;
++import com.tamantaw.projectx.persistence.mapper.AdministratorMapper;
++import com.tamantaw.projectx.persistence.repository.AdministratorRepository;
++import com.tamantaw.projectx.persistence.service.base.BaseService;
++import org.apache.logging.log4j.LogManager;
++import org.apache.logging.log4j.Logger;
++import org.springframework.beans.factory.annotation.Autowired;
++import org.springframework.stereotype.Service;
 +
-+		if (orderSpecifiers == null || orderSpecifiers.isEmpty()) {
- 			return;
- 		}
-
--		PathBuilder<?> pb =
--				new PathBuilder<>(path.getType(), path.getMetadata());
--
--		for (Sort.Order o : sort) {
--			try {
--				ComparableExpressionBase<?> exp =
--						pb.getComparable(o.getProperty(), Comparable.class);
--
--				query.orderBy(
--						o.isAscending() ? exp.asc() : exp.desc()
--				);
--			}
--			catch (IllegalArgumentException ex) {
--				throw new IllegalArgumentException(
--						"Invalid sort property '" + o.getProperty() + "' for entity "
--								+ path.getType().getSimpleName()
--								+ ". Ensure the field exists and is Comparable.",
--						ex
--				);
--			}
--		}
-+		query.orderBy(orderSpecifiers.toArray(new OrderSpecifier<?>[0]));
- 	}
-
- 	protected int bulkInChunkSize() {
- 		return 1000;
- 	}
-
- 	/**
- 	 * Preserves ID order explicitly using CASE expressions.
- 	 *
- 	 * <p>
- 	 * Used only for non-Postgres databases.
- 	 * Page size bounds the SQL complexity.
- 	 * </p>
- 	 */
- 	protected void applyIdOrder(
- 			JPQLQuery<?> query,
- 			List<Long> ids) {
-
- 		if (ids == null || ids.isEmpty()) {
- 			return;
- 		}
-
- 		CaseBuilder cb = new CaseBuilder();
- 		CaseBuilder.Cases<Integer, NumberExpression<Integer>> cases = null;
-
-@@ -576,26 +557,25 @@ public abstract class AbstractRepositoryImpl<
- 		}
-
- 		throw new IllegalStateException(
- 				"QAbstractEntity audit path not resolvable"
- 		);
- 	}
-
- 	private static <T> List<List<T>> chunk(
- 			List<T> src,
- 			int size) {
-
- 		if (src == null || src.isEmpty()) {
- 			return List.of();
- 		}
-
- 		List<List<T>> out =
- 				new ArrayList<>((src.size() + size - 1) / size);
-
- 		for (int i = 0; i < src.size(); i += size) {
- 			out.add(src.subList(i, Math.min(src.size(), i + size)));
- 		}
-
- 		return out;
- 	}
- }
--
-diff --git a/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/RoleServiceIT.java b/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/RoleServiceIT.java
-index 43a49f8893d18ef9172c8a9e9c8d81bff743c80d..6f750eda49dcba91480dd5761c3abca3ee745e6f 100644
---- a/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/RoleServiceIT.java
-+++ b/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/RoleServiceIT.java
-@@ -238,65 +238,65 @@ public class RoleServiceIT extends CommonTestBase {
- 		assertNotNull(page);
- 		assertTrue(page.getRecordsTotal() >= 2);
- 		assertEquals(page.getNumber(), 0); // Spring Page is 0-based
- 		assertTrue(page.getSize() > 0);    // should be DEFAULT_PAGE_SIZE (20) if you expose it
- 	}
-
- 	@Test
- 	public void findByPaging_withPageNumberAndLimit() throws Exception {
- 		RoleCriteria criteria = new RoleCriteria();
- 		criteria.setAppName("projectx");
- 		criteria.setPageNumber(1);
- 		criteria.setLimit(1);
-
- 		PaginatedResult<RoleDTO> page = roleService.findByPaging(criteria);
-
- 		assertNotNull(page);
- 		assertEquals(page.getNumber(), 0);
- 		assertEquals(page.getSize(), 1);
- 		assertEquals(page.getData().size(), 1);
- 	}
-
- 	@Test
- 	public void findAll_sortedByIdDesc() throws Exception {
- 		RoleCriteria criteria = new RoleCriteria();
- 		criteria.setAppName("projectx");
--		criteria.addSort("id", Sort.Direction.DESC);
-+		criteria.addSort(QRole.role.id, Sort.Direction.DESC);
-
- 		List<RoleDTO> roles = roleService.findAll(criteria);
-
- 		assertTrue(roles.size() >= 2);
- 		assertTrue(roles.get(0).getId() > roles.get(1).getId());
- 	}
-
- 	@Test
- 	public void findAll_multiSort_roleTypeAsc_nameAsc() throws Exception {
- 		RoleCriteria criteria = new RoleCriteria();
- 		criteria.setAppName("projectx");
-
--		criteria.addSort("roleType", Sort.Direction.ASC);
--		criteria.addSort("name", Sort.Direction.ASC);
-+		criteria.addSort(QRole.role.roleType, Sort.Direction.ASC);
-+		criteria.addSort(QRole.role.name, Sort.Direction.ASC);
-
- 		List<RoleDTO> roles = roleService.findAll(criteria);
-
- 		assertTrue(roles.size() >= 2);
- 	}
-
- 	@Test
- 	public void findByPaging_withNestedActionCriteria() throws Exception {
- 		ActionCriteria actionCriteria = new ActionCriteria();
- 		actionCriteria.setPage("User");
-
- 		RoleCriteria roleCriteria = new RoleCriteria();
- 		roleCriteria.setAppName("projectx");
- 		roleCriteria.setAction(actionCriteria);
- 		roleCriteria.setLimit(10);
- 		roleCriteria.setOffset(0);
-
- 		PaginatedResult<RoleDTO> page =
- 				roleService.findByPaging(roleCriteria, "Role(roleActions(action))");
-
- 		assertFalse(page.getData().isEmpty());
-
- 		assertTrue(
- 				page.getData().stream()
- 						.anyMatch(r -> "SUPER-USER".equals(r.getName()))
-@@ -320,52 +320,52 @@ public class RoleServiceIT extends CommonTestBase {
- 		assertFalse(roles.isEmpty());
- 		assertTrue(
- 				roles.stream().anyMatch(r -> "SUPER-USER".equals(r.getName()))
- 		);
- 	}
-
- 	@Test
- 	public void findByPaging_withNestedCriteria_multiSort_andOffsetLimit() throws Exception {
-
- 		// ------------------------------------------------------------------
- 		// GIVEN: nested Action criteria (forces EXISTS + ID-first paging)
- 		// ------------------------------------------------------------------
-
- 		ActionCriteria actionCriteria = new ActionCriteria();
- 		actionCriteria.setPage("User");
-
- 		RoleCriteria criteria = new RoleCriteria();
- 		criteria.setAppName("projectx");
- 		criteria.setAction(actionCriteria);
-
- 		// ------------------------------------------------------------------
- 		// GIVEN: multi-column global sorting
- 		// ORDER BY roleType ASC, id DESC
- 		// ------------------------------------------------------------------
-
--		criteria.addSort("roleType", Sort.Direction.ASC);
--		criteria.addSort("id", Sort.Direction.DESC);
-+		criteria.addSort(QRole.role.roleType, Sort.Direction.ASC);
-+		criteria.addSort(QRole.role.id, Sort.Direction.DESC);
-
- 		// ------------------------------------------------------------------
- 		// GIVEN: paging via offset + limit
- 		// ------------------------------------------------------------------
-
- 		criteria.setOffset(0);
- 		criteria.setLimit(2);
-
- 		// ------------------------------------------------------------------
- 		// WHEN
- 		// ------------------------------------------------------------------
-
- 		PaginatedResult<RoleDTO> page =
- 				roleService.findByPaging(criteria, "Role(roleActions(action))");
-
- 		// ------------------------------------------------------------------
- 		// THEN: paging metadata
- 		// ------------------------------------------------------------------
-
- 		assertNotNull(page);
- 		assertTrue(page.getRecordsTotal() > 0);
- 		assertEquals(page.getSize(), 2);
- 		assertTrue(page.getNumberOfElements() <= 2);
- 		assertFalse(page.getData().isEmpty());
-
-@@ -376,26 +376,26 @@ public class RoleServiceIT extends CommonTestBase {
- 		// ------------------------------------------------------------------
-
- 		RoleDTO first = roles.getFirst();
- 		assertNotNull(first.getActions());
- 		assertFalse(first.getActions().isEmpty());
-
- 		// ------------------------------------------------------------------
- 		// THEN: ordering must respect DB semantics
- 		// roleType ASC (DB value), id DESC (within same roleType)
- 		// ------------------------------------------------------------------
-
- 		for (int i = 1; i < roles.size(); i++) {
-
- 			RoleDTO prev = roles.get(i - 1);
- 			RoleDTO curr = roles.get(i);
-
- 			// Only assert ID order when roleType is equal
- 			if (prev.getRoleType().equals(curr.getRoleType())) {
- 				assertTrue(
- 						prev.getId() >= curr.getId(),
- 						"Expected id DESC ordering within same roleType"
- 				);
- 			}
- 		}
- 	}
--}
-\ No newline at end of file
++@Service
++public class AdministratorService
++		extends BaseService<
++		Administrator,
++		QAdministrator,
++		AdministratorCriteria,
++		AdministratorDTO,
++		AdministratorMapper> {
++
++	private static final Logger log =
++			LogManager.getLogger("serviceLogs." + AdministratorService.class.getSimpleName());
++
++	@Autowired
++	public AdministratorService(
++			AdministratorRepository administratorRepository,
++			AdministratorMapper mapper
++	) {
++		super(administratorRepository, mapper);
++	}
++}
+diff --git a/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/service/RoleActionService.java b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/service/RoleActionService.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..fbbf032e8a84a6661270625c729060edabdcb369
+--- /dev/null
++++ b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/service/RoleActionService.java
+@@ -0,0 +1,99 @@
++package com.tamantaw.projectx.persistence.service;
++
++import com.tamantaw.projectx.persistence.criteria.RoleActionCriteria;
++import com.tamantaw.projectx.persistence.dto.RoleActionDTO;
++import com.tamantaw.projectx.persistence.entity.Action;
++import com.tamantaw.projectx.persistence.entity.QRoleAction;
++import com.tamantaw.projectx.persistence.entity.Role;
++import com.tamantaw.projectx.persistence.entity.RoleAction;
++import com.tamantaw.projectx.persistence.exception.ConsistencyViolationException;
++import com.tamantaw.projectx.persistence.exception.PersistenceException;
++import com.tamantaw.projectx.persistence.mapper.RoleActionMapper;
++import com.tamantaw.projectx.persistence.repository.RoleActionRepository;
++import com.tamantaw.projectx.persistence.service.base.BaseService;
++import jakarta.persistence.EntityManager;
++import org.apache.logging.log4j.LogManager;
++import org.apache.logging.log4j.Logger;
++import org.springframework.beans.factory.annotation.Autowired;
++import org.springframework.dao.DataIntegrityViolationException;
++import org.springframework.stereotype.Service;
++import org.springframework.util.Assert;
++
++import static com.tamantaw.projectx.persistence.utils.LoggerConstants.DATA_INTEGRITY_VIOLATION_MSG;
++
++@Service
++public class RoleActionService
++		extends BaseService<
++		RoleAction,
++		QRoleAction,
++		RoleActionCriteria,
++		RoleActionDTO,
++		RoleActionMapper> {
++
++	private static final Logger log =
++			LogManager.getLogger("serviceLogs." + RoleActionService.class.getSimpleName());
++
++	private final EntityManager entityManager;
++
++	@Autowired
++	public RoleActionService(
++			RoleActionRepository roleActionRepository,
++			RoleActionMapper mapper,
++			EntityManager entityManager
++	) {
++		super(roleActionRepository, mapper);
++		this.entityManager = entityManager;
++	}
++
++	@Override
++	public RoleAction create(RoleActionDTO dto, long createdBy)
++			throws PersistenceException, ConsistencyViolationException {
++
++		Assert.notNull(dto, "DTO must not be null");
++
++		String c = String.format(
++				"[service=%s][dto=%s]",
++				serviceName(),
++				dto.getClass().getSimpleName()
++		);
++
++		log.info("{} CREATE start createdBy={}", c, createdBy);
++
++		try {
++			RoleAction entity = mapper.toEntity(dto);
++			entity.setCreatedBy(createdBy);
++			entity.setUpdatedBy(createdBy);
++
++			applyRelations(entity, dto);
++
++			RoleAction saved = repository.saveRecord(entity);
++
++			log.info("{} CREATE success id={}", c, saved.getId());
++			return saved;
++		}
++		catch (DataIntegrityViolationException e) {
++			log.error("{} CREATE integrity violation dto={}", c, dto, e);
++			throw new ConsistencyViolationException(DATA_INTEGRITY_VIOLATION_MSG, e);
++		}
++		catch (Exception e) {
++			log.error("{} CREATE failed dto={}", c, dto, e);
++			throw new PersistenceException(
++					"Create failed dto=" + dto.getClass().getSimpleName(), e
++			);
++		}
++	}
++
++	private void applyRelations(RoleAction entity, RoleActionDTO dto) {
++		if (dto.getRole() != null && dto.getRole().getId() != null) {
++			entity.setRole(
++					entityManager.getReference(Role.class, dto.getRole().getId())
++			);
++		}
++
++		if (dto.getAction() != null && dto.getAction().getId() != null) {
++			entity.setAction(
++					entityManager.getReference(Action.class, dto.getAction().getId())
++			);
++		}
++	}
++}
+diff --git a/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/ActionServiceIT.java b/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/ActionServiceIT.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..ba563a62c0cb5acb30841156086983fd411c1ba4
+--- /dev/null
++++ b/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/ActionServiceIT.java
+@@ -0,0 +1,144 @@
++package com.tamantaw.projectx.integrationTests;
++
++import com.tamantaw.projectx.CommonTestBase;
++import com.tamantaw.projectx.persistence.criteria.ActionCriteria;
++import com.tamantaw.projectx.persistence.criteria.RoleCriteria;
++import com.tamantaw.projectx.persistence.dto.ActionDTO;
++import com.tamantaw.projectx.persistence.entity.Action;
++import com.tamantaw.projectx.persistence.entity.QAction;
++import com.tamantaw.projectx.persistence.exception.ConsistencyViolationException;
++import com.tamantaw.projectx.persistence.exception.PersistenceException;
++import com.tamantaw.projectx.persistence.repository.base.UpdateSpec;
++import com.tamantaw.projectx.persistence.service.ActionService;
++import org.springframework.beans.factory.annotation.Autowired;
++import org.testng.annotations.Test;
++
++import java.util.List;
++import java.util.Optional;
++
++import static org.testng.Assert.*;
++
++public class ActionServiceIT extends CommonTestBase {
++
++	@Autowired
++	private ActionService actionService;
++
++	@Test
++	public void findById_existingAction() throws Exception {
++		Optional<ActionDTO> result = actionService.findById(10011L);
++
++		assertTrue(result.isPresent());
++		assertEquals(result.get().getActionName(), "dashboard");
++		assertEquals(result.get().getPage(), "Dashboard");
++		assertEquals(result.get().getAppName(), "projectx");
++		assertEquals(result.get().getActionType(), Action.ActionType.MAIN);
++	}
++
++	@Test
++	public void findOne_byUrl() throws Exception {
++		ActionCriteria criteria = new ActionCriteria();
++		criteria.setUrl("^/sec/users$");
++
++		Optional<ActionDTO> result = actionService.findOne(criteria);
++
++		assertTrue(result.isPresent());
++		assertEquals(result.get().getActionName(), "userList");
++		assertEquals(result.get().getPage(), "User");
++	}
++
++	@Test
++	public void findAll_byRoleCriteria() throws Exception {
++		RoleCriteria roleCriteria = new RoleCriteria();
++		roleCriteria.setName("SUPER-USER");
++
++		ActionCriteria criteria = new ActionCriteria();
++		criteria.setAppName("projectx");
++		criteria.setRole(roleCriteria);
++
++		List<ActionDTO> actions = actionService.findAll(criteria);
++
++		assertFalse(actions.isEmpty());
++		assertTrue(
++				actions.stream().anyMatch(a -> "dashboard".equals(a.getActionName()))
++		);
++	}
++
++	@Test
++	public void create_persistsAction() throws ConsistencyViolationException, PersistenceException {
++		ActionDTO dto = new ActionDTO();
++		dto.setAppName("projectx");
++		dto.setPage("Reports");
++		dto.setActionName("reportsOverview");
++		dto.setDisplayName("Reports overview");
++		dto.setActionType(Action.ActionType.SUB);
++		dto.setUrl("^/sec/reports/overview$");
++		dto.setDescription("Report overview action for integration test");
++
++		Action saved = actionService.create(dto, TEST_CREATE_USER_ID);
++
++		assertNotNull(saved.getId());
++		assertEquals(saved.getCreatedBy(), TEST_CREATE_USER_ID);
++		assertEquals(saved.getUpdatedBy(), TEST_CREATE_USER_ID);
++	}
++
++	@Test
++	public void update_updatesDisplayName() throws Exception {
++		ActionDTO dto = new ActionDTO();
++		dto.setAppName("projectx");
++		dto.setPage("TempPage");
++		dto.setActionName("tempActionUpdate");
++		dto.setDisplayName("Temp action");
++		dto.setActionType(Action.ActionType.SUB);
++		dto.setUrl("^/sec/temp/update-action$");
++		dto.setDescription("Temporary action for update test");
++
++		actionService.create(dto, TEST_CREATE_USER_ID);
++
++		ActionCriteria criteria = new ActionCriteria();
++		criteria.setActionName("tempActionUpdate");
++
++		UpdateSpec<Action> spec = (update, root) ->
++				update.set(QAction.action.displayName, "Updated Temp Action");
++
++		long affected = actionService.update(spec, criteria, TEST_UPDATE_USER_ID);
++
++		assertEquals(affected, 1L);
++
++		Action updated = entityManager
++				.createQuery(
++						"select a from Action a where a.actionName = :name",
++						Action.class
++				)
++				.setParameter("name", "tempActionUpdate")
++				.getSingleResult();
++
++		assertEquals(updated.getDisplayName(), "Updated Temp Action");
++		assertEquals(updated.getUpdatedBy(), TEST_UPDATE_USER_ID);
++	}
++
++	@Test
++	public void delete_removesAction() throws ConsistencyViolationException, PersistenceException {
++		ActionDTO dto = new ActionDTO();
++		dto.setAppName("projectx");
++		dto.setPage("TempPage");
++		dto.setActionName("tempDeleteAction");
++		dto.setDisplayName("Temp delete action");
++		dto.setActionType(Action.ActionType.SUB);
++		dto.setUrl("^/sec/temp/delete-action$");
++		dto.setDescription("Temporary action for delete test");
++
++		Action saved = actionService.create(dto, TEST_CREATE_USER_ID);
++
++		ActionCriteria criteria = new ActionCriteria();
++		criteria.setActionName("tempDeleteAction");
++
++		long deleted = actionService.delete(criteria);
++
++		assertEquals(deleted, 1L);
++
++		entityManager.flush();
++		entityManager.clear();
++
++		assertNull(entityManager.find(Action.class, saved.getId()));
++	}
++}
+diff --git a/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/AdministratorRoleServiceIT.java b/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/AdministratorRoleServiceIT.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..b416b59ad67dea660b781b36dd6f2cd394f2792d
+--- /dev/null
++++ b/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/AdministratorRoleServiceIT.java
+@@ -0,0 +1,125 @@
++package com.tamantaw.projectx.integrationTests;
++
++import com.tamantaw.projectx.CommonTestBase;
++import com.tamantaw.projectx.persistence.criteria.AdministratorRoleCriteria;
++import com.tamantaw.projectx.persistence.dto.AdministratorDTO;
++import com.tamantaw.projectx.persistence.dto.AdministratorRoleDTO;
++import com.tamantaw.projectx.persistence.dto.RoleDTO;
++import com.tamantaw.projectx.persistence.entity.Administrator;
++import com.tamantaw.projectx.persistence.entity.AdministratorRole;
++import com.tamantaw.projectx.persistence.entity.Role;
++import com.tamantaw.projectx.persistence.exception.ConsistencyViolationException;
++import com.tamantaw.projectx.persistence.exception.PersistenceException;
++import com.tamantaw.projectx.persistence.service.AdministratorRoleService;
++import com.tamantaw.projectx.persistence.service.AdministratorService;
++import com.tamantaw.projectx.persistence.service.RoleService;
++import org.springframework.beans.factory.annotation.Autowired;
++import org.testng.annotations.Test;
++
++import java.util.List;
++import java.util.Optional;
++
++import static org.testng.Assert.*;
++
++public class AdministratorRoleServiceIT extends CommonTestBase {
++
++	@Autowired
++	private AdministratorRoleService administratorRoleService;
++
++	@Autowired
++	private AdministratorService administratorService;
++
++	@Autowired
++	private RoleService roleService;
++
++	@Test
++	public void findById_existingAdministratorRole() throws Exception {
++		Optional<AdministratorRoleDTO> result = administratorRoleService.findById(1L);
++
++		assertTrue(result.isPresent());
++		AdministratorRole entity = entityManager.find(AdministratorRole.class, result.get().getId());
++		assertNotNull(entity);
++		assertEquals(entity.getAdministrator().getId(), 1L);
++		assertEquals(entity.getRole().getId(), 1L);
++	}
++
++	@Test
++	public void findAll_byRoleId() throws Exception {
++		AdministratorRoleCriteria criteria = new AdministratorRoleCriteria();
++		criteria.setRoleId(1L);
++
++		List<AdministratorRoleDTO> mappings = administratorRoleService.findAll(criteria);
++
++		assertFalse(mappings.isEmpty());
++		assertTrue(
++				mappings.stream().allMatch(m -> {
++					AdministratorRole entity = entityManager.find(AdministratorRole.class, m.getId());
++					return entity != null && entity.getRole().getId().equals(1L);
++				})
++		);
++	}
++
++	@Test
++	public void create_persistsAdministratorRole() throws ConsistencyViolationException, PersistenceException {
++		Administrator newAdmin = createAdministrator("link-admin@example.com");
++		RoleDTO role = roleService.findById(2L).orElseThrow();
++
++		AdministratorDTO adminRef = new AdministratorDTO();
++		adminRef.setId(newAdmin.getId());
++
++		AdministratorRoleDTO dto = new AdministratorRoleDTO();
++		dto.setAdministrator(adminRef);
++
++		RoleDTO roleRef = new RoleDTO();
++		roleRef.setId(role.getId());
++		dto.setRole(roleRef);
++
++		AdministratorRole saved = administratorRoleService.create(dto, TEST_CREATE_USER_ID);
++
++		assertNotNull(saved.getId());
++		assertEquals(saved.getAdministrator().getId(), newAdmin.getId());
++		assertEquals(saved.getRole().getId(), role.getId());
++	}
++
++	@Test
++	public void delete_removesAdministratorRole() throws ConsistencyViolationException, PersistenceException {
++		Administrator newAdmin = createAdministrator("unlink-admin@example.com");
++		RoleDTO role = roleService.findById(1L).orElseThrow();
++
++		AdministratorDTO adminRef = new AdministratorDTO();
++		adminRef.setId(newAdmin.getId());
++
++		RoleDTO roleRef = new RoleDTO();
++		roleRef.setId(role.getId());
++
++		AdministratorRoleDTO dto = new AdministratorRoleDTO();
++		dto.setAdministrator(adminRef);
++		dto.setRole(roleRef);
++
++		AdministratorRole saved = administratorRoleService.create(dto, TEST_CREATE_USER_ID);
++
++		AdministratorRoleCriteria criteria = new AdministratorRoleCriteria();
++		criteria.setAdministratorId(newAdmin.getId());
++
++		long deleted = administratorRoleService.delete(criteria);
++
++		assertEquals(deleted, 1L);
++
++		entityManager.flush();
++		entityManager.clear();
++
++		assertNull(entityManager.find(AdministratorRole.class, saved.getId()));
++	}
++
++	private Administrator createAdministrator(String loginId)
++			throws ConsistencyViolationException, PersistenceException {
++
++		AdministratorDTO dto = new AdministratorDTO();
++		dto.setName("Admin for Link " + loginId);
++		dto.setLoginId(loginId);
++		dto.setPassword("secret");
++		dto.setStatus(Administrator.Status.ACTIVE);
++
++		return administratorService.create(dto, TEST_CREATE_USER_ID);
++	}
++}
+diff --git a/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/AdministratorServiceIT.java b/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/AdministratorServiceIT.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..a41a373a80d2249e985caf15e6c1c59e11f152b9
+--- /dev/null
++++ b/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/AdministratorServiceIT.java
+@@ -0,0 +1,132 @@
++package com.tamantaw.projectx.integrationTests;
++
++import com.tamantaw.projectx.CommonTestBase;
++import com.tamantaw.projectx.persistence.criteria.AdministratorCriteria;
++import com.tamantaw.projectx.persistence.criteria.RoleCriteria;
++import com.tamantaw.projectx.persistence.dto.AdministratorDTO;
++import com.tamantaw.projectx.persistence.entity.Administrator;
++import com.tamantaw.projectx.persistence.entity.QAdministrator;
++import com.tamantaw.projectx.persistence.exception.ConsistencyViolationException;
++import com.tamantaw.projectx.persistence.exception.PersistenceException;
++import com.tamantaw.projectx.persistence.repository.base.UpdateSpec;
++import com.tamantaw.projectx.persistence.service.AdministratorService;
++import org.springframework.beans.factory.annotation.Autowired;
++import org.testng.annotations.Test;
++
++import java.util.List;
++import java.util.Optional;
++
++import static org.testng.Assert.*;
++
++public class AdministratorServiceIT extends CommonTestBase {
++
++	@Autowired
++	private AdministratorService administratorService;
++
++	@Test
++	public void findById_existingAdministrator() throws Exception {
++		Optional<AdministratorDTO> result = administratorService.findById(1L);
++
++		assertTrue(result.isPresent());
++		assertEquals(result.get().getLoginId(), "tha@superuser");
++		assertEquals(result.get().getStatus(), Administrator.Status.ACTIVE);
++	}
++
++	@Test
++	public void findOne_byLoginId() throws Exception {
++		AdministratorCriteria criteria = new AdministratorCriteria();
++		criteria.setLoginId("zeyar@superuser");
++
++		Optional<AdministratorDTO> result = administratorService.findOne(criteria);
++
++		assertTrue(result.isPresent());
++		assertEquals(result.get().getName(), "Zeyar Phyo Maung");
++	}
++
++	@Test
++	public void findAll_byRoleCriteria() throws Exception {
++		RoleCriteria roleCriteria = new RoleCriteria();
++		roleCriteria.setName("SUPER-USER");
++
++		AdministratorCriteria criteria = new AdministratorCriteria();
++		criteria.setRole(roleCriteria);
++
++		List<AdministratorDTO> administrators = administratorService.findAll(criteria);
++
++		assertFalse(administrators.isEmpty());
++		assertTrue(
++				administrators.stream()
++						.allMatch(a -> a.getLoginId().contains("@superuser"))
++		);
++	}
++
++	@Test
++	public void create_persistsAdministrator() throws ConsistencyViolationException, PersistenceException {
++		AdministratorDTO dto = new AdministratorDTO();
++		dto.setName("Integration Admin");
++		dto.setLoginId("integration-admin@example.com");
++		dto.setPassword("secret");
++		dto.setStatus(Administrator.Status.ACTIVE);
++
++		Administrator saved = administratorService.create(dto, TEST_CREATE_USER_ID);
++
++		assertNotNull(saved.getId());
++		assertEquals(saved.getCreatedBy(), TEST_CREATE_USER_ID);
++		assertEquals(saved.getUpdatedBy(), TEST_CREATE_USER_ID);
++	}
++
++	@Test
++	public void update_updatesStatus() throws Exception {
++		AdministratorDTO dto = new AdministratorDTO();
++		dto.setName("Updatable Admin");
++		dto.setLoginId("update-admin@example.com");
++		dto.setPassword("secret");
++		dto.setStatus(Administrator.Status.ACTIVE);
++
++		administratorService.create(dto, TEST_CREATE_USER_ID);
++
++		AdministratorCriteria criteria = new AdministratorCriteria();
++		criteria.setLoginId("update-admin@example.com");
++
++		UpdateSpec<Administrator> spec = (update, root) ->
++				update.set(QAdministrator.administrator.status, Administrator.Status.SUSPENDED);
++
++		long affected = administratorService.update(spec, criteria, TEST_UPDATE_USER_ID);
++
++		assertEquals(affected, 1L);
++
++		Administrator updated = entityManager
++				.createQuery(
++						"select a from Administrator a where a.loginId = :login",
++						Administrator.class
++				)
++				.setParameter("login", "update-admin@example.com")
++				.getSingleResult();
++
++		assertEquals(updated.getStatus(), Administrator.Status.SUSPENDED);
++		assertEquals(updated.getUpdatedBy(), TEST_UPDATE_USER_ID);
++	}
++
++	@Test
++	public void delete_removesAdministrator() throws ConsistencyViolationException, PersistenceException {
++		AdministratorDTO dto = new AdministratorDTO();
++		dto.setName("Deletable Admin");
++		dto.setLoginId("delete-admin@example.com");
++		dto.setPassword("secret");
++		dto.setStatus(Administrator.Status.ACTIVE);
++
++		Administrator saved = administratorService.create(dto, TEST_CREATE_USER_ID);
++
++		AdministratorCriteria criteria = new AdministratorCriteria();
++		criteria.setLoginId("delete-admin@example.com");
++
++		long deleted = administratorService.delete(criteria);
++
++		assertEquals(deleted, 1L);
++
++		entityManager.flush();
++		entityManager.clear();
++
++		assertNull(entityManager.find(Administrator.class, saved.getId()));
++	}
++}
+diff --git a/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/RoleActionServiceIT.java b/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/RoleActionServiceIT.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..b32b35fc5bcd4957859c50441dfb0f6bc7c160de
+--- /dev/null
++++ b/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/RoleActionServiceIT.java
+@@ -0,0 +1,145 @@
++package com.tamantaw.projectx.integrationTests;
++
++import com.tamantaw.projectx.CommonTestBase;
++import com.tamantaw.projectx.persistence.criteria.RoleActionCriteria;
++import com.tamantaw.projectx.persistence.dto.ActionDTO;
++import com.tamantaw.projectx.persistence.dto.RoleActionDTO;
++import com.tamantaw.projectx.persistence.dto.RoleDTO;
++import com.tamantaw.projectx.persistence.entity.Action;
++import com.tamantaw.projectx.persistence.entity.Role;
++import com.tamantaw.projectx.persistence.entity.RoleAction;
++import com.tamantaw.projectx.persistence.exception.ConsistencyViolationException;
++import com.tamantaw.projectx.persistence.exception.PersistenceException;
++import com.tamantaw.projectx.persistence.service.ActionService;
++import com.tamantaw.projectx.persistence.service.RoleActionService;
++import com.tamantaw.projectx.persistence.service.RoleService;
++import org.springframework.beans.factory.annotation.Autowired;
++import org.testng.annotations.Test;
++
++import java.util.List;
++import java.util.Optional;
++
++import static org.testng.Assert.*;
++
++public class RoleActionServiceIT extends CommonTestBase {
++
++	@Autowired
++	private RoleActionService roleActionService;
++
++	@Autowired
++	private RoleService roleService;
++
++	@Autowired
++	private ActionService actionService;
++
++	@Test
++	public void findById_existingRoleAction() throws Exception {
++		Optional<RoleActionDTO> result = roleActionService.findById(1L);
++
++		assertTrue(result.isPresent());
++		RoleAction entity = entityManager.find(RoleAction.class, result.get().getId());
++		assertNotNull(entity);
++		assertEquals(entity.getRole().getId(), 1L);
++		assertEquals(entity.getAction().getId(), 10011L);
++	}
++
++	@Test
++	public void findAll_byRoleId() throws Exception {
++		RoleActionCriteria criteria = new RoleActionCriteria();
++		criteria.setRoleId(2L);
++
++		List<RoleActionDTO> mappings = roleActionService.findAll(criteria);
++
++		assertEquals(mappings.size(), 3);
++		assertTrue(
++				mappings.stream()
++						.allMatch(m -> {
++							RoleAction entity = entityManager.find(RoleAction.class, m.getId());
++							return entity != null && entity.getRole().getId().equals(2L);
++						})
++		);
++	}
++
++	@Test
++	public void create_persistsRoleAction() throws ConsistencyViolationException, PersistenceException {
++		Role newRole = createRole("TEMP_ROLE_ACTION");
++
++		RoleDTO roleRef = new RoleDTO();
++		roleRef.setId(newRole.getId());
++
++		RoleActionDTO dto = new RoleActionDTO();
++		dto.setRole(roleRef);
++
++		RoleAction saved = roleActionService.create(
++				populateAction(dto, 10021L),
++				TEST_CREATE_USER_ID
++		);
++
++		assertNotNull(saved.getId());
++		assertEquals(saved.getRole().getId(), newRole.getId());
++		assertEquals(saved.getAction().getId(), 10021L);
++	}
++
++	@Test
++	public void delete_removesRoleAction() throws ConsistencyViolationException, PersistenceException {
++		Role newRole = createRole("TEMP_ROLE_ACTION_DELETE");
++		Action newAction = createAction("deleteActionLink", "^/sec/actions/delete-link$");
++
++		RoleDTO roleRef = new RoleDTO();
++		roleRef.setId(newRole.getId());
++
++		ActionDTO actionRef = new ActionDTO();
++		actionRef.setId(newAction.getId());
++
++		RoleActionDTO dto = new RoleActionDTO();
++		dto.setRole(roleRef);
++		dto.setAction(actionRef);
++
++		RoleAction saved = roleActionService.create(dto, TEST_CREATE_USER_ID);
++
++		RoleActionCriteria criteria = new RoleActionCriteria();
++		criteria.setRoleId(newRole.getId());
++		criteria.setActionId(newAction.getId());
++
++		long deleted = roleActionService.delete(criteria);
++
++		assertEquals(deleted, 1L);
++
++		entityManager.flush();
++		entityManager.clear();
++
++		assertNull(entityManager.find(RoleAction.class, saved.getId()));
++	}
++
++	private Role createRole(String name) throws ConsistencyViolationException, PersistenceException {
++		RoleDTO dto = new RoleDTO();
++		dto.setAppName("projectx");
++		dto.setName(name);
++		dto.setRoleType(Role.RoleType.CUSTOM);
++		dto.setDescription("Role for role-action integration test");
++
++		return roleService.create(dto, TEST_CREATE_USER_ID);
++	}
++
++	private RoleActionDTO populateAction(RoleActionDTO dto, long actionId) {
++		ActionDTO actionRef = new ActionDTO();
++		actionRef.setId(actionId);
++		dto.setAction(actionRef);
++		return dto;
++	}
++
++	private Action createAction(String actionName, String url)
++			throws ConsistencyViolationException, PersistenceException {
++
++		ActionDTO dto = new ActionDTO();
++		dto.setAppName("projectx");
++		dto.setPage("Integration");
++		dto.setActionName(actionName);
++		dto.setDisplayName("Integration Action " + actionName);
++		dto.setActionType(Action.ActionType.SUB);
++		dto.setUrl(url);
++		dto.setDescription("Action for role-action delete test");
++
++		return actionService.create(dto, TEST_CREATE_USER_ID);
++	}
 +}
