@@ -1,16 +1,323 @@
+diff --git a/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/service/AdministratorService.java b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/service/AdministratorService.java
+index ef4bdf084cf93423c58e32d5c57935436e97779e..0649e572b2fe28974b1bf7faf595abc13e5e95e7 100644
+--- a/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/service/AdministratorService.java
++++ b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/service/AdministratorService.java
+@@ -1,50 +1,52 @@
+ package com.tamantaw.projectx.persistence.service;
+
+ import com.tamantaw.projectx.persistence.criteria.AdministratorCriteria;
+ import com.tamantaw.projectx.persistence.dto.AdministratorDTO;
+ import com.tamantaw.projectx.persistence.entity.Administrator;
+ import com.tamantaw.projectx.persistence.entity.QAdministrator;
+ import com.tamantaw.projectx.persistence.entity.Role;
+ import com.tamantaw.projectx.persistence.entity.AdministratorRole;
++import com.tamantaw.projectx.persistence.exception.ContentNotFoundException;
+ import com.tamantaw.projectx.persistence.exception.ConsistencyViolationException;
+ import com.tamantaw.projectx.persistence.exception.PersistenceException;
+ import com.tamantaw.projectx.persistence.mapper.AdministratorMapper;
+ import com.tamantaw.projectx.persistence.repository.AdministratorRepository;
+ import com.tamantaw.projectx.persistence.service.base.BaseService;
+ import jakarta.persistence.EntityManager;
+ import org.apache.logging.log4j.LogManager;
+ import org.apache.logging.log4j.Logger;
+ import org.springframework.beans.factory.annotation.Autowired;
+ import org.springframework.dao.DataIntegrityViolationException;
+ import org.springframework.stereotype.Service;
+ import org.springframework.util.Assert;
+
+ import java.util.ArrayList;
+ import java.util.LinkedHashSet;
+ import java.util.List;
+ import java.util.Set;
++import java.util.stream.Collectors;
+
+ import static com.tamantaw.projectx.persistence.utils.LoggerConstants.DATA_INTEGRITY_VIOLATION_MSG;
+
+ @Service
+ public class AdministratorService
+ 		extends BaseService<
+ 		Administrator,
+ 		QAdministrator,
+ 		AdministratorCriteria,
+ 		AdministratorDTO,
+ 		AdministratorMapper> {
+
+ 	private static final Logger log =
+ 			LogManager.getLogger("serviceLogs." + AdministratorService.class.getSimpleName());
+
+ 	private final EntityManager entityManager;
+
+ 	@Autowired
+ 	public AdministratorService(
+ 			AdministratorRepository administratorRepository,
+ 			AdministratorMapper mapper,
+ 			EntityManager entityManager
+ 	) {
+ 		super(administratorRepository, mapper);
+ 		this.entityManager = entityManager;
+@@ -82,26 +84,96 @@ public class AdministratorService
+ 				administratorRole.setUpdatedBy(createdBy);
+ 				administratorRoles.add(administratorRole);
+ 			}
+
+ 			entity.setAdministratorRoles(administratorRoles);
+
+ 			Administrator saved = repository.saveRecord(entity);
+
+ 			log.info("{} CREATE_WITH_ROLES success id={} roles={}",
+ 					c, saved.getId(), administratorRoles.size());
+ 			return saved;
+ 		}
+ 		catch (DataIntegrityViolationException e) {
+ 			log.error("{} CREATE_WITH_ROLES integrity violation dto={} roles={}",
+ 					c, dto, roleIds, e);
+ 			throw new ConsistencyViolationException(DATA_INTEGRITY_VIOLATION_MSG, e);
+ 		}
+ 		catch (Exception e) {
+ 			log.error("{} CREATE_WITH_ROLES failed dto={} roles={}", c, dto, roleIds, e);
+ 			throw new PersistenceException(
+ 					"CreateWithRoles failed dto=" + dto.getClass().getSimpleName(),
+ 					e
+ 			);
+ 		}
+ 	}
++
++	public Administrator updateAdministratorAndRoles(Long adminId, List<Long> roleIds)
++			throws PersistenceException, ConsistencyViolationException {
++
++		Assert.notNull(adminId, "adminId must not be null");
++		Assert.notNull(roleIds, "roleIds must not be null");
++		Assert.noNullElements(roleIds, "roleIds must not contain null elements");
++
++		String c = String.format(
++				"[service=%s][domain=%s][id=%d]",
++				serviceName(),
++				"Administrator",
++				adminId
++		);
++
++		log.info("{} UPDATE_WITH_ROLES start roleCount={}", c, roleIds.size());
++
++		try {
++			Administrator administrator = repository.findById(adminId)
++					.orElseThrow(() -> new ContentNotFoundException("Administrator not found id=" + adminId));
++
++			Set<Long> uniqueRoleIds = new LinkedHashSet<>(roleIds);
++			List<AdministratorRole> existingRoles = administrator.getAdministratorRoles();
++
++			// remove associations that are no longer requested
++			existingRoles.removeIf(ar -> !uniqueRoleIds.contains(ar.getRole().getId()));
++
++			// add any missing associations
++			Set<Long> existingRoleIds = existingRoles.stream()
++					.map(ar -> ar.getRole().getId())
++					.collect(Collectors.toSet());
++
++			for (Long roleId : uniqueRoleIds) {
++				if (existingRoleIds.contains(roleId)) {
++					continue;
++				}
++
++				AdministratorRole administratorRole = new AdministratorRole();
++				administratorRole.setAdministrator(administrator);
++				administratorRole.setRole(entityManager.getReference(Role.class, roleId));
++				administratorRole.setCreatedBy(administrator.getUpdatedBy());
++				administratorRole.setUpdatedBy(administrator.getUpdatedBy());
++				existingRoles.add(administratorRole);
++			}
++
++			Administrator saved = repository.saveRecord(administrator);
++
++			log.info("{} UPDATE_WITH_ROLES success id={} roles={} updatedBy={} roleIds={}",
++					c,
++					saved.getId(),
++					saved.getAdministratorRoles().size(),
++					saved.getUpdatedBy(),
++					saved.getAdministratorRoles()
++						.stream()
++						.map(ar -> ar.getRole().getId())
++						.collect(Collectors.toSet())
++			);
++
++			return saved;
++		}
++		catch (DataIntegrityViolationException e) {
++			log.error("{} UPDATE_WITH_ROLES integrity violation adminId={} roleIds={}",
++					c, adminId, roleIds, e);
++			throw new ConsistencyViolationException(DATA_INTEGRITY_VIOLATION_MSG, e);
++		}
++		catch (Exception e) {
++			log.error("{} UPDATE_WITH_ROLES failed adminId={} roleIds={}", c, adminId, roleIds, e);
++			throw new PersistenceException("UpdateWithRoles failed adminId=" + adminId, e);
++		}
++	}
+ }
+diff --git a/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/service/RoleService.java b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/service/RoleService.java
+index 4903048c697b9ff9ae522c4638e1dd1553c21385..017848d8e15aceb3f06e1db3bfaed9030f65c5b5 100644
+--- a/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/service/RoleService.java
++++ b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/service/RoleService.java
+@@ -1,50 +1,52 @@
+ package com.tamantaw.projectx.persistence.service;
+
+ import com.tamantaw.projectx.persistence.criteria.RoleCriteria;
+ import com.tamantaw.projectx.persistence.dto.RoleDTO;
+ import com.tamantaw.projectx.persistence.entity.Action;
+ import com.tamantaw.projectx.persistence.entity.QRole;
+ import com.tamantaw.projectx.persistence.entity.Role;
+ import com.tamantaw.projectx.persistence.entity.RoleAction;
++import com.tamantaw.projectx.persistence.exception.ContentNotFoundException;
+ import com.tamantaw.projectx.persistence.exception.ConsistencyViolationException;
+ import com.tamantaw.projectx.persistence.exception.PersistenceException;
+ import com.tamantaw.projectx.persistence.mapper.RoleMapper;
+ import com.tamantaw.projectx.persistence.repository.RoleRepository;
+ import com.tamantaw.projectx.persistence.service.base.BaseService;
+ import jakarta.persistence.EntityManager;
+ import org.apache.logging.log4j.LogManager;
+ import org.apache.logging.log4j.Logger;
+ import org.springframework.beans.factory.annotation.Autowired;
+ import org.springframework.dao.DataIntegrityViolationException;
+ import org.springframework.stereotype.Service;
+ import org.springframework.util.Assert;
+
+ import java.util.ArrayList;
+ import java.util.LinkedHashSet;
+ import java.util.List;
+ import java.util.Set;
++import java.util.stream.Collectors;
+
+ import static com.tamantaw.projectx.persistence.utils.LoggerConstants.DATA_INTEGRITY_VIOLATION_MSG;
+
+ @Service
+ public class RoleService
+ 		extends BaseService<
+ 		Role,
+ 		QRole,
+ 		RoleCriteria,
+ 		RoleDTO,
+ 		RoleMapper> {
+
+ 	private static final Logger log =
+ 			LogManager.getLogger("serviceLogs." + RoleService.class.getSimpleName());
+
+ 	private final EntityManager entityManager;
+
+ 	@Autowired
+ 	public RoleService(RoleRepository roleRepository, RoleMapper mapper, EntityManager entityManager) {
+
+ 		super(roleRepository, mapper);
+ 		this.entityManager = entityManager;
+ 	}
+
+ 	public Role create(RoleDTO dto, List<Long> actionIds, long createdBy)
+@@ -79,26 +81,97 @@ public class RoleService
+ 				roleAction.setUpdatedBy(createdBy);
+ 				roleActions.add(roleAction);
+ 			}
+
+ 			entity.setRoleActions(roleActions);
+
+ 			Role saved = repository.saveRecord(entity);
+
+ 			log.info("{} CREATE_WITH_ACTIONS success id={} actions={}",
+ 					c, saved.getId(), roleActions.size());
+ 			return saved;
+ 		}
+ 		catch (DataIntegrityViolationException e) {
+ 			log.error("{} CREATE_WITH_ACTIONS integrity violation dto={} actions={}",
+ 					c, dto, actionIds, e);
+ 			throw new ConsistencyViolationException(DATA_INTEGRITY_VIOLATION_MSG, e);
+ 		}
+ 		catch (Exception e) {
+ 			log.error("{} CREATE_WITH_ACTIONS failed dto={} actions={}", c, dto, actionIds, e);
+ 			throw new PersistenceException(
+ 					"CreateWithActions failed dto=" + dto.getClass().getSimpleName(),
+ 					e
+ 			);
+ 		}
+ 	}
++
++	public Role updateRoleAndActions(Long roleId, List<Long> actionIds)
++			throws PersistenceException, ConsistencyViolationException {
++
++		Assert.notNull(roleId, "roleId must not be null");
++		Assert.notNull(actionIds, "actionIds must not be null");
++		Assert.noNullElements(actionIds, "actionIds must not contain null elements");
++
++		String c = String.format(
++				"[service=%s][domain=%s][id=%d]",
++				serviceName(),
++				"Role",
++				roleId
++		);
++
++		log.info("{} UPDATE_WITH_ACTIONS start actionCount={}", c, actionIds.size());
++
++		try {
++			Role role = repository.findById(roleId)
++					.orElseThrow(() -> new ContentNotFoundException("Role not found id=" + roleId));
++
++			Set<Long> uniqueActionIds = new LinkedHashSet<>(actionIds);
++			List<RoleAction> existingRoleActions = role.getRoleActions();
++
++			// remove associations that are no longer requested
++			existingRoleActions.removeIf(ra -> !uniqueActionIds.contains(ra.getAction().getId()));
++
++			// add any missing associations
++			Set<Long> existingActionIds = existingRoleActions.stream()
++					.map(ra -> ra.getAction().getId())
++					.collect(Collectors.toSet());
++
++			for (Long actionId : uniqueActionIds) {
++				if (existingActionIds.contains(actionId)) {
++					continue;
++				}
++
++				RoleAction roleAction = new RoleAction();
++				roleAction.setRole(role);
++				roleAction.setAction(entityManager.getReference(Action.class, actionId));
++				roleAction.setCreatedBy(role.getUpdatedBy());
++				roleAction.setUpdatedBy(role.getUpdatedBy());
++				existingRoleActions.add(roleAction);
++			}
++
++			Role saved = repository.saveRecord(role);
++
++			log.info("{} UPDATE_WITH_ACTIONS success id={} actions={} updatedBy={} actionIds={}",
++					c,
++					saved.getId(),
++					saved.getRoleActions().size(),
++					saved.getUpdatedBy(),
++					saved.getRoleActions()
++						.stream()
++						.map(RoleAction::getAction)
++						.map(Action::getId)
++						.collect(Collectors.toSet())
++			);
++
++			return saved;
++		}
++		catch (DataIntegrityViolationException e) {
++			log.error("{} UPDATE_WITH_ACTIONS integrity violation roleId={} actionIds={}",
++					c, roleId, actionIds, e);
++			throw new ConsistencyViolationException(DATA_INTEGRITY_VIOLATION_MSG, e);
++		}
++		catch (Exception e) {
++			log.error("{} UPDATE_WITH_ACTIONS failed roleId={} actionIds={}", c, roleId, actionIds, e);
++			throw new PersistenceException("UpdateWithActions failed roleId=" + roleId, e);
++		}
++	}
+ }
 diff --git a/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/AdministratorServiceIT.java b/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/AdministratorServiceIT.java
-index 19800d6cf443e87f4e2e77686e4fbbdedb023091..68a3141968cee9e5c44edcc6bc036f678e7850cd 100644
+index 68a3141968cee9e5c44edcc6bc036f678e7850cd..e4a3c085f7f419463a7e9a17bd7d20b1aa2eb9c2 100644
 --- a/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/AdministratorServiceIT.java
 +++ b/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/AdministratorServiceIT.java
-@@ -1,50 +1,92 @@
- package com.tamantaw.projectx.integrationTests;
-
+@@ -3,50 +3,85 @@ package com.tamantaw.projectx.integrationTests;
  import com.tamantaw.projectx.CommonTestBase;
  import com.tamantaw.projectx.persistence.criteria.AdministratorCriteria;
  import com.tamantaw.projectx.persistence.criteria.RoleCriteria;
  import com.tamantaw.projectx.persistence.dto.AdministratorDTO;
  import com.tamantaw.projectx.persistence.entity.Administrator;
-+import com.tamantaw.projectx.persistence.entity.AdministratorRole;
+ import com.tamantaw.projectx.persistence.entity.AdministratorRole;
  import com.tamantaw.projectx.persistence.entity.QAdministrator;
  import com.tamantaw.projectx.persistence.exception.ConsistencyViolationException;
  import com.tamantaw.projectx.persistence.exception.PersistenceException;
@@ -21,7 +328,7 @@ index 19800d6cf443e87f4e2e77686e4fbbdedb023091..68a3141968cee9e5c44edcc6bc036f67
 
  import java.util.List;
  import java.util.Optional;
-+import java.util.stream.Collectors;
+ import java.util.stream.Collectors;
 
  import static org.testng.Assert.*;
 
@@ -31,86 +338,70 @@ index 19800d6cf443e87f4e2e77686e4fbbdedb023091..68a3141968cee9e5c44edcc6bc036f67
  	private AdministratorService administratorService;
 
 +	@Test
-+	public void create_withRoles_persistsAdministratorAndRoles() throws Exception {
++	public void updateAdministratorAndRoles_replacesRoles() throws Exception {
 +		AdministratorDTO dto = new AdministratorDTO();
-+		dto.setName("Admin With Roles");
-+		dto.setLoginId("admin-with-roles@example.com");
++		dto.setName("Admin For Update");
++		dto.setLoginId("update-roles-admin@example.com");
 +		dto.setPassword("secret");
 +		dto.setStatus(Administrator.Status.ACTIVE);
 +
-+		List<Long> roleIds = List.of(1L, 2L, 1L); // include duplicate to ensure uniqueness handling
++		Administrator saved = administratorService.create(dto, List.of(1L), TEST_CREATE_USER_ID);
 +
-+		Administrator saved = administratorService.create(dto, roleIds, TEST_CREATE_USER_ID);
++		entityManager.flush();
++		entityManager.clear();
++
++		administratorService.updateAdministratorAndRoles(saved.getId(), List.of(2L, 1L));
 +
 +		entityManager.flush();
 +		entityManager.clear();
 +
 +		List<AdministratorRole> roles = entityManager
 +				.createQuery(
-+						"select ar from AdministratorRole ar where ar.administrator.id = :adminId",
++						"select ar from AdministratorRole ar join fetch ar.role where ar.administrator.id = :adminId",
 +						AdministratorRole.class
 +				)
 +				.setParameter("adminId", saved.getId())
 +				.getResultList();
 +
-+		assertNotNull(saved.getId());
-+		assertEquals(roles.size(), 2); // duplicate role id should be ignored
-+		assertEquals(saved.getCreatedBy(), TEST_CREATE_USER_ID);
-+		assertEquals(saved.getUpdatedBy(), TEST_CREATE_USER_ID);
++		assertEquals(roles.size(), 2);
 +		assertTrue(
 +				roles.stream()
 +						.map(ar -> ar.getRole().getId())
 +						.collect(Collectors.toSet())
 +						.containsAll(List.of(1L, 2L))
 +		);
-+		assertTrue(
-+				roles.stream()
-+						.allMatch(ar -> ar.getCreatedBy() == TEST_CREATE_USER_ID &&
-+								ar.getUpdatedBy() == TEST_CREATE_USER_ID)
-+		);
 +	}
 +
  	@Test
- 	public void findById_existingAdministrator() throws Exception {
- 		Optional<AdministratorDTO> result = administratorService.findById(1L);
+ 	public void create_withRoles_persistsAdministratorAndRoles() throws Exception {
+ 		AdministratorDTO dto = new AdministratorDTO();
+ 		dto.setName("Admin With Roles");
+ 		dto.setLoginId("admin-with-roles@example.com");
+ 		dto.setPassword("secret");
+ 		dto.setStatus(Administrator.Status.ACTIVE);
 
- 		assertTrue(result.isPresent());
- 		assertEquals(result.get().getLoginId(), "alice@superuser");
- 		assertEquals(result.get().getStatus(), Administrator.Status.ACTIVE);
- 	}
+ 		List<Long> roleIds = List.of(1L, 2L, 1L); // include duplicate to ensure uniqueness handling
 
- 	@Test
- 	public void findOne_byLoginId() throws Exception {
- 		AdministratorCriteria criteria = new AdministratorCriteria();
- 		criteria.setLoginId("bob@superuser");
+ 		Administrator saved = administratorService.create(dto, roleIds, TEST_CREATE_USER_ID);
 
- 		Optional<AdministratorDTO> result = administratorService.findOne(criteria);
+ 		entityManager.flush();
+ 		entityManager.clear();
 
- 		assertTrue(result.isPresent());
- 		assertEquals(result.get().getName(), "Bob Nguyen");
- 	}
+ 		List<AdministratorRole> roles = entityManager
+ 				.createQuery(
+ 						"select ar from AdministratorRole ar where ar.administrator.id = :adminId",
+ 						AdministratorRole.class
+ 				)
+ 				.setParameter("adminId", saved.getId())
+ 				.getResultList();
 
- 	@Test
- 	public void findAll_byRoleCriteria() throws Exception {
- 		RoleCriteria roleCriteria = new RoleCriteria();
- 		roleCriteria.setName("SUPER-USER");
-
+ 		assertNotNull(saved.getId());
+ 		assertEquals(roles.size(), 2); // duplicate role id should be ignored
 diff --git a/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/RoleServiceIT.java b/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/RoleServiceIT.java
-index 6f750eda49dcba91480dd5761c3abca3ee745e6f..28d233614ecb3f73ffa7543157b574f883a66e61 100644
+index 28d233614ecb3f73ffa7543157b574f883a66e61..a9bf39cf1767829750a387a7a1b5dd785af1527b 100644
 --- a/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/RoleServiceIT.java
 +++ b/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/RoleServiceIT.java
-@@ -1,45 +1,48 @@
- package com.tamantaw.projectx.integrationTests;
-
- import com.tamantaw.projectx.CommonTestBase;
- import com.tamantaw.projectx.persistence.criteria.ActionCriteria;
- import com.tamantaw.projectx.persistence.criteria.RoleCriteria;
- import com.tamantaw.projectx.persistence.dto.RoleDTO;
- import com.tamantaw.projectx.persistence.dto.base.PaginatedResult;
-+import com.tamantaw.projectx.persistence.entity.Action;
- import com.tamantaw.projectx.persistence.entity.QRole;
- import com.tamantaw.projectx.persistence.entity.Role;
-+import com.tamantaw.projectx.persistence.entity.RoleAction;
+@@ -12,50 +12,85 @@ import com.tamantaw.projectx.persistence.entity.RoleAction;
  import com.tamantaw.projectx.persistence.exception.ConsistencyViolationException;
  import com.tamantaw.projectx.persistence.exception.PersistenceException;
  import com.tamantaw.projectx.persistence.repository.base.UpdateSpec;
@@ -122,7 +413,7 @@ index 6f750eda49dcba91480dd5761c3abca3ee745e6f..28d233614ecb3f73ffa7543157b574f8
 
  import java.util.List;
  import java.util.Optional;
-+import java.util.stream.Collectors;
+ import java.util.stream.Collectors;
 
  import static org.testng.Assert.assertEquals;
  import static org.testng.Assert.assertTrue;
@@ -136,55 +427,19 @@ index 6f750eda49dcba91480dd5761c3abca3ee745e6f..28d233614ecb3f73ffa7543157b574f8
  	@Autowired
  	private EntityManager entityManager;
 
- 	// ----------------------------------------------------------------------
- 	// FIND BY ID (seed data)
- 	// ----------------------------------------------------------------------
-
- 	@Test
- 	public void findById_existingRole() throws Exception {
- 		Optional<RoleDTO> result = roleService.findById(1L);
-
- 		assertTrue(result.isPresent());
- 		assertEquals(result.get().getName(), "SUPER-USER");
- 		assertEquals(result.get().getAppName(), "projectx");
- 		assertEquals(result.get().getRoleType(), Role.RoleType.SUPERUSER);
-@@ -97,50 +100,90 @@ public class RoleServiceIT extends CommonTestBase {
- 		assertTrue(
- 				roles.stream().anyMatch(r -> r.getName().equals("SUPER-USER"))
- 		);
- 	}
-
- 	// ----------------------------------------------------------------------
- 	// CREATE
- 	// ----------------------------------------------------------------------
-
- 	@Test
- 	public void create_persistsRole() throws Exception {
- 		RoleDTO dto = new RoleDTO();
- 		dto.setAppName("projectx");
- 		dto.setName("TEMP_ROLE");
- 		dto.setRoleType(Role.RoleType.CUSTOM);
- 		dto.setDescription("Temporary role for IT test");
-
- 		Role saved = roleService.create(dto, 100L);
-
- 		assertNotNull(saved.getId());
- 		assertEquals(saved.getName(), "TEMP_ROLE");
- 		assertEquals(saved.getCreatedBy(), 100L);
- 		assertEquals(saved.getUpdatedBy(), 100L);
- 	}
-
 +	@Test
-+	public void create_withActions_persistsRoleAndActions() throws Exception {
++	public void updateRoleAndActions_replacesActions() throws Exception {
 +		RoleDTO dto = new RoleDTO();
 +		dto.setAppName("projectx");
-+		dto.setName("ROLE_WITH_ACTIONS");
++		dto.setName("ROLE_FOR_UPDATE");
 +		dto.setRoleType(Role.RoleType.CUSTOM);
 +
-+		// include duplicate action ID to verify unique handling
-+		List<Long> actionIds = List.of(10021L, 10022L, 10021L);
++		Role saved = roleService.create(dto, List.of(10021L), TEST_CREATE_USER_ID);
 +
-+		Role saved = roleService.create(dto, actionIds, 123L);
++		entityManager.flush();
++		entityManager.clear();
++
++		roleService.updateRoleAndActions(saved.getId(), List.of(10022L, 10021L));
 +
 +		entityManager.flush();
 +		entityManager.clear();
@@ -197,10 +452,7 @@ index 6f750eda49dcba91480dd5761c3abca3ee745e6f..28d233614ecb3f73ffa7543157b574f8
 +				.setParameter("roleId", saved.getId())
 +				.getResultList();
 +
-+		assertNotNull(saved.getId());
-+		assertEquals(roleActions.size(), 2); // duplicate action id should be ignored
-+		assertEquals(saved.getCreatedBy(), 123L);
-+		assertEquals(saved.getUpdatedBy(), 123L);
++		assertEquals(roleActions.size(), 2);
 +		assertTrue(
 +				roleActions.stream()
 +						.map(RoleAction::getAction)
@@ -208,34 +460,30 @@ index 6f750eda49dcba91480dd5761c3abca3ee745e6f..28d233614ecb3f73ffa7543157b574f8
 +						.collect(Collectors.toSet())
 +						.containsAll(List.of(10021L, 10022L))
 +		);
-+		assertTrue(
-+				roleActions.stream()
-+						.allMatch(ra -> ra.getCreatedBy() == 123L && ra.getUpdatedBy() == 123L)
-+		);
 +	}
 +
  	// ----------------------------------------------------------------------
- 	// UPDATE
+ 	// FIND BY ID (seed data)
  	// ----------------------------------------------------------------------
 
  	@Test
- 	public void update_updatesRoleName() throws Exception {
+ 	public void findById_existingRole() throws Exception {
+ 		Optional<RoleDTO> result = roleService.findById(1L);
+
+ 		assertTrue(result.isPresent());
+ 		assertEquals(result.get().getName(), "SUPER-USER");
+ 		assertEquals(result.get().getAppName(), "projectx");
+ 		assertEquals(result.get().getRoleType(), Role.RoleType.SUPERUSER);
+ 	}
+
+ 	// ----------------------------------------------------------------------
+ 	// FIND ONE (CRITERIA)
+ 	// ----------------------------------------------------------------------
+
+ 	@Test
+ 	public void findOne_byName() throws Exception {
  		RoleCriteria criteria = new RoleCriteria();
  		criteria.setName("ADMINISTRATOR");
 
- 		UpdateSpec<Role> spec = (update, root) ->
- 				update.set(QRole.role.name, "ADMIN_UPDATED");
+ 		Optional<RoleDTO> result = roleService.findOne(criteria);
 
- 		long affected = roleService.update(spec, criteria, 200L);
-
- 		assertEquals(affected, 1L);
-
- 		Role updated = entityManager
- 				.createQuery(
- 						"select r from Role r where r.name = :name",
- 						Role.class
- 				)
- 				.setParameter("name", "ADMIN_UPDATED")
- 				.getSingleResult();
-
- 		assertEquals(updated.getUpdatedBy(), 200L);

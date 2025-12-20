@@ -26,6 +26,41 @@ public class AdministratorServiceIT extends CommonTestBase {
 	private AdministratorService administratorService;
 
 	@Test
+	public void updateAdministratorAndRoles_replacesRoles() throws Exception {
+		AdministratorDTO dto = new AdministratorDTO();
+		dto.setName("Admin For Update");
+		dto.setLoginId("update-roles-admin@example.com");
+		dto.setPassword("secret");
+		dto.setStatus(Administrator.Status.ACTIVE);
+
+		Administrator saved = administratorService.create(dto, List.of(1L), TEST_CREATE_USER_ID);
+
+		entityManager.flush();
+		entityManager.clear();
+
+		administratorService.updateAdministratorAndRoles(saved.getId(), List.of(2L, 1L));
+
+		entityManager.flush();
+		entityManager.clear();
+
+		List<AdministratorRole> roles = entityManager
+				.createQuery(
+						"select ar from AdministratorRole ar join fetch ar.role where ar.administrator.id = :adminId",
+						AdministratorRole.class
+				)
+				.setParameter("adminId", saved.getId())
+				.getResultList();
+
+		assertEquals(roles.size(), 2);
+		assertTrue(
+				roles.stream()
+						.map(ar -> ar.getRole().getId())
+						.collect(Collectors.toSet())
+						.containsAll(List.of(1L, 2L))
+		);
+	}
+
+	@Test
 	public void create_withRoles_persistsAdministratorAndRoles() throws Exception {
 		AdministratorDTO dto = new AdministratorDTO();
 		dto.setName("Admin With Roles");

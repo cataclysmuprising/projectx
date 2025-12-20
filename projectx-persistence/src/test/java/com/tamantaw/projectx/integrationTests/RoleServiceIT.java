@@ -34,6 +34,41 @@ public class RoleServiceIT extends CommonTestBase {
 	@Autowired
 	private EntityManager entityManager;
 
+	@Test
+	public void updateRoleAndActions_replacesActions() throws Exception {
+		RoleDTO dto = new RoleDTO();
+		dto.setAppName("projectx");
+		dto.setName("ROLE_FOR_UPDATE");
+		dto.setRoleType(Role.RoleType.CUSTOM);
+
+		Role saved = roleService.create(dto, List.of(10021L), TEST_CREATE_USER_ID);
+
+		entityManager.flush();
+		entityManager.clear();
+
+		roleService.updateRoleAndActions(saved.getId(), List.of(10022L, 10021L));
+
+		entityManager.flush();
+		entityManager.clear();
+
+		List<RoleAction> roleActions = entityManager
+				.createQuery(
+						"select ra from RoleAction ra join fetch ra.action where ra.role.id = :roleId",
+						RoleAction.class
+				)
+				.setParameter("roleId", saved.getId())
+				.getResultList();
+
+		assertEquals(roleActions.size(), 2);
+		assertTrue(
+				roleActions.stream()
+						.map(RoleAction::getAction)
+						.map(Action::getId)
+						.collect(Collectors.toSet())
+						.containsAll(List.of(10021L, 10022L))
+		);
+	}
+
 	// ----------------------------------------------------------------------
 	// FIND BY ID (seed data)
 	// ----------------------------------------------------------------------
