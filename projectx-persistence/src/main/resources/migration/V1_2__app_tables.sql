@@ -148,3 +148,18 @@ CREATE TABLE mjr_admin_x_role (
 
 CREATE INDEX idx_mjr_admin_x_role_admin ON mjr_admin_x_role(admin_id);
 CREATE INDEX idx_mjr_admin_x_role_role  ON mjr_admin_x_role(role_id);
+
+CREATE TABLE mjr_admin_login_history (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    admin_id  BIGINT NOT NULL,
+    ip_address varchar(100),
+    os varchar(100),
+    client_agent varchar(200),
+    login_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    created_date    TIMESTAMP NOT NULL,
+    created_by      BIGINT NOT NULL,
+    updated_date    TIMESTAMP NOT NULL,
+    updated_by      BIGINT NOT NULL,
+);
+COMMENT ON COLUMN "mjr_admin_login_history"."os" IS 'Operating System';
