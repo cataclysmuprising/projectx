@@ -82,7 +82,7 @@
 						<excludes>
 							<exclude>migration/**</exclude>
 							<exclude>others/**</exclude>
-							<exclude>projectx-persistence-dev.yml</exclude>
+							<exclude>persistence-dev.yml</exclude>
 						</excludes>
 					</resource>
 				</resources>
