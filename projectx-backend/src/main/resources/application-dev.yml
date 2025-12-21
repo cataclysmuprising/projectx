@@ -2,6 +2,9 @@
 logging:
   config: classpath:logger/log4j2-dev.yml
 spring:
+  config:
+    import:
+      - classpath:persistence-dev.yml
   thymeleaf: # Thymeleaf
     cache: false
     mode: HTML
@@ -20,6 +23,3 @@ server:
     session:
       timeout:
         72000s
-
-### File upload directory ###
-filestorage-root-dir: 'D:/temp/projectx/files'

@@ -15,9 +15,6 @@ datasource:
     connection-test-query: SELECT 1
 
 spring:
-  config:
-    activate:
-      on-profile: dev
   jpa:
     open-in-view: false
     hibernate:
