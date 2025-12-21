@@ -34,6 +34,7 @@ public class AdministratorRoleService
 			LogManager.getLogger("serviceLogs." + AdministratorRoleService.class.getSimpleName());
 
 	private final EntityManager entityManager;
+	private final AdministratorRoleRepository administratorRoleRepository;
 
 	@Autowired
 	public AdministratorRoleService(
@@ -43,6 +44,7 @@ public class AdministratorRoleService
 	) {
 		super(administratorRoleRepository, mapper);
 		this.entityManager = entityManager;
+		this.administratorRoleRepository = administratorRoleRepository;
 	}
 
 	@Override
@@ -66,7 +68,7 @@ public class AdministratorRoleService
 
 			applyRelations(entity, dto);
 
-			AdministratorRole saved = repository.saveRecord(entity);
+			AdministratorRole saved = administratorRoleRepository.saveRecord(entity);
 
 			log.info("{} CREATE success id={}", c, saved.getId());
 			return saved;

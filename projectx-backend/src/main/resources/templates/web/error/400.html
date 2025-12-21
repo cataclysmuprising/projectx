@@ -1,0 +1,34 @@
+<section class="card" th:fragment="content">
+	<div class="cardHeader">
+		<h1>
+			<span>
+				<strong>4</strong>
+			</span>
+			<span>
+				<strong>0</strong>
+			</span>
+			<span>
+				<strong>5</strong>
+			</span>
+		</h1>
+	</div>
+	<div class="cardContent">
+		<h2>
+			Error !
+			<span>Illegal Access</span>
+		</h2>
+		<hr/>
+		<div class="cardFooter">
+			<p>
+				Sorry
+				<span class="userName" th:text="${loginUserName}"></span>
+				! We assume you are trying to access with illegal ways.Don't be mess-up.
+			</p>
+			Goback to
+			<a th:href="@{/}">Home</a>
+			(or)
+			<a th:href="@{/logout}">Sign In</a>
+			with different Account.
+		</div>
+	</div>
+</section>

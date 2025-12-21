@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="head">
+	<meta charset="utf-8">
+	<meta content="width=device-width, initial-scale=1" name="viewport">
+	<meta name="_ctx" th:content="${contextPath}"/>
+	<meta id="_csrf" name="_csrf" th:content="${_csrf.token}"/>
+	<meta id="_csrf_header" name="_csrf_header" th:content="${_csrf.headerName}"/>
+	<!-- Favicon -->
+	<link rel="shortcut icon" th:href="@{/static/images/site/favicon.ico}" type="image/x-icon"/>
+	<title th:text="(${#strings.isEmpty(appShortName)}  ? 'APP' : ${appShortName}) + (${#strings.isEmpty(pageName)} ?  '' : ' | ' +${pageName})"></title>
+	<!-- Error style -->
+	<link rel="stylesheet" th:href="@{'/static/css/common/error'+ ${isProduction == true ? '.min.css' : '.css'}+'?v='+${buildNumber}}">
+</head>
+<body class="text-sm">
+
+<div th:remove="tag" th:replace="~{${view} :: content}">
+	CONTENT
+</div>
+
+</body>
+</html>

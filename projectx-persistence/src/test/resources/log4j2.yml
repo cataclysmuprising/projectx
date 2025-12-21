@@ -1,4 +1,4 @@
-Configutation:
+Configuration:
   status: warn # log level for configuration errors
   shutdownHook: disable
   ##### Variables #####

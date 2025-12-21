@@ -34,6 +34,7 @@ public class RoleActionService
 			LogManager.getLogger("serviceLogs." + RoleActionService.class.getSimpleName());
 
 	private final EntityManager entityManager;
+	private final RoleActionRepository roleActionRepository;
 
 	@Autowired
 	public RoleActionService(
@@ -43,6 +44,7 @@ public class RoleActionService
 	) {
 		super(roleActionRepository, mapper);
 		this.entityManager = entityManager;
+		this.roleActionRepository = roleActionRepository;
 	}
 
 	@Override
@@ -66,7 +68,7 @@ public class RoleActionService
 
 			applyRelations(entity, dto);
 
-			RoleAction saved = repository.saveRecord(entity);
+			RoleAction saved = roleActionRepository.saveRecord(entity);
 
 			log.info("{} CREATE success id={}", c, saved.getId());
 			return saved;

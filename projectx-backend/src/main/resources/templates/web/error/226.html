@@ -1,0 +1,28 @@
+<section class="card" th:fragment="content">
+	<div class="cardHeader">
+		<h1>
+			<span>
+				<strong>2</strong>
+			</span>
+			<span>
+				<strong>2</strong>
+			</span>
+			<span>
+				<strong>6</strong>
+			</span>
+		</h1>
+	</div>
+	<div class="cardContent">
+		<h2>
+			Error !
+			<span>I'm still in Used</span>
+		</h2>
+		<hr/>
+		<div class="cardFooter">
+			<p>Rejected : Unable to remove your requested informations because this was connected with other resources.If you try to forcely remove it, the entire application will loose consistency.</p>
+			Contact your administrators (or) Go
+			<a th:href="${referer}">Back</a>
+			to your previous page.
+		</div>
+	</div>
+</section>

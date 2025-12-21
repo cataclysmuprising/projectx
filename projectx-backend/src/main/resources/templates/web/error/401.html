@@ -1,0 +1,33 @@
+<section class="card" th:fragment="content">
+	<div class="cardHeader">
+		<h1>
+			<span>
+				<strong>4</strong>
+			</span>
+			<span>
+				<strong>0</strong>
+			</span>
+			<span>
+				<strong>1</strong>
+			</span>
+		</h1>
+	</div>
+	<div class="cardContent">
+		<h2>
+			Error !
+			<span>Session Time Out</span>
+		</h2>
+		<hr/>
+		<div class="cardFooter">
+			<p>
+				Sorry
+				<span class="userName" th:text="${loginUserName}"></span>
+				! You were <strong>AFK</strong><em> (away from keyboard)</em> for a long-time.Your session was expired.
+			</p>
+			<a th:href="@{/login}">Re-login</a>
+			with a new session (or)
+			<a th:href="${referer}">Redirect</a>
+			to your last page.
+		</div>
+	</div>
+</section>

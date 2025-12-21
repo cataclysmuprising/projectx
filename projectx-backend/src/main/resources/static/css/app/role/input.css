@@ -1,0 +1,35 @@
+/***************************
+3.5 selectable table styles
+****************************/
+table.dataTable.selectable tbody td:first-child, table.dataTable.selectable thead th:first-child,
+table.dataTable.selectable thead td:first-child {
+    width: 30px;
+    min-width: 30px;
+    max-width: 30px;
+    text-align: center;
+}
+
+table.dataTable.selectable tr {
+    cursor: pointer;
+}
+
+table.dataTable.selectable .pretty {
+    margin-right: 0;
+}
+
+/**************************
+ 4.4 Pretty CheckBox style
+ **************************/
+.text-sm .pretty .state label:after,
+.text-sm .pretty .state label:before {
+    width: calc(1.23em + 1px) !important;
+    height: calc(1.23em + 1px) !important;
+}
+
+.text-sm .pretty.p-switch .state::before {
+    top: calc((0% - (100% - 1em)) - 5.5%) !important;
+}
+
+.text-sm .pretty.p-switch.p-fill input:checked ~ .state label::after {
+    left: .9em;
+}

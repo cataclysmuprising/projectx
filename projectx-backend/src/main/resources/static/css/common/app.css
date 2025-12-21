@@ -1,0 +1,598 @@
+/**
+ * TABLE OF CONTENTS
+ * 1) General
+ *    1.1) Fonts
+ *    1.2) Misc
+
+ * 2) Theme Override
+ * 	  2.1) Layout Styles
+ *    2.2) Misc
+
+ * 3) Custom Components
+ * 	  3.1) Required Field Label Style
+ *    3.2) DataTable Loading Icon
+ *    3.3) Function Column
+ *    3.4) DataTable detail-control
+ *    3.5) selectable table styles
+
+ * 4) Custom Rules
+ * 	  4.1) DataTable
+ * 	  4.2) Bootstrap Select
+ * 	  4.3) Autocomplete Box
+ *    4.4) Custom Radio Top placement
+
+ * 5) Responsive
+ **/
+
+/*###################
+ 1. General
+ ####################*/
+
+/*******************
+ 1.1 Fonts
+ *******************/
+
+@font-face {
+    font-family: 'Roboto Regular';
+    src: url('../../fonts/Roboto-Regular/Roboto-Regular-webfont.eot');
+    src: url('../../fonts/Roboto-Regular/Roboto-Regular-webfont.eot?#iefix') format('embedded-opentype'),
+    url('../../fonts/Roboto-Regular/Roboto-Regular-webfont.woff') format('woff'),
+    url('../../fonts/Roboto-Regular/Roboto-Regular-webfont.ttf') format('truetype'),
+    url('../../fonts/Roboto-Regular/Roboto-Regular-webfont.svg#robotoregular') format('svg');
+    font-weight: normal;
+    font-style: normal;
+}
+
+/*@font-face {*/
+/*    font-family: 'Roboto Regular';*/
+/*    src: url('http://localhost:8081/reporting-platform/static/fonts/Roboto-Regular/Roboto-Regular-webfont.eot');*/
+/*    src: url('http://localhost:8081/reporting-platform/static/fonts/Roboto-Regular/Roboto-Regular-webfont.eot?#iefix') format('embedded-opentype'),*/
+/*    url('http://localhost:8081/reporting-platform/static/fonts/Roboto-Regular/Roboto-Regular-webfont.woff') format('woff'),*/
+/*    url('http://localhost:8081/reporting-platform/static/fonts/Roboto-Regular/Roboto-Regular-webfont.ttf') format('truetype'),*/
+/*    url('http://localhost:8081/reporting-platform/static/fonts/Roboto-Regular/Roboto-Regular-webfont.svg#robotoregular') format('svg');*/
+/*    font-weight: normal;*/
+/*    font-style: normal;*/
+/*}*/
+
+@font-face {
+    font-family: 'Source Sans Pro';
+    src: url('../../fonts/SourceSansPro-Regular.woff2') format('woff2');
+}
+
+/*@font-face {*/
+/*    font-family: 'Source Sans Pro';*/
+/*    src: url('http://localhost:8081/reporting-platform/static/fonts/SourceSansPro-Regular.woff2') format('woff2');*/
+/*}*/
+
+@font-face {
+    font-family: 'NotoSans Myanmar';
+    font-style: normal;
+    font-size: 11px;
+    font-weight: 400;
+    src: url('../../fonts/NotoSansMyanmar-Regular.ttf') format('truetype');
+}
+
+/*@font-face {*/
+/*    font-family: 'NotoSans Myanmar';*/
+/*    font-style: normal;*/
+/*    font-size: 11px;*/
+/*    font-weight: 400;*/
+/*    src: url('http://localhost:8081/reporting-platform/static/fonts/NotoSansMyanmar-Regular.ttf') format('truetype');*/
+/*}*/
+
+body {
+    font-family: 'Roboto Regular', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+/*******************
+ 1.2 Misc
+ *******************/
+
+div:has(> table.dataTable) {
+    min-height: 100px;
+}
+
+.form-control-sm {
+    height: calc(2.2rem) !important;
+    padding: .25rem .75rem !important;
+}
+
+input {
+    filter: unset !important;
+}
+
+.text-center {
+    text-align: center !important;
+    justify-content: center;
+}
+
+.disabled {
+    cursor: not-allowed;
+}
+
+.lobibox-notify-title {
+    font-size: 1rem !important;
+}
+
+.dataTables_wrapper .col-sm-12 {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+}
+
+/* If using icomoon icons*/
+.nav-sidebar > .nav-item .nav-icon {
+    font-size: 1rem !important;
+}
+
+/*###################
+ 2. Theme Override
+ ####################*/
+
+/**********************
+ 2.1 Layout Styles
+ **********************/
+
+.text-sm .nav-flat .nav-link {
+    padding: .4rem 1.4rem;
+}
+
+.sidebar-collapse .nav-link {
+    padding: .4rem 1rem;
+}
+
+.sidebar-collapse .nav-flat .nav-link {
+    padding: .4rem 1rem;
+}
+
+.text-sm .form-control, .text-sm .dropdown-menu {
+    font-size: .75rem !important;
+}
+
+.text-sm .form-control {
+    border-radius: 0;
+    line-height: 1.5;
+}
+
+.text-sm table {
+    font-size: .65rem;
+}
+
+.text-sm table td .dropdown-menu.show {
+    padding: .3rem 0;
+}
+
+.form-control:focus {
+    border-color: #6c757d;
+}
+
+.text-sm .btn {
+    font-size: .65rem !important;
+    padding: .45rem .75rem;
+    cursor: pointer;
+    line-height: 1.2rem;
+}
+
+.text-sm .btn {
+    line-height: 1.2rem;
+}
+
+.text-sm .btn:disabled, .text-sm .btn.disabled {
+    cursor: not-allowed !important;
+    background-color: #e0e0e0 !important;
+    color: #6f6f6f !important;
+}
+
+.text-sm .btn:not(.btn-tool,.dropdown-toggle), td .btn-group .btn:first-child {
+    padding: .35rem .875rem;
+}
+
+td .btn {
+    line-height: 1rem;
+}
+
+.text-sm .input-group-text {
+    font-size: .75rem !important;
+    padding: .175rem .75rem;
+}
+
+.text-sm .dataTable .btn.dropdown-toggle {
+    padding: .25rem .5rem;
+}
+
+.text-sm .card-title {
+    font-size: .75rem;
+}
+
+.card.card-outline-tabs .card-tools {
+    margin: auto !important;
+}
+
+.text-sm .content-header {
+    padding-bottom: 0;
+}
+
+.text-sm .content-header h1 {
+    font-size: 1rem;
+}
+
+.text-sm .content-wrapper > .content {
+    padding: 0 .5rem 1rem .5rem;
+}
+
+.table td, .table th {
+    border-top: 1px solid #dee2e6;
+}
+
+.table th {
+    /*  padding: .5rem;*/
+    vertical-align: middle;
+    color: #000;
+    font-weight: normal;
+}
+
+.table td {
+    padding: .45rem .625rem;
+    vertical-align: middle;
+    color: #444;
+    line-height: 1.5rem;
+    white-space: nowrap;
+}
+
+.btn .fa, .btn .fas {
+    margin-right: 3px;
+}
+
+.dropdown-menu {
+    min-width: 7.5rem;
+    border-radius: 0;
+}
+
+.modal-header .modal-title {
+    font-size: 1rem !important;
+}
+
+.nav-sidebar > .nav-item .nav-icon.fa, .nav-sidebar > .nav-item .nav-icon.fab, .nav-sidebar > .nav-item .nav-icon.far, .nav-sidebar > .nav-item .nav-icon.fas, .nav-sidebar > .nav-item .nav-icon.glyphicon, .nav-sidebar > .nav-item .nav-icon.ion {
+    font-size: .875rem;
+}
+
+.nav-sidebar .nav-link > .right, .nav-sidebar .nav-link > p > .right {
+    top: .6rem;
+}
+
+.smallPanel {
+    width: 100%;
+    margin: 0 auto;
+    margin-bottom: 1rem;
+}
+
+
+@media (max-width: 768px) {
+    div.dataTables_wrapper div.dataTables_paginate ul.pagination {
+        justify-content: center !important;
+    }
+}
+
+@media (min-width: 360px) {
+    .smallPanel {
+        width: 90%;
+    }
+
+    .col-form-label.text-right {
+        text-align: left !important;
+    }
+
+}
+
+@media (min-width: 768px) {
+    .smallPanel {
+        width: 70%;
+    }
+}
+
+@media (min-width: 1200px) {
+    .smallPanel {
+        width: 55%;
+    }
+}
+
+button:focus {
+    outline: none;
+}
+
+.text-sm .nav-link {
+    padding: .5rem 1rem;
+}
+
+/**********************
+ 2.2 Misc
+ **********************/
+
+.col-form-label {
+    font-weight: 400 !important;
+}
+
+.table td, .table th {
+    vertical-align: middle;
+}
+
+/*####################
+ 3. Custom Components
+ #####################*/
+
+/*******************************
+ 3.1 Required Field Label Style
+ *******************************/
+
+label.required-left::before {
+    font-family: "Font Awesome 5 Free", serif;
+    content: "\f2dc";
+    margin-left: 5px;
+    color: #ff3c3c;
+    font-size: .65rem;
+    position: relative;
+    top: -3px;
+    font-weight: 400;
+}
+
+label.required-right::after {
+    font-family: "Font Awesome 5 Free", serif;
+    content: "\f2dc";
+    margin-left: 5px;
+    color: #ff3c3c;
+    font-size: .65rem;
+    position: relative;
+    top: -3px;
+    font-weight: 400;
+}
+
+/*****************************
+ 3.2 DataTable Loading Icon
+ *****************************/
+#overlay {
+    position: fixed;
+    height: 100%;
+    width: 100%;
+    z-index: 999999;
+    top: 0;
+    left: 0;
+    opacity: .90;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #f7f7f7;
+}
+
+.overlay-spinner {
+    height: 36px;
+    width: 36px;
+    animation: rotate 0.8s infinite linear;
+    border: 3px solid #444;
+    border-right-color: transparent;
+    border-radius: 50%;
+}
+
+@keyframes rotate {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes spinner {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.spinner:before {
+    content: '';
+    box-sizing: border-box;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 30px;
+    height: 30px;
+    margin-top: -10px;
+    margin-left: -10px;
+    border-radius: 50%;
+    animation: spinner .6s linear infinite;
+}
+
+/**********************
+ 3.3 Function Column
+ **********************/
+.functionColumn {
+    width: 100px !important;
+    max-width: 100px !important;
+    min-width: 100px !important;
+    text-align: center;
+    font-weight: 700;
+    cursor: default !important;
+}
+
+/****************************
+3.4 DataTable detail-control
+ ****************************/
+
+.table td.details-control::before {
+    height: 14px;
+    width: 14px;
+    display: block;
+    color: white;
+    border: 2px solid white;
+    border-radius: 14px;
+    box-shadow: 0 0 4px #444;
+    box-sizing: content-box;
+    text-align: center;
+    text-indent: 0 !important;
+    font-family: 'Courier New', Courier, monospace;
+    line-height: 14px;
+    content: '+';
+    background-color: #31b131;
+    margin: 0 auto;
+}
+
+.table tr.shown td.details-control::before {
+    content: '-';
+    background-color: #d33333;
+}
+
+/***************************
+3.5 selectable table styles
+****************************/
+table.dataTable.selectable tbody td:first-child, table.dataTable.selectable thead th:first-child,
+table.dataTable.selectable thead td:first-child {
+    width: 30px;
+    min-width: 30px;
+    max-width: 30px;
+    text-align: center;
+}
+
+table.dataTable.selectable tr {
+    cursor: pointer;
+}
+
+table.dataTable.selectable .pretty {
+    margin-right: 0;
+}
+
+.itemCountWrapper {
+    opacity: 0;
+    position: fixed;
+    top: 10px !important;
+    width: 100%;
+    z-index: 999999999;
+    left: 0;
+}
+
+.itemCountWrapper a {
+    padding: 0.575rem;
+    background-color: #c6c6c6;
+    border: 1px solid #f4f4f4;
+    font-size: 0.875rem;
+}
+
+.itemCountWrapper .count {
+    color: #dd4b39;
+}
+
+
+/*###################
+ 4. Custom Rules
+ ####################*/
+
+/**********************
+ 4.1 DataTable
+ **********************/
+
+div.dataTables_wrapper div.dataTables_processing {
+    background-color: transparent;
+    box-shadow: none;
+    border: none;
+    top: 80px !important;
+}
+
+tbody {
+    min-height: 100px;
+}
+
+.table thead th {
+    border-top-width: 0;
+    border-bottom: none;
+    background-color: #f9f9f9;
+}
+
+/**********************
+ 4.2 Bootstrap Select
+ **********************/
+.dropdown-item {
+    padding: .5rem 1rem !important;
+}
+
+.bootstrap-select.show-tick .dropdown-menu .selected span.check-mark {
+    top: 10px !important;
+}
+
+.is-invalid .bootstrap-select > .btn.dropdown-toggle:not(.disabled), .is-invalid .input-group-append, .bootstrap-select.is-invalid > .btn.dropdown-toggle {
+    border-color: #dc3545 !important;
+}
+
+.is-invalid .input-group-append {
+    margin-left: 0 !important;
+}
+
+.dropdown-item:focus, .dropdown-item:hover {
+    background-color: #f3f3f3;
+}
+
+.bootstrap-select .dropdown-toggle:focus, .bootstrap-select > select.mobile-device:focus + .dropdown-toggle {
+    outline: none !important;
+}
+
+.bootstrap-select .dropdown-toggle.btn-light {
+    background-color: #fff;
+    border-color: #ced4da;
+    border-radius: 0;
+}
+
+.selectpicker:disabled + .dropdown-toggle.btn-light {
+    background-color: #e9e6e6 !important;
+}
+
+.bootstrap-select .dropdown-menu.show {
+    min-width: 100% !important;
+}
+
+/**********************
+ 4.3 Autocomplete Box
+ **********************/
+
+.autocomplete-suggestions {
+    position: absolute;
+    z-index: 10000;
+    background-color: #F5F5F5;
+    box-shadow: 0 1px 3px 1px #d2d6de;
+    display: none;
+    max-height: 150px;
+    overflow: auto;
+}
+
+.autocomplete-suggestion {
+    padding: 2px 6px;
+    margin: 3px 0;
+    cursor: pointer;
+    font-size: 11px;
+    color: #555;
+}
+
+.autocomplete-suggestion b {
+    text-shadow: 0 -1px #C0C0C0;
+    padding: 0 1px;
+}
+
+.radio-inline, .checkbox-inline {
+    padding-left: 0 !important;
+}
+
+.radio-inline label, .checkbox-inline label {
+    position: relative;
+    top: 1px;
+    cursor: pointer;
+}
+
+/******************************
+ 4.4 Custom Radio Top placement
+ ******************************/
+
+.custom-control-label::before {
+    top: .2rem !important;
+}
+
+.custom-control-label::after {
+    top: .2rem !important;
+}

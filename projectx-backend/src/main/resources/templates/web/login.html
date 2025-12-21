@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<!-- Page Styles -->
+<div th:fragment="styles" th:remove="tag">
+	<link rel="stylesheet" th:href="@{'/static/css/common/icheck-bootstrap.min.css?v='+${buildNumber}}">
+	<link rel="stylesheet" th:href="@{'/static/css/app/login/page'+ ${isProduction == true ? '.min.css' : '.css'}+'?v='+${buildNumber}}">
+</div>
+<!-- /Page Styles -->
+<!-- Page Scripts -->
+<div th:fragment="scripts" th:remove="tag">
+</div>
+<!-- /Page Scripts -->
+
+<div class="login-page" th:fragment="content">
+	<div class="login-box">
+		<div class="login-logo">
+			<img alt="" class="" th:src="@{/static/images/site/logo.png}">
+			<span class="brand-text font-weight-bolder" th:text="${appShortName}"></span>
+		</div>
+		<!-- /.login-logo -->
+		<div class="card">
+			<div class="card-body login-card-body">
+				<p class="login-box-msg">Sign in to start your session</p>
+
+				<form method="post" role="form" th:action="@{/login}">
+					<div th:class="${'alert alert-sm alert-dismissible show fade '+ messageStyle}" th:if="${pageMessage != null}">
+						<div class="alert-body">
+							<div class="alert-body">
+								<button class="close" data-dismiss="alert">
+									<span>×</span>
+								</button>
+								<span th:text="${pageMessage}"></span>
+							</div>
+						</div>
+					</div>
+					<div class="input-group mb-3">
+						<input class="form-control" id="loginId" name="loginId" placeholder="Enter Login ID">
+						<div class="input-group-append">
+							<div class="input-group-text">
+								<span class="fas fa-key"></span>
+							</div>
+						</div>
+					</div>
+					<div class="input-group mb-3">
+						<input class="form-control" id="password" name="password" placeholder="Password" type="password">
+						<div class="input-group-append">
+							<div class="input-group-text">
+								<span class="fas fa-lock"></span>
+							</div>
+						</div>
+					</div>
+					<div class="row">
+						<div class="col-8">
+							<div class="icheck-gray">
+								<input id="remember" name="remember-me" type="checkbox">
+								<label for="remember"> Remember Me </label>
+							</div>
+						</div>
+						<!-- /.col -->
+						<div class="col-4">
+							<button class="btn btn-secondary btn-block btn-flat" type="submit">Sign In</button>
+						</div>
+						<!-- /.col -->
+					</div>
+				</form>
+			</div>
+			<!-- /.login-card-body -->
+			<div class="card-footer login-card-footer">
+			</div>
+		</div>
+	</div>
+	<!-- /.login-box -->
+</div>
+
+</html>
+

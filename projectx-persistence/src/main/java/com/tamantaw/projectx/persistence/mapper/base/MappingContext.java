@@ -15,6 +15,6 @@ public class MappingContext {
 	private final AdministratorMapper administratorMapper;
 	private final AdministratorRoleMapper administratorRoleMapper;
 	private final RoleActionMapper roleActionMapper;
+	private final AdministratorLoginHistoryMapper administratorLoginHistoryMapper;
 }
-
 

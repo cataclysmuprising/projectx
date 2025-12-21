@@ -67,4 +67,8 @@ public class Administrator extends AbstractEntity implements Serializable {
 	@OneToMany(mappedBy = "administrator", cascade = CascadeType.ALL, orphanRemoval = true)
 	@ToString.Exclude
 	private List<AdministratorRole> administratorRoles = new ArrayList<>();
+
+	@OneToMany(mappedBy = "administrator", cascade = CascadeType.ALL, orphanRemoval = true)
+	@ToString.Exclude
+	private List<AdministratorLoginHistory> loginHistories = new ArrayList<>();
 }

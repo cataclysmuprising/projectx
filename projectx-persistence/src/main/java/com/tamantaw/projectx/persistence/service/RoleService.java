@@ -1,13 +1,14 @@
 package com.tamantaw.projectx.persistence.service;
 
+import com.tamantaw.projectx.persistence.config.PrimaryPersistenceContext;
 import com.tamantaw.projectx.persistence.criteria.RoleCriteria;
 import com.tamantaw.projectx.persistence.dto.RoleDTO;
 import com.tamantaw.projectx.persistence.entity.Action;
 import com.tamantaw.projectx.persistence.entity.QRole;
 import com.tamantaw.projectx.persistence.entity.Role;
 import com.tamantaw.projectx.persistence.entity.RoleAction;
-import com.tamantaw.projectx.persistence.exception.ContentNotFoundException;
 import com.tamantaw.projectx.persistence.exception.ConsistencyViolationException;
+import com.tamantaw.projectx.persistence.exception.ContentNotFoundException;
 import com.tamantaw.projectx.persistence.exception.PersistenceException;
 import com.tamantaw.projectx.persistence.mapper.RoleMapper;
 import com.tamantaw.projectx.persistence.repository.RoleRepository;
@@ -18,6 +19,7 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 
 import java.util.ArrayList;
@@ -26,7 +28,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static com.tamantaw.projectx.persistence.utils.LoggerConstants.DATA_INTEGRITY_VIOLATION_MSG;
+import static com.tamantaw.projectx.persistence.utils.LoggerConstants.*;
 
 @Service
 public class RoleService
@@ -37,16 +39,34 @@ public class RoleService
 		RoleDTO,
 		RoleMapper> {
 
-	private static final Logger log =
+	private static final Logger serviceLogger =
 			LogManager.getLogger("serviceLogs." + RoleService.class.getSimpleName());
 
 	private final EntityManager entityManager;
+	private final RoleRepository roleRepository;
 
 	@Autowired
 	public RoleService(RoleRepository roleRepository, RoleMapper mapper, EntityManager entityManager) {
 
 		super(roleRepository, mapper);
 		this.entityManager = entityManager;
+		this.roleRepository = roleRepository;
+	}
+
+	@Transactional(transactionManager = PrimaryPersistenceContext.TX_MANAGER, rollbackFor = Exception.class, readOnly = true)
+	public List<String> selectRolesByActionURL(String actionUrl, String appName) throws PersistenceException {
+		Assert.notNull(actionUrl, "Action URL shouldn't be Null.");
+		Assert.notNull(appName, "App Name shouldn't be Null.");
+		serviceLogger.info(LOG_PREFIX + "Transaction start for fetching role names by given actionUrl : <{}> and appName : <{}>" + LOG_SUFFIX, actionUrl, appName);
+		List<String> roleNames;
+		try {
+			roleNames = roleRepository.selectRolesByActionURL(actionUrl, appName);
+		}
+		catch (Exception e) {
+			throw new PersistenceException(e.getMessage(), e);
+		}
+		serviceLogger.info(LOG_PREFIX + "Transaction finished successfully for fetching role names by given actionUrl : <{}> and appName : <{}>" + LOG_SUFFIX, actionUrl, appName);
+		return roleNames;
 	}
 
 	public Role create(RoleDTO dto, List<Long> actionIds, long createdBy)
@@ -62,7 +82,7 @@ public class RoleService
 				dto.getClass().getSimpleName()
 		);
 
-		log.info("{} CREATE_WITH_ACTIONS start createdBy={} actionCount={}",
+		serviceLogger.info("{} CREATE_WITH_ACTIONS start createdBy={} actionCount={}",
 				c, createdBy, actionIds.size());
 
 		try {
@@ -84,19 +104,19 @@ public class RoleService
 
 			entity.setRoleActions(roleActions);
 
-			Role saved = repository.saveRecord(entity);
+			Role saved = roleRepository.saveRecord(entity);
 
-			log.info("{} CREATE_WITH_ACTIONS success id={} actions={}",
+			serviceLogger.info("{} CREATE_WITH_ACTIONS success id={} actions={}",
 					c, saved.getId(), roleActions.size());
 			return saved;
 		}
 		catch (DataIntegrityViolationException e) {
-			log.error("{} CREATE_WITH_ACTIONS integrity violation dto={} actions={}",
+			serviceLogger.error("{} CREATE_WITH_ACTIONS integrity violation dto={} actions={}",
 					c, dto, actionIds, e);
 			throw new ConsistencyViolationException(DATA_INTEGRITY_VIOLATION_MSG, e);
 		}
 		catch (Exception e) {
-			log.error("{} CREATE_WITH_ACTIONS failed dto={} actions={}", c, dto, actionIds, e);
+			serviceLogger.error("{} CREATE_WITH_ACTIONS failed dto={} actions={}", c, dto, actionIds, e);
 			throw new PersistenceException(
 					"CreateWithActions failed dto=" + dto.getClass().getSimpleName(),
 					e
@@ -104,7 +124,7 @@ public class RoleService
 		}
 	}
 
-	public Role updateRoleAndActions(Long roleId, List<Long> actionIds)
+	public void updateRoleAndActions(Long roleId, List<Long> actionIds)
 			throws PersistenceException, ConsistencyViolationException {
 
 		Assert.notNull(roleId, "roleId must not be null");
@@ -118,10 +138,10 @@ public class RoleService
 				roleId
 		);
 
-		log.info("{} UPDATE_WITH_ACTIONS start actionCount={}", c, actionIds.size());
+		serviceLogger.info("{} UPDATE_WITH_ACTIONS start actionCount={}", c, actionIds.size());
 
 		try {
-			Role role = repository.findById(roleId)
+			Role role = roleRepository.findById(roleId)
 					.orElseThrow(() -> new ContentNotFoundException("Role not found id=" + roleId));
 
 			Set<Long> uniqueActionIds = new LinkedHashSet<>(actionIds);
@@ -148,29 +168,27 @@ public class RoleService
 				existingRoleActions.add(roleAction);
 			}
 
-			Role saved = repository.saveRecord(role);
+			Role saved = roleRepository.saveRecord(role);
 
-			log.info("{} UPDATE_WITH_ACTIONS success id={} actions={} updatedBy={} actionIds={}",
+			serviceLogger.info("{} UPDATE_WITH_ACTIONS success id={} actions={} updatedBy={} actionIds={}",
 					c,
 					saved.getId(),
 					saved.getRoleActions().size(),
 					saved.getUpdatedBy(),
 					saved.getRoleActions()
-						.stream()
-						.map(RoleAction::getAction)
-						.map(Action::getId)
-						.collect(Collectors.toSet())
+							.stream()
+							.map(RoleAction::getAction)
+							.map(Action::getId)
+							.collect(Collectors.toSet())
 			);
-
-			return saved;
 		}
 		catch (DataIntegrityViolationException e) {
-			log.error("{} UPDATE_WITH_ACTIONS integrity violation roleId={} actionIds={}",
+			serviceLogger.error("{} UPDATE_WITH_ACTIONS integrity violation roleId={} actionIds={}",
 					c, roleId, actionIds, e);
 			throw new ConsistencyViolationException(DATA_INTEGRITY_VIOLATION_MSG, e);
 		}
 		catch (Exception e) {
-			log.error("{} UPDATE_WITH_ACTIONS failed roleId={} actionIds={}", c, roleId, actionIds, e);
+			serviceLogger.error("{} UPDATE_WITH_ACTIONS failed roleId={} actionIds={}", c, roleId, actionIds, e);
 			throw new PersistenceException("UpdateWithActions failed roleId=" + roleId, e);
 		}
 	}

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="head">
+	<meta charset="utf-8">
+	<meta content="width=device-width, initial-scale=1" name="viewport">
+	<meta name="_ctx" th:content="${contextPath}"/>
+	<meta id="_csrf" name="_csrf" th:content="${_csrf.token}"/>
+	<meta id="_csrf_header" name="_csrf_header" th:content="${_csrf.headerName}"/>
+	<!-- Favicon -->
+	<link rel="shortcut icon" th:href="@{/static/images/site/favicon.ico}" type="image/x-icon"/>
+	<title th:text="(${#strings.isEmpty(appShortName)}  ? 'APP' : ${appShortName}) + (${#strings.isEmpty(pageName)} ?  '' : ' | ' +${pageName})"></title>
+	<!-- Font Awesome -->
+	<link rel="stylesheet" th:href="@{'/static/css/common/fontawesome.min.css?v='+${buildNumber}}">
+	<!-- Icomoon icons -->
+	<link rel="stylesheet" th:href="@{'/static/css/common/icomoon.min.css?v='+${buildNumber}}">
+	<!-- Toastr Alert -->
+	<link rel="stylesheet" th:href="@{'/static/css/common/toastr.min.css?v='+${buildNumber}}">
+	<!-- Theme style -->
+	<link rel="stylesheet" th:href="@{'/static/css/common/theme.min.css?v='+${buildNumber}}">
+	<!-- App style -->
+	<link rel="stylesheet" th:href="@{'/static/css/common/app'+ ${isProduction == true ? '.min.css' : '.css'}+'?v='+${buildNumber}}">
+	<link rel="stylesheet" th:href="@{'/static/css/common/skin'+ ${isProduction == true ? '.min.css' : '.css'}+'?v='+${buildNumber}}">
+	<!-- page related styles -->
+	<meta th:replace="~{${view} :: styles}"/>
+</head>
+
+<body class="layout-fixed sidebar-mini layout-navbar-fixed text-sm">
+<!-- Site wrapper -->
+<div class="wrapper">
+	<nav th:replace="~{/fragments/layouts/default/header}">
+		HEADER
+	</nav>
+	<aside th:replace="~{/fragments/layouts/default/main-sidebar}">
+		MAIN SIDE-BAR
+	</aside>
+
+	<!-- Content Wrapper. Contains page content -->
+	<div th:replace="~{${view} :: content}">
+		CONTENT
+	</div>
+
+	<!-- /.content-wrapper -->
+	<footer th:replace="~{/fragments/layouts/default/footer}">
+		FOOTER
+	</footer>
+</div>
+<!-- ./wrapper -->
+<!-- jQuery -->
+<script th:src="@{'/static/js/common/jquery.min.js?v='+${buildNumber}}"></script>
+<!-- Bootstrap 4 -->
+<script th:src="@{'/static/js/common/bootstrap.bundle.min.js?v='+${buildNumber}}"></script>
+<!-- Toastr Alert -->
+<script th:src="@{'/static/js/common/toastr.min.js?v='+${buildNumber}}"></script>
+<!-- Theme JS -->
+<script th:src="@{'/static/js/common/theme.min.js?v='+${buildNumber}}"></script>
+<!-- page related scripts -->
+<div th:replace="~{${view} :: scripts}"></div>
+<!-- App JS -->
+<script th:src="@{'/static/js/common/app'+ ${isProduction == true ? '.min.js' : '.js'}+'?v='+${buildNumber}}"></script>
+</body>
+</html>

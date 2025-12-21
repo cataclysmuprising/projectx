@@ -28,8 +28,7 @@ public class ActionRepository
 		super(Action.class, entityManager);
 	}
 
-	@SuppressWarnings("SpringDataRepositoryMethodReturnTypeInspection")
-	public List<String> findDistinctPagesByAppName(String appName) {
+	public List<String> selectPages(String appName) {
 		return queryFactory.selectDistinct(qAction.page).from(qAction).where(qAction.appName.eq(appName)).fetch();
 	}
 }

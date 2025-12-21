@@ -1,0 +1,80 @@
+<!-- Main Sidebar Container -->
+<aside class="main-sidebar sidebar-dark-info elevation-3" th:fragment="main-sidebar" xmlns:th="http://www.thymeleaf.org">
+	<!-- Brand Logo -->
+	<a class="brand-link" th:href="@{/}">
+		<img alt="Site Logo" class="brand-image img-circle elevation-3" style="opacity: .8" th:src="@{/static/images/site/logo_white.png}">
+		<span class="brand-text font-weight-light" th:text="${appFullName}"></span>
+	</a>
+
+	<!-- Sidebar -->
+	<div class="sidebar">
+		<!-- Sidebar user (optional) -->
+		<div class="user-panel mt-3 pb-3 mb-3 d-flex">
+			<div class="image">
+				<img alt="User Image" class="img-circle elevation-2" th:src="@{/static/images/avatar/guest.jpg}">
+			</div>
+			<div class="info">
+				<a class="d-block" th:href="@{/}" th:text="${#strings.isEmpty(loginUserName)} ? 'Guest' : ${loginUserName}"></a>
+			</div>
+		</div>
+
+		<!-- Sidebar Menu -->
+		<nav class="mt-2">
+			<ul class="nav nav-pills nav-sidebar flex-column" data-accordion="false" data-widget="treeview" role="menu">
+				<li class="nav-item" th:if="${dashboard == true}">
+					<a class="nav-link" th:classappend="${pageName == 'Dashboard' } ? 'active' : ''" th:href="@{/sec/dashboard}">
+						<i class="nav-icon icon-display"></i>
+						<p>Dashboard</p>
+					</a>
+				</li>
+
+				<li class="nav-item" th:if="${reportList == true}">
+					<a class="nav-link" th:classappend="${pageName == 'Report' } ? 'active' : ''" th:href="@{/sec/reports}">
+						<i class="nav-icon icon-certificate"></i>
+						<p>Reports</p>
+					</a>
+				</li>
+
+				<li class="nav-item" th:if="${reportList == true or transactionsOfReportList == true}">
+					<a class="nav-link" th:classappend="${pageName == 'Transaction' } ? 'active' : ''" th:href="@{/sec/transactions}">
+						<i class="nav-icon icon-stats-growth"></i>
+						<p>Transactions</p>
+					</a>
+				</li>
+
+				<li class="nav-item treeview" th:classappend="${pageName == 'User' or pageName == 'Role' or pageName == 'Branch'} ? 'menu-open' : ''" th:if="${userList == true or roleList == true or branchAdd == true}">
+					<a class="nav-link" href="#">
+						<i class="nav-icon icon-cog3"></i>
+						<p>Settings <i class="fas fa-angle-left right"></i></p>
+					</a>
+
+					<ul class="nav nav-treeview">
+						<li class="nav-item" th:if="${userList == true}">
+							<a class="nav-link" th:classappend="${pageName == 'User' } ? 'active' : ''" th:href="@{/sec/staffs}">
+								<i class="nav-icon icon-users2"></i>
+								<p>Staffs</p>
+							</a>
+						</li>
+
+						<li class="nav-item" th:if="${roleList == true}">
+							<a class="nav-link" th:classappend="${pageName == 'Role' } ? 'active' : ''" th:href="@{/sec/role}">
+								<i class="nav-icon icon-medal-star"></i>
+								<p>Roles</p>
+							</a>
+						</li>
+
+						<li class="nav-item" th:if="${branchAdd == true}">
+							<a class="nav-link" th:classappend="${pageName == 'Branch' } ? 'active' : ''" th:href="@{/sec/branch/add}">
+								<i class="nav-icon icon-split"></i>
+								<p>Branches</p>
+							</a>
+						</li>
+					</ul>
+				</li>
+
+			</ul>
+		</nav>
+		<!-- /.sidebar-menu -->
+	</div>
+	<!-- /.sidebar -->
+</aside>

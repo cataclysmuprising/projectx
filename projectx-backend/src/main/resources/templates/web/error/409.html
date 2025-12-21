@@ -1,0 +1,28 @@
+<section class="card" th:fragment="content">
+	<div class="cardHeader">
+		<h1>
+			<span>
+				<strong>4</strong>
+			</span>
+			<span>
+				<strong>0</strong>
+			</span>
+			<span>
+				<strong>9</strong>
+			</span>
+		</h1>
+	</div>
+	<div class="cardContent">
+		<h2>
+			Error !
+			<span>Already Reported</span>
+		</h2>
+		<hr/>
+		<div class="cardFooter">
+			<p>Your last submitted informations contain duplicated value(s) that the server won't allow to process.</p>
+			Contact your administrators (or) Go
+			<a th:href="${referer}">Back</a>
+			to your last submitted form.
+		</div>
+	</div>
+</section>

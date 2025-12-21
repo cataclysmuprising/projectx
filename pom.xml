@@ -18,6 +18,7 @@
 
 	<modules>
 		<module>projectx-persistence</module>
+		<module>projectx-backend</module>
 	</modules>
 
 	<properties>
@@ -26,7 +27,7 @@
 		<maven.compiler.source>${java.version}</maven.compiler.source>
 		<maven.compiler.target>${java.version}</maven.compiler.target>
 		<maven.compiler.version>3.14.1</maven.compiler.version>
-		<maven.warplugin.version>3.5.1</maven.warplugin.version>
+		<maven.warplugin.version>3.5.0</maven.warplugin.version>
 		<testng.version>7.11.0</testng.version>
 		<guava.version>33.5.0-jre</guava.version>
 		<spotbugs.version>4.9.8</spotbugs.version>
@@ -126,30 +127,15 @@
 				</exclusion>
 			</exclusions>
 		</dependency>
-		<!-- Jackson databind libs -->
+		<!-- Jackson libs -->
 		<dependency>
-			<groupId>com.fasterxml.jackson.core</groupId>
-			<artifactId>jackson-core</artifactId>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-json</artifactId>
 		</dependency>
-		<dependency>
-			<groupId>com.fasterxml.jackson.core</groupId>
-			<artifactId>jackson-databind</artifactId>
-		</dependency>
+		<!-- below lib needs for yaml log4j config files -->
 		<dependency>
 			<groupId>com.fasterxml.jackson.dataformat</groupId>
 			<artifactId>jackson-dataformat-yaml</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>com.fasterxml.jackson.datatype</groupId>
-			<artifactId>jackson-datatype-jsr310</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>com.fasterxml.jackson.module</groupId>
-			<artifactId>jackson-module-parameter-names</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>com.fasterxml.jackson.datatype</groupId>
-			<artifactId>jackson-datatype-json-org</artifactId>
 		</dependency>
 	</dependencies>
 

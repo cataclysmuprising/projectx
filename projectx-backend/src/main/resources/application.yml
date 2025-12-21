@@ -1,0 +1,20 @@
+### application settings ###
+spring:
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: false
+    time-zone: Asia/Rangoon
+  aop:
+    proxy-target-class: true
+  main:
+    banner-mode: 'off' #disable banner
+  jmx:
+    enabled: false
+  ### disable spring-boot's multipath resolver ###
+  servlet:
+    multipart:
+      enabled: false
+  ### Set the active profile here ###
+  profiles:
+    #    active: stag
+    active: dev

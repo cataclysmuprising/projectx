@@ -1,0 +1,25 @@
+### Define Logger config file directory ###
+logging:
+  config: classpath:logger/log4j2-dev.yml
+spring:
+  thymeleaf: # Thymeleaf
+    cache: false
+    mode: HTML
+    encoding: UTF-8
+    prefix: file:src/main/resources/templates/web/
+  web:
+    resources:
+      static-locations: src/main/resources/static/
+      cache:
+        period: 0
+### embedded Tomcat server settings ###
+server:
+  port: 8282
+  servlet:
+    context-path: /projectx
+    session:
+      timeout:
+        72000s
+
+### File upload directory ###
+filestorage-root-dir: 'D:/temp/projectx/files'

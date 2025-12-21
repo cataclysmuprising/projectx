@@ -3,11 +3,11 @@ package com.tamantaw.projectx.persistence.service;
 import com.tamantaw.projectx.persistence.criteria.AdministratorCriteria;
 import com.tamantaw.projectx.persistence.dto.AdministratorDTO;
 import com.tamantaw.projectx.persistence.entity.Administrator;
+import com.tamantaw.projectx.persistence.entity.AdministratorRole;
 import com.tamantaw.projectx.persistence.entity.QAdministrator;
 import com.tamantaw.projectx.persistence.entity.Role;
-import com.tamantaw.projectx.persistence.entity.AdministratorRole;
-import com.tamantaw.projectx.persistence.exception.ContentNotFoundException;
 import com.tamantaw.projectx.persistence.exception.ConsistencyViolationException;
+import com.tamantaw.projectx.persistence.exception.ContentNotFoundException;
 import com.tamantaw.projectx.persistence.exception.PersistenceException;
 import com.tamantaw.projectx.persistence.mapper.AdministratorMapper;
 import com.tamantaw.projectx.persistence.repository.AdministratorRepository;
@@ -41,6 +41,7 @@ public class AdministratorService
 			LogManager.getLogger("serviceLogs." + AdministratorService.class.getSimpleName());
 
 	private final EntityManager entityManager;
+	private final AdministratorRepository administratorRepository;
 
 	@Autowired
 	public AdministratorService(
@@ -50,6 +51,7 @@ public class AdministratorService
 	) {
 		super(administratorRepository, mapper);
 		this.entityManager = entityManager;
+		this.administratorRepository = administratorRepository;
 	}
 
 	public Administrator create(AdministratorDTO dto, List<Long> roleIds, long createdBy)
@@ -87,7 +89,7 @@ public class AdministratorService
 
 			entity.setAdministratorRoles(administratorRoles);
 
-			Administrator saved = repository.saveRecord(entity);
+			Administrator saved = administratorRepository.saveRecord(entity);
 
 			log.info("{} CREATE_WITH_ROLES success id={} roles={}",
 					c, saved.getId(), administratorRoles.size());
@@ -124,7 +126,7 @@ public class AdministratorService
 		log.info("{} UPDATE_WITH_ROLES start roleCount={}", c, roleIds.size());
 
 		try {
-			Administrator administrator = repository.findById(adminId)
+			Administrator administrator = administratorRepository.findById(adminId)
 					.orElseThrow(() -> new ContentNotFoundException("Administrator not found id=" + adminId));
 
 			Set<Long> uniqueRoleIds = new LinkedHashSet<>(roleIds);
@@ -151,7 +153,7 @@ public class AdministratorService
 				existingRoles.add(administratorRole);
 			}
 
-			Administrator saved = repository.saveRecord(administrator);
+			Administrator saved = administratorRepository.saveRecord(administrator);
 
 			log.info("{} UPDATE_WITH_ROLES success id={} roles={} updatedBy={} roleIds={}",
 					c,
@@ -159,9 +161,9 @@ public class AdministratorService
 					saved.getAdministratorRoles().size(),
 					saved.getUpdatedBy(),
 					saved.getAdministratorRoles()
-						.stream()
-						.map(ar -> ar.getRole().getId())
-						.collect(Collectors.toSet())
+							.stream()
+							.map(ar -> ar.getRole().getId())
+							.collect(Collectors.toSet())
 			);
 
 			return saved;

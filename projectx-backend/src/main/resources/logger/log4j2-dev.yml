@@ -1,0 +1,162 @@
+Configuration:
+  status: warn # log level for configuration errors
+  ##### Variables #####
+  Properties:
+    Property:
+      - name: default-msg-pattern
+        value: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5p %c{10}:%L %m%n"
+
+      - name: backup-file-pattern # define how should rollover files
+        value: "%d{_[yyyy-MM-dd]_hh}" # must be SimpleDateFormat pattern
+
+
+  ##### Define logging appenders #####
+  Appenders:
+    # loggers for console
+    Console:
+
+      - name: root_logger
+        target: SYSTEM_OUT
+        PatternLayout:
+          Pattern: "%style{%-5p}{bold,yellow} %style{%c{10}}{bold,cyan}:%L %m%n"
+          disableAnsi: false
+
+      - name: console_app_logger
+        target: SYSTEM_OUT
+        PatternLayout:
+          Pattern: "%style{%-5p}{bold,yellow} %style{%c{10}}{bold,cyan}%highlight{:%L %m%n}{FATAL=red blink, ERROR=red, WARN=yellow bold, INFO=magenta bold, DEBUG=magenta, TRACE=magenta}"
+          disableAnsi: false
+
+      - name: console_service_logger
+        target: SYSTEM_OUT
+        PatternLayout:
+          Pattern: "%style{%-5p}{bold,yellow} %style{%c{10}}{bold,cyan}%highlight{:%L %m%n}{FATAL=red blink, ERROR=red, WARN=yellow bold, INFO=blue bold, DEBUG=blue, TRACE=blue}"
+          disableAnsi: false
+
+      - name: console_repository_logger
+        target: SYSTEM_OUT
+        PatternLayout:
+          Pattern: "%style{%-5p}{bold,yellow} %style{%c{10}}{bold,cyan}%highlight{:%L %m%n}{FATAL=red blink, ERROR=red, WARN=yellow bold, INFO=yellow bold, DEBUG=yellow, TRACE=yellow}"
+          disableAnsi: false
+
+      - name: console_sql_logger
+        target: SYSTEM_OUT
+        PatternLayout:
+          Pattern: "%style{%-5p}{bold,yellow} %style{%c{10}}{bold,cyan}%highlight{:%L %m%n}{FATAL=red blink, ERROR=red, WARN=yellow bold, INFO=green bold, DEBUG=green, TRACE=green}"
+          disableAnsi: false
+
+      - name: console_error_logger
+        target: SYSTEM_OUT
+        PatternLayout:
+          Pattern: "%style{%-5p}{bold,yellow} %style{%c{10}}{bold,cyan}%highlight{:%L %m%n}{FATAL=red blink, ERROR=red, WARN=red bold, INFO=red bold, DEBUG=red, TRACE=red}"
+          disableAnsi: false
+
+  ##### Define loggers #####
+  Loggers:
+    Root: # This is root logger. Every logs with catch up.
+      level: DEBUG
+      AppenderRef:
+        - ref: root_logger
+
+    Logger: # User defined loggers go here
+
+      - name: applicationLogs   # application Logger
+        additivity: false # don't conflicts with root logger
+        level: DEBUG
+        AppenderRef:
+          - ref: console_app_logger
+
+      - name: errorLogs  # error Logger
+        additivity: false
+        level: DEBUG
+        AppenderRef:
+          - ref: console_error_logger
+
+      - name: serviceLogs  # service Logger
+        additivity: false
+        level: DEBUG
+        AppenderRef:
+          - ref: console_service_logger
+
+      - name: repositoryLogs  # repository Logger
+        additivity: false
+        level: DEBUG
+        AppenderRef:
+          - ref: console_repository_logger
+
+      - name: org.hibernate.SQL # sql Logger
+        additivity: false
+        level: DEBUG
+        AppenderRef:
+          - ref: console_sql_logger
+
+      ### Spring framework ###
+      - name: org.springframework
+        level: DEBUG
+      - name: org.springframework.security
+        level: TRACE
+      - name: org.springframework.boot.actuate
+        level: ERROR
+      - name: org.springframework.boot.autoconfigure
+        level: ERROR
+      - name: org.springframework.test.context.support
+        level: WARN
+      - name: org.springframework.beans.factory.support
+        level: WARN
+      - name: org.springframework.context.annotation
+        level: WARN
+      - name: org.springframework.core.env
+        level: WARN
+      - name: org.springframework.core.io.support
+        level: WARN
+      - name: org.springframework.aop.framework
+        level: WARN
+      - name: org.springframework.beans.factory.annotation
+        level: WARN
+      - name: org.springframework.test.context.cache
+        level: WARN
+      - name: org.springframework.web
+        level: DEBUG
+      - name: org.springframework.data
+        level: INFO
+        ### JPA ###
+      - name: org.springframework.orm.jpa.SharedEntityManagerCreator$SharedEntityManagerInvocationHandler
+        level: INFO
+      - name: org.springframework.orm.jpa.support.OpenEntityManagerInViewInterceptor
+        level: INFO
+        ### Hibernate ###
+      - name: org.hibernate
+        level: INFO
+      - name: org.hibernate.type.BasicTypeRegistry
+        level: ERROR
+        # SQL statements and parameters
+      - name: org.hibernate.orm.jdbc.bind
+        level: TRACE
+      # Statistics and slow queries
+      - name: org.hibernate.stat
+        level: DEBUG
+      - name: org.hibernate.SQL_SLOW
+        level: INFO
+      # 2nd Level Cache
+      - name: org.hibernate.cache
+        level: DEBUG
+        ### Embedded Tomcat Logs ###
+      - name: org.apache.catalina
+        level: INFO
+      - name: org.apache.coyote.http11
+        level: INFO
+      - name: org.apache.tomcat.util
+        level: INFO
+        ### Others ###
+      - name: com.tamantaw.projectx.persistence
+        level: DEBUG
+      - name: com.zaxxer # change below to DEBUG if you want to see connection pool properties
+        level: WARN
+      - name: org.flywaydb.core # flyway SQL scripts
+        level: DEBUG
+      - name: org.thymeleaf.TemplateEngine.CONFIG
+        level: INFO
+      - name: sun.rmi
+        level: WARN
+      - name: javax.management.remote
+        level: WARN

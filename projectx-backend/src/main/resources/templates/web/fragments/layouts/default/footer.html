@@ -1,0 +1,9 @@
+<footer class="main-footer" th:fragment="footer" xmlns:th="http://www.thymeleaf.org">
+	<div class="float-right d-none d-sm-block">
+		<b>Version</b>
+		<span class="text-muted text-xs" th:text="${projectVersion} + ' [build-'+${buildNumber}+']'"></span>
+	</div>
+	<strong>Copyright &copy; 2020-2026
+		<a href="/projectx/sec/dashboard" target="blank">ProjectX</a>
+			.</strong> All rights reserved.
+</footer>

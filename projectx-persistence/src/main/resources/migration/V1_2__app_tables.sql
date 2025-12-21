@@ -165,6 +165,6 @@ CREATE TABLE mjr_admin_login_history (
     CONSTRAINT mjr_admin_login_history_admin
     FOREIGN KEY (admin_id)
     REFERENCES mjr_admin(id)
-    ON DELETE CASCADE,
+    ON DELETE CASCADE
 );
 COMMENT ON COLUMN "mjr_admin_login_history"."os" IS 'Operating System';

@@ -1,0 +1,36 @@
+#loginId, #password {
+    height: calc(2.25rem + 2px) !important;
+}
+
+.text-sm .form-control {
+    font-size: .875rem;
+}
+
+input {
+    filter: unset !important;
+}
+
+
+.login-card-footer {
+    background: #6c757d;
+    padding: 24px;
+    border-top: 0;
+}
+
+.login-logo {
+    margin-bottom: 1.5rem;
+}
+
+.login-logo img {
+    width: 50px;
+}
+
+.alert-sm {
+    padding: 8px 12px;
+    font-size: .8rem
+}
+
+.alert-sm.alert-dismissible .close {
+    font-size: 1.2rem;
+    padding: 0.5rem .9rem;
+}

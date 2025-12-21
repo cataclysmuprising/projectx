@@ -38,7 +38,7 @@ public abstract class BaseService<
 	private static final Logger log =
 			LogManager.getLogger("serviceLogs." + BaseService.class.getSimpleName());
 
-	protected final AbstractRepository<ENTITY, QCLAZZ, CRITERIA, Long> repository;
+	private final AbstractRepository<ENTITY, QCLAZZ, CRITERIA, Long> repository;
 	protected final MAPPER mapper;
 
 	@Autowired

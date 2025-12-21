@@ -1,0 +1,203 @@
+/**********************
+ Placeholder color
+ **********************/
+input::-webkit-input-placeholder { /* Chrome/Opera/Safari */
+    color: #ababab !important;
+}
+
+input::-moz-placeholder { /* Firefox 19+ */
+    color: #ababab !important;
+}
+
+input:-ms-input-placeholder { /* IE 10+ */
+    color: #ababab !important;
+}
+
+input:-moz-placeholder { /* Firefox 18- */
+    color: #ababab !important;
+}
+
+textarea::-webkit-input-placeholder { /* Chrome/Opera/Safari */
+    color: #ababab !important;
+}
+
+textarea::-moz-placeholder { /* Firefox 19+ */
+    color: #ababab !important;
+}
+
+textarea:-ms-input-placeholder { /* IE 10+ */
+    color: #ababab !important
+}
+
+textarea:-moz-placeholder { /* Firefox 18- */
+    color: #ababab !important;
+}
+
+.bs-placeholder {
+    color: #ababab !important;
+}
+
+/********************
+ Inline Table
+ ********************/
+.inlineTableContainer {
+    background-color: #f7f7f7;
+}
+
+.inlineTable {
+    margin-bottom: 0;
+}
+
+.inlineTable thead tr th {
+    background-color: #f3f3f3;
+    color: #595959;
+}
+
+.inlineTable tbody {
+    background-color: #fafafa;
+    color: #494949;
+}
+
+/*********************
+     MISC
+**********************/
+.spinner:before {
+    border: 2px solid #f9f9f9;
+    border-top-color: #2ac4c4;
+}
+
+.form-control:focus {
+    border-color: #2ac4c4;
+}
+
+.page-item.active .page-link, .btn-primary {
+    background-color: #00b5ad;
+    border-color: #00b6ae;
+}
+
+.btn-primary.disabled, .btn-primary:disabled {
+    color: #fff;
+    background-color: #00b5ad;
+    border-color: #00b6ae;
+    cursor: not-allowed;
+}
+
+[class*="sidebar-dark-"] .nav-treeview > .nav-item > .nav-link.active,
+[class*="sidebar-dark-"] .nav-treeview > .nav-item > .nav-link.active:focus,
+[class*="sidebar-dark-"] .nav-treeview > .nav-item > .nav-link.active:hover {
+    background-color: #17a2b8;
+    color: #fff;
+    border-left-color: #034f5b !important;
+}
+
+[class*="sidebar-dark-"] .nav-treeview > .nav-item > .nav-link.active,
+[class*="sidebar-dark-"] .nav-treeview > .nav-item > .nav-link.active:focus,
+[class*="sidebar-dark-"] .nav-treeview > .nav-item > .nav-link.active:hover {
+    background-color: #628f96;
+    color: #efefef;
+    border-left-color: #034f5b !important;
+}
+
+.btn-primary:not(:disabled):not(.disabled):hover, .btn-primary:not(:disabled):not(.disabled).active,
+.btn-primary:not(:disabled):not(.disabled):active,
+.btn-primary:not(:disabled):not(.disabled):focus,
+.show > .btn-primary.dropdown-toggle {
+    background-color: #2ac4c4;
+    border-color: #2ac4c4;
+}
+
+.page-link:focus {
+    box-shadow: none;
+}
+
+a, .page-link {
+    color: #00b5ad;
+}
+
+a:hover, .page-link:hover {
+    color: #2ac4c4;
+}
+
+.breadcrumb-item a, .breadcrumb-item .fa {
+    color: #6c757d;
+}
+
+.breadcrumb-item a:hover {
+    color: #000;
+}
+
+.card-primary.card-outline-tabs .card-header a.active {
+    border-top: 3px solid #00b5ad;
+}
+
+.card-primary.card-outline-tabs > .card-header a.active, .card-primary.card-outline-tabs > .card-header a.active:hover {
+    border-top: 3px solid #00b5ad;
+}
+
+.card-primary:not(.card-outline) > .card-header,
+.dropdown-item.active, .dropdown-item:active,
+.dropdown-item.selected {
+    background-color: #00b5ad;
+    color: #fff;
+}
+
+.daterangepicker td.active, .daterangepicker td.active:hover {
+    background-color: #00b5ad !important;
+}
+
+.card-header {
+    background-color: rgba(0, 0, 0, .009);
+}
+
+.card-footer {
+    background-color: rgba(0, 0, 0, .025);
+    box-shadow: 0px -1px 1px 0px #d2d2d2;
+}
+
+table.dataTable.selectable tr.selected {
+    background-color: #4f4f4f;
+    color: #fff;
+}
+
+table.dataTable > tbody > tr.selected > * {
+    box-shadow: none !important;
+}
+
+table.dataTable.selectable tr.selected td {
+    color: #fff !important;
+}
+
+table.selectable .pretty.p-default:not(.p-fill) input:checked ~ .state.p-default-o label::after {
+    background-color: #2ac4c4 !important;
+}
+
+table.selectable .pretty input:checked ~ .state.p-default-o label::before, .text-sm .pretty.p-toggle .state.p-default-o label::before {
+    border-color: #99b0b0 !important;
+}
+
+.text-sm .pretty.p-default:not(.p-fill) input:checked ~ .state.p-primary-o label::after {
+    background-color: #2ac4c4 !important;
+}
+
+.text-sm .pretty input:checked ~ .state.p-primary-o label::before, .text-sm .pretty.p-toggle .state.p-primary-o label::before {
+    border-color: #2ac4c4 !important;
+}
+
+.text-sm .pretty.p-switch.p-fill input:checked ~ .state.p-primary::before {
+    background-color: #2ac4c4 !important;
+}
+
+.text-sm .pretty.p-switch input:checked ~ .state.p-primary::before {
+    border-color: #2ac4c4 !important;
+}
+
+.custom-control-input:checked ~ .custom-control-label::before {
+    color: #fff;
+    border-color: #00b5ad;
+    background-color: #00b5ad;
+    box-shadow: none;
+}
+
+.custom-control-input:focus ~ .custom-control-label::before {
+    box-shadow: inset 0 0 0 transparent, 0 0 0 1px #fff, 0 0 0 0 #2ac4c4;
+}

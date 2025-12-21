@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<!-- Page Styles -->
+<div th:fragment="styles" th:remove="tag">
+	<link rel="stylesheet" th:href="@{'/static/css/common/bootstrap-select.min.css?v='+${buildNumber}}">
+	<link rel="stylesheet" th:href="@{'/static/css/common/datatables.min.css?v='+${buildNumber}}">
+	<link rel="stylesheet" th:href="@{'/static/css/app/user/home'+ ${isProduction == true ? '.min.css' : '.css'}+'?v='+${buildNumber}}">
+</div>
+<!-- /Page Styles -->
+
+<!-- Page Scripts -->
+<div th:fragment="scripts" th:remove="tag">
+	<script th:src="@{'/static/js/common/bootstrap-select.min.js?v='+${buildNumber}}"></script>
+	<script th:src="@{'/static/js/common/datatables.min.js?v='+${buildNumber}}"></script>
+	<script th:src="@{'/static/js/common/datatables-util'+ ${isProduction == true ? '.min.js' : '.js'}+'?v='+${buildNumber}}"></script>
+	<script th:src="@{'/static/js/app/user/home'+ ${isProduction == true ? '.min.js' : '.js'}+'?v='+${buildNumber}}"></script>
+</div>
+<!-- /Page Scripts -->
+
+<div class="content-wrapper" th:fragment="content">
+
+	<!-- Content Header (Page header) -->
+	<section class="content-header">
+		<div class="container-fluid">
+			<div class="row mb-2">
+				<div class="col-sm-6">
+					<h1>Staffs</h1>
+				</div>
+				<div class="col-sm-6">
+					<ol class="breadcrumb float-sm-right">
+						<li class="breadcrumb-item">
+							<i class="fa fa-home mr-1"></i>
+							<a th:href="@{/}">Home</a>
+						</li>
+						<li class="breadcrumb-item active">
+							<i class="icon-users2 mr-1"></i> Staffs
+						</li>
+					</ol>
+				</div>
+			</div>
+		</div>
+	</section>
+	<!-- /Content Header (Page header) -->
+
+	<!-- Main content -->
+	<section class="content">
+		<div class="card">
+			<div class="card-header">
+				<form id="userForm">
+					<div class="row">
+						<div class="col-md-3 col-sm-12 mb-1">
+							<input class="form-control rounded-0 form-control-sm" id="keyword" placeholder="keyword ..." type="text">
+						</div>
+						<div class="col-md-3 col-sm-12 mb-1">
+							<select class="form-control input-sm selectpicker show-tick" id="lstStatus" title="Staff Status (All)">
+								<option selected="selected" value="">Staff Status (All)</option>
+								<option value="ACTIVE">Active</option>
+								<option value="LOCKED">Locked</option>
+								<option value="BLACKLISTED">Blacklisted</option>
+							</select>
+						</div>
+
+						<div class="col-md-3 col-sm-12 mb-1" th:if="${#authorization.expression('hasAuthority(''SUPER-USER'')')}">
+							<div class="form-group">
+								<select class="dropdown-select form-control input-sm bank-selectpicker show-tick" data-live-search="true" data-size="5" id="lst-bank" title="Select Bank">
+								</select>
+							</div>
+						</div>
+
+						<div class="col-md-3 col-sm-12 mb-1" th:if="${#authorization.expression('hasAuthority(''SUPER-USER'')')}">
+							<div class="form-group">
+								<select class="dropdown-select form-control  input-sm branch-selectpicker show-tick" data-live-search="true" data-size="5" id="lst-branch" title="Select Branch">
+								</select>
+							</div>
+						</div>
+
+					</div>
+
+					<div class="row">
+						<div class="col-md-12 col-sm-12 text-center">
+							<button class="btn btn-flat btn-primary" id="btnSearch" type="button">
+								<i class="fas fa-search"></i> Search
+							</button>
+							<button class="btn btn-flat btn-warning" id="btnReset" type="button">
+								<i class="fas fa-recycle"></i> Reset
+							</button>
+							<a class="btn btn-secondary btn-flat" role="button" th:href="@{/sec/staffs/add}" th:if="${userAdd == true}">
+								<i class="fas fa-plus"></i> Add New
+							</a>
+						</div>
+					</div>
+
+				</form>
+			</div>
+			<div class="card-body">
+				<table class="table table-bordered" id="tblUser">
+					<thead>
+					<tr>
+						<th class="text-left" data-sort-key="officerName">Name</th>
+						<th class="text-left" data-sort-key="contactPhone">Phone</th>
+						<th class="text-center" data-sort-key="officerRank">Rank</th>
+						<th class="text-center" data-sort-key="status">Status</th>
+						<th class="functionColumn" th:if="${userDetail or userEdit or userRemove}">Function</th>
+					</tr>
+					</thead>
+					<tbody>
+					</tbody>
+				</table>
+			</div>
+		</div>
+	</section>
+	<!-- /Main content -->
+
+	<!-- Common Delete Confirm modal -->
+	<div th:replace="~{/fragments/others/modals :: modal-confirm-delete}"></div>
+	<!-- /Common Delete Confirm modal -->
+</div>
+</html>
