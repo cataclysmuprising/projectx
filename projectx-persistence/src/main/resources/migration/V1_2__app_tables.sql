@@ -161,5 +161,10 @@ CREATE TABLE mjr_admin_login_history (
     created_by      BIGINT NOT NULL,
     updated_date    TIMESTAMP NOT NULL,
     updated_by      BIGINT NOT NULL,
+
+    CONSTRAINT mjr_admin_login_history_admin
+    FOREIGN KEY (admin_id)
+    REFERENCES mjr_admin(id)
+    ON DELETE CASCADE,
 );
 COMMENT ON COLUMN "mjr_admin_login_history"."os" IS 'Operating System';
