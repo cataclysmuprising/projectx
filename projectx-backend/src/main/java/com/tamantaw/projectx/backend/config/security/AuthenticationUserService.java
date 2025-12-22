@@ -37,9 +37,8 @@ public class AuthenticationUserService implements UserDetailsService {
 			AdministratorDTO authDTO = administratorService.findOne(criteria, "Administrator(administratorRoles)").orElseThrow(() -> new UsernameNotFoundException("Login administrator doesn`t exist !"));
 			applicationLogger.info(LOG_PREFIX + "Roles of :{} are {}" + LOG_SUFFIX, authDTO.getName(), authDTO.getRoles());
 			Set<String> roleNames = authDTO.getRoles().stream().map(RoleDTO::getName).collect(Collectors.toSet());
-			Set<Long> roleIds = authDTO.getRoles().stream().map(RoleDTO::getId).collect(Collectors.toSet());
 
-			AuthenticatedClient loggedUser = new AuthenticatedClient(authDTO, roleNames, roleIds);
+			AuthenticatedClient loggedUser = new AuthenticatedClient(authDTO, roleNames);
 			applicationLogger.info(LOG_BREAKER_CLOSE);
 			return loggedUser;
 		}

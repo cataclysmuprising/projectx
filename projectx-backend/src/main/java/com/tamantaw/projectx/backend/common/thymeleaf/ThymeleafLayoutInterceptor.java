@@ -57,6 +57,11 @@ public class ThymeleafLayoutInterceptor implements HandlerInterceptor {
 		// ------------------------------------------------------------
 		if (request.getAttribute(RequestDispatcher.ERROR_STATUS_CODE) != null) {
 
+			// Custom error controllers may already provide the layout + content view
+			if (modelAndView.getModelMap().containsKey(viewAttributeName)) {
+				return;
+			}
+
 			originalViewName = normalizeViewName(originalViewName, request);
 
 			modelAndView.setViewName("fragments/layouts/error/template");
@@ -147,4 +152,3 @@ public class ThymeleafLayoutInterceptor implements HandlerInterceptor {
 		return layout;
 	}
 }
-

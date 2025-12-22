@@ -22,7 +22,7 @@
 			<div class="card-body login-card-body">
 				<p class="login-box-msg">Sign in to start your session</p>
 
-				<form method="post" role="form" th:action="@{/login}">
+				<form method="post" role="form" th:action="@{/web/pub/login}">
 					<div th:class="${'alert alert-sm alert-dismissible show fade '+ messageStyle}" th:if="${pageMessage != null}">
 						<div class="alert-body">
 							<div class="alert-body">

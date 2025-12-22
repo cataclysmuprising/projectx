@@ -1,48 +1,181 @@
-diff --git a/projectx-backend/src/main/resources/application-dev.yml b/projectx-backend/src/main/resources/application-dev.yml
-index 88d1bbd9b7d9d8b65a3df439f23769ec6aae31c6..b5ccb2cecff51f225e713773bcd64fe3a5874568 100644
---- a/projectx-backend/src/main/resources/application-dev.yml
-+++ b/projectx-backend/src/main/resources/application-dev.yml
-@@ -1,25 +1,41 @@
- ### Define Logger config file directory ###
- logging:
-   config: classpath:logger/log4j2-dev.yml
- spring:
-   thymeleaf: # Thymeleaf
-     cache: false
-     mode: HTML
-     encoding: UTF-8
-     prefix: file:src/main/resources/templates/web/
-   web:
-     resources:
-       static-locations: src/main/resources/static/
-       cache:
-         period: 0
- ### embedded Tomcat server settings ###
- server:
-   port: 8282
-   servlet:
-     context-path: /projectx
-     session:
-       timeout:
-         72000s
-
-+# Database connection for persistence module
-+datasource:
-+  primary:
-+    type: com.zaxxer.hikari.HikariDataSource
-+    jdbc-url: jdbc:postgresql://localhost:5432/projectx?currentSchema=projectx&reWriteBatchedInserts=true
-+    username: postgres
-+    password: postgres
-+    driver-class-name: org.postgresql.Driver
-+    pool-name: PrimaryDataSourceJPAHikariCP
-+    connection-timeout: 30000
-+    minimum-idle: 5
-+    maximum-pool-size: 10
-+    idle-timeout: 30000
-+    max-lifetime: 2000000
-+    connection-test-query: SELECT 1
+diff --git a/projectx-backend/src/main/java/com/tamantaw/projectx/backend/common/exceptionHandlers/CustomErrorController.java b/projectx-backend/src/main/java/com/tamantaw/projectx/backend/common/exceptionHandlers/CustomErrorController.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..198495aac49030a241709acadeed1e70e943cbc7
+--- /dev/null
++++ b/projectx-backend/src/main/java/com/tamantaw/projectx/backend/common/exceptionHandlers/CustomErrorController.java
+@@ -0,0 +1,88 @@
++package com.tamantaw.projectx.backend.common.exceptionHandlers;
 +
- ### File upload directory ###
--filestorage-root-dir: 'D:/temp/projectx/files'
-\ No newline at end of file
-+filestorage-root-dir: 'D:/temp/projectx/files'
++import com.tamantaw.projectx.backend.controller.mvc.BaseMVCController;
++import jakarta.servlet.http.HttpServletRequest;
++import jakarta.servlet.http.HttpServletResponse;
++import org.springframework.beans.factory.ObjectProvider;
++import org.springframework.boot.autoconfigure.web.ErrorProperties;
++import org.springframework.boot.autoconfigure.web.servlet.error.BasicErrorController;
++import org.springframework.boot.web.servlet.error.ErrorAttributes;
++import org.springframework.boot.web.servlet.error.ErrorViewResolver;
++import org.springframework.context.annotation.Primary;
++import org.springframework.core.env.Environment;
++import org.springframework.http.HttpHeaders;
++import org.springframework.http.HttpStatus;
++import org.springframework.stereotype.Controller;
++import org.springframework.util.StringUtils;
++import org.springframework.web.bind.annotation.RequestMapping;
++import org.springframework.web.servlet.ModelAndView;
++import org.springframework.web.servlet.View;
++
++import java.util.Arrays;
++import java.util.Collections;
++import java.util.List;
++
++/**
++ * Ensures HTML error responses (including 404) use the shared error layout so static assets are loaded.
++ */
++@Controller
++@Primary
++@RequestMapping("${server.error.path:${error.path:/error}}")
++public class CustomErrorController extends BasicErrorController {
++
++	private final Environment environment;
++
++	public CustomErrorController(ErrorAttributes errorAttributes,
++	                             ErrorProperties errorProperties,
++	                             ObjectProvider<List<ErrorViewResolver>> viewResolversProvider,
++	                             Environment environment) {
++		super(errorAttributes, errorProperties, viewResolversProvider.getIfAvailable(Collections::emptyList));
++		this.environment = environment;
++	}
++
++	@Override
++	public ModelAndView errorHtml(HttpServletRequest request, HttpServletResponse response) {
++		ModelAndView modelAndView = super.errorHtml(request, response);
++
++		HttpStatus status = getStatus(request);
++		response.setStatus(status.value());
++
++		String resolvedViewName = resolveViewName(status, modelAndView);
++
++		modelAndView.setViewName("fragments/layouts/error/template");
++		modelAndView.addObject("view", resolvedViewName);
++
++		modelAndView.addObject("referer", request.getHeader(HttpHeaders.REFERER));
++		modelAndView.addObject("projectVersion", BaseMVCController.getProjectVersion());
++		modelAndView.addObject("buildNumber", BaseMVCController.getBuildNumber());
++		modelAndView.addObject("appShortName", BaseMVCController.getAppShortName());
++		modelAndView.addObject("appFullName", BaseMVCController.getAppFullName());
++		modelAndView.addObject("pageName", "Error!");
++		modelAndView.addObject("isProduction",
++				Arrays.asList(environment.getActiveProfiles()).contains("prd"));
++
++		return modelAndView;
++	}
++
++	private String resolveViewName(HttpStatus status, ModelAndView modelAndView) {
++		String candidate = modelAndView.getViewName();
++		if (!StringUtils.hasText(candidate)) {
++			return "error/" + status.value();
++		}
++
++		if (View.RESPONSE_STATUS_ATTRIBUTE.equals(candidate)) {
++			return "error/" + status.value();
++		}
++
++		candidate = trimLeadingSlash(candidate);
++		if ("error".equals(candidate)) {
++			return "error/" + status.value();
++		}
++
++		return candidate;
++	}
++
++	private String trimLeadingSlash(String value) {
++		return (value != null && value.startsWith("/")) ? value.substring(1) : value;
++	}
++}
+diff --git a/projectx-backend/src/main/java/com/tamantaw/projectx/backend/common/thymeleaf/ThymeleafLayoutInterceptor.java b/projectx-backend/src/main/java/com/tamantaw/projectx/backend/common/thymeleaf/ThymeleafLayoutInterceptor.java
+index fc70ba25d5b2643849b8959a1c07e06c5b4c9b01..76277ea794d565268ecc016e43156f87682b6673 100644
+--- a/projectx-backend/src/main/java/com/tamantaw/projectx/backend/common/thymeleaf/ThymeleafLayoutInterceptor.java
++++ b/projectx-backend/src/main/java/com/tamantaw/projectx/backend/common/thymeleaf/ThymeleafLayoutInterceptor.java
+@@ -35,50 +35,55 @@ public class ThymeleafLayoutInterceptor implements HandlerInterceptor {
+
+ 		// ------------------------------------------------------------
+ 		// 1️⃣ Must exist and have a view
+ 		// ------------------------------------------------------------
+ 		if (modelAndView == null || !modelAndView.hasView()) {
+ 			return;
+ 		}
+
+ 		String originalViewName = modelAndView.getViewName();
+ 		if (originalViewName == null) {
+ 			return;
+ 		}
+
+ 		// ------------------------------------------------------------
+ 		// 2️⃣ Ignore redirect / forward
+ 		// ------------------------------------------------------------
+ 		if (isRedirectOrForward(originalViewName)) {
+ 			return;
+ 		}
+
+ 		// ------------------------------------------------------------
+ 		// 3️⃣ ERROR DISPATCH (this is the missing piece)
+ 		// ------------------------------------------------------------
+ 		if (request.getAttribute(RequestDispatcher.ERROR_STATUS_CODE) != null) {
+
++			// Custom error controllers may already provide the layout + content view
++			if (modelAndView.getModelMap().containsKey(viewAttributeName)) {
++				return;
++			}
++
+ 			originalViewName = normalizeViewName(originalViewName, request);
+
+ 			modelAndView.setViewName("fragments/layouts/error/template");
+ 			modelAndView.addObject(viewAttributeName, originalViewName);
+ 			return;
+ 		}
+
+ 		// ------------------------------------------------------------
+ 		// 4️⃣ Normal controller-based layout resolution
+ 		// ------------------------------------------------------------
+ 		if (!(handler instanceof HandlerMethod handlerMethod)) {
+ 			return;
+ 		}
+
+ 		originalViewName = normalizeViewName(originalViewName, request);
+
+ 		String layoutName = getLayoutName(handlerMethod);
+ 		modelAndView.setViewName(layoutName);
+ 		modelAndView.addObject(viewAttributeName, originalViewName);
+ 	}
+
+ 	private boolean isRedirectOrForward(String viewName) {
+ 		return viewName.startsWith("redirect:")
+ 				|| viewName.startsWith("forward:");
+ 	}
+@@ -125,26 +130,25 @@ public class ThymeleafLayoutInterceptor implements HandlerInterceptor {
+ 	private String getLayoutName(Object handler) {
+ 		if (handler instanceof HandlerMethod handlerMethod) {
+ 			Layout layout = getMethodOrTypeAnnotation(handlerMethod);
+ 			if (layout != null) {
+ 				String value = layout.value();
+
+ 				// 🚨 SAFETY: layout name must be logical, not a path
+ 				if (value.contains("/") || value.contains("\\")) {
+ 					return defaultLayout;
+ 				}
+
+ 				return DEFAULT_PREFIX + value + DEFAULT_SUFFIX;
+ 			}
+ 		}
+ 		return defaultLayout;
+ 	}
+
+ 	private Layout getMethodOrTypeAnnotation(HandlerMethod handlerMethod) {
+ 		Layout layout = handlerMethod.getMethodAnnotation(Layout.class);
+ 		if (layout == null) {
+ 			return handlerMethod.getBeanType().getAnnotation(Layout.class);
+ 		}
+ 		return layout;
+ 	}
+ }
+-

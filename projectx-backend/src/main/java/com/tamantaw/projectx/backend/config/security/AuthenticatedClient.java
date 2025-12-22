@@ -24,13 +24,11 @@ public class AuthenticatedClient implements UserDetails {
 	private static final long serialVersionUID = 1774247443506921090L;
 	private AdministratorDTO administrator;
 	private Set<String> roleNames;
-	private Set<Long> roleIds;
 	private String requestUrl;
 
-	public AuthenticatedClient(AdministratorDTO administrator, Set<String> roleNames, Set<Long> roleIds) {
+	public AuthenticatedClient(AdministratorDTO administrator, Set<String> roleNames) {
 		this.administrator = administrator;
 		this.roleNames = roleNames;
-		this.roleIds = roleIds;
 	}
 
 	@Override
