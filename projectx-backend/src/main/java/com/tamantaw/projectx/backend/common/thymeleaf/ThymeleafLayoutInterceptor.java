@@ -1,7 +1,6 @@
 package com.tamantaw.projectx.backend.common.thymeleaf;
 
 import jakarta.annotation.Nonnull;
-import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.Setter;
@@ -39,7 +38,6 @@ public class ThymeleafLayoutInterceptor implements HandlerInterceptor {
 		if (modelAndView == null || !modelAndView.hasView()) {
 			return;
 		}
-
 		String originalViewName = modelAndView.getViewName();
 		if (originalViewName == null) {
 			return;
@@ -53,24 +51,7 @@ public class ThymeleafLayoutInterceptor implements HandlerInterceptor {
 		}
 
 		// ------------------------------------------------------------
-		// 3️⃣ ERROR DISPATCH (this is the missing piece)
-		// ------------------------------------------------------------
-		if (request.getAttribute(RequestDispatcher.ERROR_STATUS_CODE) != null) {
-
-			// Custom error controllers may already provide the layout + content view
-			if (modelAndView.getModelMap().containsKey(viewAttributeName)) {
-				return;
-			}
-
-			originalViewName = normalizeViewName(originalViewName, request);
-
-			modelAndView.setViewName("fragments/layouts/error/template");
-			modelAndView.addObject(viewAttributeName, originalViewName);
-			return;
-		}
-
-		// ------------------------------------------------------------
-		// 4️⃣ Normal controller-based layout resolution
+		// 3️⃣ Normal controller-based layout resolution
 		// ------------------------------------------------------------
 		if (!(handler instanceof HandlerMethod handlerMethod)) {
 			return;

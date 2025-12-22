@@ -82,6 +82,33 @@ function baseBind() {
         });
     });
 
+    $('#btnSignInOut').on('click', function (e) {
+        e.preventDefault();
+        let title = $(this).attr('title') || '';
+        if (title.toLowerCase().includes('sign out')) {
+            const token = $('meta[name="_csrf"]').attr('content');
+            const header = $('meta[name="_csrf_header"]').attr('content');
+
+            $.ajax({
+                url: getContextPath() + '/web/sec/logout',
+                type: 'POST',
+                beforeSend: function (xhr) {
+                    xhr.setRequestHeader(header, token);
+                },
+                success: function () {
+                    window.location.href = getContextPath() + '/web/pub/login';
+                },
+                error: function () {
+                    // fallback
+                    window.location.href = getContextPath() + '/web/pub/login';
+                }
+            });
+        }
+        else {
+            window.location.href = getContextPath() + '/web/pub/login';
+        }
+    });
+
     disableFormSubmitEvent();
 }
 

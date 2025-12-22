@@ -240,8 +240,10 @@ public class MVCExceptionHandler {
 
 		ModelAndView mav = new ModelAndView();
 
-		// ✅ THIS IS CRITICAL
-		mav.setViewName(normalizeErrorView(view));
+		String normalizedView = normalizeErrorView(view);
+
+		mav.setViewName("fragments/layouts/error/template");
+		mav.addObject("view", normalizedView);
 		mav.setStatus(status);
 
 		mav.addObject("referer", request.getHeader("referer"));

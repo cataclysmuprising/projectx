@@ -18,5 +18,42 @@
 	CONTENT
 </div>
 
+<script>
+	document.addEventListener('DOMContentLoaded', function () {
+
+		const btn = document.getElementById('btnSignInOut');
+		if (!btn) return;
+
+		btn.addEventListener('click', function (e) {
+			e.preventDefault();
+			// ================= SIGN OUT =================
+			const csrfToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+			const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+
+			fetch(getContextPath() + '/web/sec/logout', {
+				method: 'POST',
+				headers: {
+					...(csrfHeader && csrfToken ? {[csrfHeader]: csrfToken} : {})
+				},
+				credentials: 'same-origin'
+			})
+					.then(() => {
+						// Spring Security already cleared session
+						window.location.href = getContextPath() + '/web/pub/login';
+					})
+					.catch(() => {
+						// fallback
+						window.location.href = getContextPath() + '/web/pub/login';
+					});
+
+		});
+
+	});
+
+	function getContextPath() {
+		return window.location.pathname.substring(0, window.location.pathname.indexOf("/", 2));
+	}
+</script>
+
 </body>
 </html>

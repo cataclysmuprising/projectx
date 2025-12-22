@@ -1,6 +1,8 @@
 package com.tamantaw.projectx.backend.config.security;
 
+import com.tamantaw.projectx.backend.BackendApplication;
 import com.tamantaw.projectx.persistence.criteria.AdministratorCriteria;
+import com.tamantaw.projectx.persistence.criteria.RoleCriteria;
 import com.tamantaw.projectx.persistence.dto.AdministratorDTO;
 import com.tamantaw.projectx.persistence.dto.RoleDTO;
 import com.tamantaw.projectx.persistence.exception.PersistenceException;
@@ -32,9 +34,12 @@ public class AuthenticationUserService implements UserDetailsService {
 	public final UserDetails loadUserByUsername(@Nonnull String loginId) throws UsernameNotFoundException {
 		applicationLogger.info(LOG_BREAKER_OPEN);
 		try {
-			AdministratorCriteria criteria = new AdministratorCriteria();
-			criteria.setLoginId(loginId);
-			AdministratorDTO authDTO = administratorService.findOne(criteria, "Administrator(administratorRoles)").orElseThrow(() -> new UsernameNotFoundException("Login administrator doesn`t exist !"));
+			AdministratorCriteria adminCriteria = new AdministratorCriteria();
+			adminCriteria.setLoginId(loginId);
+			RoleCriteria roleCriteria = new RoleCriteria();
+			roleCriteria.setAppName(BackendApplication.APP_NAME);
+			adminCriteria.setRole(roleCriteria);
+			AdministratorDTO authDTO = administratorService.findOne(adminCriteria, "Administrator(administratorRoles(role))").orElseThrow(() -> new UsernameNotFoundException("Login administrator doesn`t exist !"));
 			applicationLogger.info(LOG_PREFIX + "Roles of :{} are {}" + LOG_SUFFIX, authDTO.getName(), authDTO.getRoles());
 			Set<String> roleNames = authDTO.getRoles().stream().map(RoleDTO::getName).collect(Collectors.toSet());
 

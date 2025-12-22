@@ -37,7 +37,7 @@
 		</li>
 
 		<li class="nav-item">
-			<a class="nav-link" data-slide="true" th:href="@{${#strings.isEmpty(loginUserName)} ?  '/login' : '/logout'}" th:title="${#strings.isEmpty(loginUserName)} ? 'Sign In' : 'Sign Out'">
+			<a class="nav-link" data-slide="true" href="#" id="btnSignInOut" th:title="${#strings.isEmpty(loginUserName)} ? 'Sign In' : 'Sign Out'">
 				<!-- <i class="fas ${not empty loginUserName ? 'fa-sign-out-alt': 'fa-sign-in-alt'}"></i>-->
 				<i th:class="${#strings.isEmpty(loginUserName)} ? 'icon-enter3' : 'icon-exit2'"></i>
 			</a>

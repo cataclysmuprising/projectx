@@ -1,181 +1,61 @@
-diff --git a/projectx-backend/src/main/java/com/tamantaw/projectx/backend/common/exceptionHandlers/CustomErrorController.java b/projectx-backend/src/main/java/com/tamantaw/projectx/backend/common/exceptionHandlers/CustomErrorController.java
-new file mode 100644
-index 0000000000000000000000000000000000000000..198495aac49030a241709acadeed1e70e943cbc7
---- /dev/null
-+++ b/projectx-backend/src/main/java/com/tamantaw/projectx/backend/common/exceptionHandlers/CustomErrorController.java
-@@ -0,0 +1,88 @@
-+package com.tamantaw.projectx.backend.common.exceptionHandlers;
-+
-+import com.tamantaw.projectx.backend.controller.mvc.BaseMVCController;
-+import jakarta.servlet.http.HttpServletRequest;
-+import jakarta.servlet.http.HttpServletResponse;
-+import org.springframework.beans.factory.ObjectProvider;
-+import org.springframework.boot.autoconfigure.web.ErrorProperties;
-+import org.springframework.boot.autoconfigure.web.servlet.error.BasicErrorController;
-+import org.springframework.boot.web.servlet.error.ErrorAttributes;
-+import org.springframework.boot.web.servlet.error.ErrorViewResolver;
-+import org.springframework.context.annotation.Primary;
-+import org.springframework.core.env.Environment;
-+import org.springframework.http.HttpHeaders;
-+import org.springframework.http.HttpStatus;
-+import org.springframework.stereotype.Controller;
-+import org.springframework.util.StringUtils;
-+import org.springframework.web.bind.annotation.RequestMapping;
-+import org.springframework.web.servlet.ModelAndView;
-+import org.springframework.web.servlet.View;
-+
-+import java.util.Arrays;
-+import java.util.Collections;
-+import java.util.List;
-+
-+/**
-+ * Ensures HTML error responses (including 404) use the shared error layout so static assets are loaded.
-+ */
-+@Controller
-+@Primary
-+@RequestMapping("${server.error.path:${error.path:/error}}")
-+public class CustomErrorController extends BasicErrorController {
-+
-+	private final Environment environment;
-+
-+	public CustomErrorController(ErrorAttributes errorAttributes,
-+	                             ErrorProperties errorProperties,
-+	                             ObjectProvider<List<ErrorViewResolver>> viewResolversProvider,
-+	                             Environment environment) {
-+		super(errorAttributes, errorProperties, viewResolversProvider.getIfAvailable(Collections::emptyList));
-+		this.environment = environment;
-+	}
-+
-+	@Override
-+	public ModelAndView errorHtml(HttpServletRequest request, HttpServletResponse response) {
-+		ModelAndView modelAndView = super.errorHtml(request, response);
-+
-+		HttpStatus status = getStatus(request);
-+		response.setStatus(status.value());
-+
-+		String resolvedViewName = resolveViewName(status, modelAndView);
-+
-+		modelAndView.setViewName("fragments/layouts/error/template");
-+		modelAndView.addObject("view", resolvedViewName);
-+
-+		modelAndView.addObject("referer", request.getHeader(HttpHeaders.REFERER));
-+		modelAndView.addObject("projectVersion", BaseMVCController.getProjectVersion());
-+		modelAndView.addObject("buildNumber", BaseMVCController.getBuildNumber());
-+		modelAndView.addObject("appShortName", BaseMVCController.getAppShortName());
-+		modelAndView.addObject("appFullName", BaseMVCController.getAppFullName());
-+		modelAndView.addObject("pageName", "Error!");
-+		modelAndView.addObject("isProduction",
-+				Arrays.asList(environment.getActiveProfiles()).contains("prd"));
-+
-+		return modelAndView;
-+	}
-+
-+	private String resolveViewName(HttpStatus status, ModelAndView modelAndView) {
-+		String candidate = modelAndView.getViewName();
-+		if (!StringUtils.hasText(candidate)) {
-+			return "error/" + status.value();
-+		}
-+
-+		if (View.RESPONSE_STATUS_ATTRIBUTE.equals(candidate)) {
-+			return "error/" + status.value();
-+		}
-+
-+		candidate = trimLeadingSlash(candidate);
-+		if ("error".equals(candidate)) {
-+			return "error/" + status.value();
-+		}
-+
-+		return candidate;
-+	}
-+
-+	private String trimLeadingSlash(String value) {
-+		return (value != null && value.startsWith("/")) ? value.substring(1) : value;
-+	}
-+}
-diff --git a/projectx-backend/src/main/java/com/tamantaw/projectx/backend/common/thymeleaf/ThymeleafLayoutInterceptor.java b/projectx-backend/src/main/java/com/tamantaw/projectx/backend/common/thymeleaf/ThymeleafLayoutInterceptor.java
-index fc70ba25d5b2643849b8959a1c07e06c5b4c9b01..76277ea794d565268ecc016e43156f87682b6673 100644
---- a/projectx-backend/src/main/java/com/tamantaw/projectx/backend/common/thymeleaf/ThymeleafLayoutInterceptor.java
-+++ b/projectx-backend/src/main/java/com/tamantaw/projectx/backend/common/thymeleaf/ThymeleafLayoutInterceptor.java
-@@ -35,50 +35,55 @@ public class ThymeleafLayoutInterceptor implements HandlerInterceptor {
-
- 		// ------------------------------------------------------------
- 		// 1️⃣ Must exist and have a view
- 		// ------------------------------------------------------------
- 		if (modelAndView == null || !modelAndView.hasView()) {
- 			return;
- 		}
-
- 		String originalViewName = modelAndView.getViewName();
- 		if (originalViewName == null) {
- 			return;
- 		}
-
- 		// ------------------------------------------------------------
- 		// 2️⃣ Ignore redirect / forward
- 		// ------------------------------------------------------------
- 		if (isRedirectOrForward(originalViewName)) {
- 			return;
- 		}
-
- 		// ------------------------------------------------------------
- 		// 3️⃣ ERROR DISPATCH (this is the missing piece)
- 		// ------------------------------------------------------------
- 		if (request.getAttribute(RequestDispatcher.ERROR_STATUS_CODE) != null) {
-
-+			// Custom error controllers may already provide the layout + content view
-+			if (modelAndView.getModelMap().containsKey(viewAttributeName)) {
-+				return;
-+			}
-+
- 			originalViewName = normalizeViewName(originalViewName, request);
-
- 			modelAndView.setViewName("fragments/layouts/error/template");
- 			modelAndView.addObject(viewAttributeName, originalViewName);
- 			return;
- 		}
-
- 		// ------------------------------------------------------------
- 		// 4️⃣ Normal controller-based layout resolution
- 		// ------------------------------------------------------------
- 		if (!(handler instanceof HandlerMethod handlerMethod)) {
- 			return;
- 		}
-
- 		originalViewName = normalizeViewName(originalViewName, request);
-
- 		String layoutName = getLayoutName(handlerMethod);
- 		modelAndView.setViewName(layoutName);
- 		modelAndView.addObject(viewAttributeName, originalViewName);
+diff --git a/projectx-backend/src/main/java/com/tamantaw/projectx/backend/common/exceptionHandlers/MVCExceptionHandler.java b/projectx-backend/src/main/java/com/tamantaw/projectx/backend/common/exceptionHandlers/MVCExceptionHandler.java
+index a858f2e0f67547c6c3eda37c60e05f46f980946c..a039d7e8db2aa2cc012592e2b6303f61fb1cef83 100644
+--- a/projectx-backend/src/main/java/com/tamantaw/projectx/backend/common/exceptionHandlers/MVCExceptionHandler.java
++++ b/projectx-backend/src/main/java/com/tamantaw/projectx/backend/common/exceptionHandlers/MVCExceptionHandler.java
+@@ -218,52 +218,55 @@ public class MVCExceptionHandler {
+ 		pd.setType(URI.create(typeUri));
+ 		pd.setProperty("timestamp", Instant.now());
+ 		pd.setProperty("path", request.getRequestURI());
+ 		return pd;
  	}
 
- 	private boolean isRedirectOrForward(String viewName) {
- 		return viewName.startsWith("redirect:")
- 				|| viewName.startsWith("forward:");
+ 	private boolean isApiRequest(HttpServletRequest request) {
+ 		return request.getRequestURI().startsWith("/api/")
+ 				|| "XMLHttpRequest".equals(request.getHeader("X-Requested-With"));
  	}
-@@ -125,26 +130,25 @@ public class ThymeleafLayoutInterceptor implements HandlerInterceptor {
- 	private String getLayoutName(Object handler) {
- 		if (handler instanceof HandlerMethod handlerMethod) {
- 			Layout layout = getMethodOrTypeAnnotation(handlerMethod);
- 			if (layout != null) {
- 				String value = layout.value();
 
- 				// 🚨 SAFETY: layout name must be logical, not a path
- 				if (value.contains("/") || value.contains("\\")) {
- 					return defaultLayout;
- 				}
+ 	private void logError(String handler, Exception e) {
+ 		errorLogger.error(LoggerConstants.LOG_BREAKER_OPEN);
+ 		errorLogger.error("Handler ==> {}", handler);
+ 		errorLogger.error(e.getMessage(), e);
+ 		errorLogger.error(LoggerConstants.LOG_BREAKER_CLOSE);
+ 	}
 
- 				return DEFAULT_PREFIX + value + DEFAULT_SUFFIX;
- 			}
+ 	private ModelAndView errorView(HttpStatus status,
+ 	                               String view,
+ 	                               Authentication auth,
+ 	                               HttpServletRequest request) {
+
+ 		ModelAndView mav = new ModelAndView();
+
++		String normalizedView = normalizeErrorView(view);
++
+ 		// ✅ THIS IS CRITICAL
+-		mav.setViewName(normalizeErrorView(view));
++		mav.setViewName("fragments/layouts/error/template");
++		mav.addObject("view", normalizedView);
+ 		mav.setStatus(status);
+
+ 		mav.addObject("referer", request.getHeader("referer"));
+
+ 		mav.addObject("projectVersion", BaseMVCController.getProjectVersion());
+ 		mav.addObject("buildNumber", BaseMVCController.getBuildNumber());
+ 		mav.addObject("appShortName", BaseMVCController.getAppShortName());
+ 		mav.addObject("appFullName", BaseMVCController.getAppFullName());
+ 		mav.addObject("pageName", "Error!");
+
+ 		mav.addObject("isProduction",
+ 				Arrays.asList(environment.getActiveProfiles()).contains("prd"));
+
+ 		return mav;
+ 	}
+
+ 	private String normalizeErrorView(String view) {
+ 		if (view == null) {
+ 			return null;
  		}
- 		return defaultLayout;
- 	}
 
- 	private Layout getMethodOrTypeAnnotation(HandlerMethod handlerMethod) {
- 		Layout layout = handlerMethod.getMethodAnnotation(Layout.class);
- 		if (layout == null) {
- 			return handlerMethod.getBeanType().getAnnotation(Layout.class);
- 		}
- 		return layout;
+ 		// accept "/error/404" or "error/404"
+ 		int idx = view.indexOf("/error/");
+ 		return (idx >= 0) ? view.substring(idx + 1) : view;
  	}
- }
--
