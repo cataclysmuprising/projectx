@@ -2,22 +2,22 @@
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <!-- Page Styles -->
 <div th:fragment="styles" th:remove="tag">
-	<link rel="stylesheet" th:href="@{'/static/css/common/pretty-checkbox.min.css?v='+${buildNumber}}">
-	<link rel="stylesheet" th:href="@{'/static/css/common/bootstrap-select.min.css?v='+${buildNumber}}">
-	<link rel="stylesheet" th:href="@{'/static/css/common/icheck-bootstrap.min.css?v='+${buildNumber}}">
-	<link rel="stylesheet" th:href="@{'/static/css/common/datatables.min.css?v='+${buildNumber}}">
-	<link rel="stylesheet" th:href="@{'/static/css/app/role/input'+ ${isProduction == true ? '.min.css' : '.css'}+'?v='+${buildNumber}}">
+	<link rel="stylesheet" th:href="@{'/web/static/css/common/pretty-checkbox.min.css?v='+${buildNumber}}">
+	<link rel="stylesheet" th:href="@{'/web/static/css/common/bootstrap-select.min.css?v='+${buildNumber}}">
+	<link rel="stylesheet" th:href="@{'/web/static/css/common/icheck-bootstrap.min.css?v='+${buildNumber}}">
+	<link rel="stylesheet" th:href="@{'/web/static/css/common/datatables.min.css?v='+${buildNumber}}">
+	<link rel="stylesheet" th:href="@{'/web/static/css/app/role/input'+ ${isProduction == true ? '.min.css' : '.css'}+'?v='+${buildNumber}}">
 </div>
 <!-- /Page Styles -->
 
 <!-- Page Scripts -->
 <div th:fragment="scripts" th:remove="tag">
-	<script th:src="@{'/static/js/common/bootstrap-select.min.js?v='+${buildNumber}}"></script>
-	<script th:src="@{'/static/js/common/jquery.validate.min.js?v='+${buildNumber}}"></script>
-	<script th:src="@{'/static/js/common/datatables.min.js?v='+${buildNumber}}"></script>
-	<script th:src="@{'/static/js/common/datatables-util'+ ${isProduction == true ? '.min.js' : '.js'}+'?v='+${buildNumber}}"></script>
-	<script th:src="@{'/static/js/common/datatables-select'+ ${isProduction == true ? '.min.js' : '.js'}+'?v='+${buildNumber}}"></script>
-	<script th:src="@{'/static/js/app/role/input'+ ${isProduction == true ? '.min.js' : '.js'}+'?v='+${buildNumber}}"></script>
+	<script th:src="@{'/web/static/js/common/bootstrap-select.min.js?v='+${buildNumber}}"></script>
+	<script th:src="@{'/web/static/js/common/jquery.validate.min.js?v='+${buildNumber}}"></script>
+	<script th:src="@{'/web/static/js/common/datatables.min.js?v='+${buildNumber}}"></script>
+	<script th:src="@{'/web/static/js/common/datatables-util'+ ${isProduction == true ? '.min.js' : '.js'}+'?v='+${buildNumber}}"></script>
+	<script th:src="@{'/web/static/js/common/datatables-select'+ ${isProduction == true ? '.min.js' : '.js'}+'?v='+${buildNumber}}"></script>
+	<script th:src="@{'/web/static/js/app/role/input'+ ${isProduction == true ? '.min.js' : '.js'}+'?v='+${buildNumber}}"></script>
 </div>
 <!-- /Page Scripts -->
 

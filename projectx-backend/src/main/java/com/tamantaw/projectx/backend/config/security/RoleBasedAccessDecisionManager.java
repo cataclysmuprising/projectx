@@ -1,6 +1,8 @@
 package com.tamantaw.projectx.backend.config.security;
 
 import com.tamantaw.projectx.backend.BackendApplication;
+import com.tamantaw.projectx.backend.dto.ActionDefinition;
+import com.tamantaw.projectx.backend.utils.ActionRegistry;
 import com.tamantaw.projectx.persistence.service.RoleService;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -11,66 +13,150 @@ import org.springframework.security.authorization.AuthorizationResult;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
+import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 
 import java.util.List;
+import java.util.Set;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
+@Component
 public class RoleBasedAccessDecisionManager implements AuthorizationManager<RequestAuthorizationContext> {
-	private static final Logger applicationLogger = LogManager.getLogger("applicationLogs." + RoleBasedAccessDecisionManager.class.getName());
+
+	private static final Logger applicationLogger =
+			LogManager.getLogger("applicationLogs." + RoleBasedAccessDecisionManager.class.getName());
+
 	private final RoleService roleService;
+	private final ActionRegistry actionRegistry;
 
-	public RoleBasedAccessDecisionManager(RoleService roleService) {
+	public RoleBasedAccessDecisionManager(RoleService roleService, ActionRegistry actionRegistry) {
 		this.roleService = roleService;
-	}
-
-	private List<String> getAssociatedRolesByUrl(String url) {
-		List<String> urlAssociatedRoles = null;
-		try {
-			urlAssociatedRoles = roleService.selectRolesByActionURL(url, BackendApplication.APP_NAME);
-		}
-		catch (Exception e) {
-			applicationLogger.error("Failed to load associated roles for URL ==> " + url);
-		}
-		return urlAssociatedRoles;
+		this.actionRegistry = actionRegistry;
 	}
 
 	@Override
 	public void verify(@Nullable Supplier<? extends @Nullable Authentication> authentication, RequestAuthorizationContext context) {
+		// Keep your override if Spring Security in your version calls it.
 		if (authentication != null) {
 			AuthorizationManager.super.verify(authentication, context);
 		}
 	}
 
 	@Override
-	public @Nullable AuthorizationResult authorize(Supplier<? extends @Nullable Authentication> authentication, RequestAuthorizationContext context) {
-		AuthorizationDecision decision = new AuthorizationDecision(true);
+	public @Nullable AuthorizationResult authorize(
+			Supplier<? extends @Nullable Authentication> authentication,
+			RequestAuthorizationContext context) {
+
 		Authentication auth = authentication.get();
-		applicationLogger.debug("Authentication : " + auth);
-		if (auth == null || auth.getPrincipal() == null || !auth.isAuthenticated() || auth.getPrincipal().equals("anonymousUser")) {
+		applicationLogger.debug("Authentication : {}", auth);
+
+		if (auth == null
+				|| !auth.isAuthenticated()
+				|| auth.getPrincipal() == null
+				|| "anonymousUser".equals(auth.getPrincipal())) {
+
 			applicationLogger.debug("Invalid authentication : need to reauthenticate for current user.");
 			return new AuthorizationDecision(false);
 		}
 
 		String requestURL = context.getRequest().getServletPath();
-		applicationLogger.debug("Filtering process executed by RoleBasedAccessDecisionManager for requested URL ==> {}", requestURL);
-		List<String> urlAssociatedRoles = getAssociatedRolesByUrl(requestURL);
-		if (urlAssociatedRoles == null || urlAssociatedRoles.isEmpty()) {
-			applicationLogger.debug("Access restrictions were not defined for URL ==> {}.", requestURL);
-			return null;
+		applicationLogger.debug(
+				"Filtering process executed by RoleBasedAccessDecisionManager for requested URL ==> {}",
+				requestURL
+		);
+
+		// ---------------------------------------------------------------------
+		// Resolve ACTION (Java-side path matching, not DB regex)
+		// ---------------------------------------------------------------------
+		ActionDefinition action;
+		try {
+			action = actionRegistry.resolve(requestURL);
 		}
-		applicationLogger.debug("URL ==> {} was requested for Roles => {} ", requestURL, urlAssociatedRoles);
-		List<String> authorities = auth.getAuthorities().parallelStream().map(GrantedAuthority::getAuthority).collect(Collectors.toList());
-		applicationLogger.debug("Current Authenticated User has owned ==> {}", authorities);
-		boolean hasAuthority = CollectionUtils.containsAny(urlAssociatedRoles, authorities);
-		if (hasAuthority) {
-			applicationLogger.debug("Access Granted : Filtered by RoleBasedAccessDecisionManager.");
-			return new AuthorizationDecision(true);
-		}
-		else {
-			applicationLogger.debug("Access Denied : Filtered by RoleBasedAccessDecisionManager.");
+		catch (Exception e) {
+			applicationLogger.error(
+					"Failed to resolve action definition for URL ==> {}",
+					requestURL,
+					e
+			);
+			// Safer default: deny if action resolution fails
 			return new AuthorizationDecision(false);
 		}
+
+		if (action == null) {
+			applicationLogger.debug(
+					"No action definition matched for URL ==> {}. Allowing (authenticated already).",
+					requestURL
+			);
+			return new AuthorizationDecision(true);
+		}
+
+		applicationLogger.debug(
+				"Resolved action for URL ==> {} : [actionId={}, actionName={}]",
+				requestURL,
+				action.id(),
+				action.actionName()
+		);
+
+		// ---------------------------------------------------------------------
+		// Load allowed roles for resolved ACTION
+		// ---------------------------------------------------------------------
+		Set<String> actionAssociatedRoles;
+		try {
+			actionAssociatedRoles = roleService.selectRolesByActionId(action.id(), BackendApplication.APP_NAME);
+		}
+		catch (Exception e) {
+			applicationLogger.error(
+					"Failed to load associated roles for actionId={} (URL ==> {})",
+					action.id(),
+					requestURL,
+					e
+			);
+			// Safer default: deny if role rules can't be loaded
+			return new AuthorizationDecision(false);
+		}
+
+		if (actionAssociatedRoles.isEmpty()) {
+			applicationLogger.debug(
+					"No role restrictions defined for actionId={} (URL ==> {}). Allowing.",
+					action.id(),
+					requestURL
+			);
+			return new AuthorizationDecision(true);
+		}
+
+		applicationLogger.debug(
+				"URL ==> {} was requested for ActionId={} with allowed Roles => {}",
+				requestURL,
+				action.id(),
+				actionAssociatedRoles
+		);
+
+		// ---------------------------------------------------------------------
+		// Compare against authenticated user's authorities
+		// ---------------------------------------------------------------------
+		List<String> authorities = auth.getAuthorities().stream()
+				.map(GrantedAuthority::getAuthority)
+				.toList();
+
+		applicationLogger.debug(
+				"Current Authenticated User has owned ==> {}",
+				authorities
+		);
+
+		boolean hasAuthority =
+				CollectionUtils.containsAny(actionAssociatedRoles, authorities);
+
+		if (hasAuthority) {
+			applicationLogger.debug(
+					"Access Granted : Filtered by RoleBasedAccessDecisionManager."
+			);
+			return new AuthorizationDecision(true);
+		}
+
+		applicationLogger.debug(
+				"Access Denied : Filtered by RoleBasedAccessDecisionManager."
+		);
+		return new AuthorizationDecision(false);
 	}
 }
+

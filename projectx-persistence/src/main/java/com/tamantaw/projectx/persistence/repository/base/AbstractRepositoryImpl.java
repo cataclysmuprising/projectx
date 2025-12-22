@@ -3,7 +3,10 @@ package com.tamantaw.projectx.persistence.repository.base;
 import com.querydsl.core.types.EntityPath;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.Predicate;
-import com.querydsl.core.types.dsl.*;
+import com.querydsl.core.types.dsl.CaseBuilder;
+import com.querydsl.core.types.dsl.EntityPathBase;
+import com.querydsl.core.types.dsl.NumberExpression;
+import com.querydsl.core.types.dsl.PathBuilder;
 import com.querydsl.jpa.JPQLQuery;
 import com.querydsl.jpa.impl.AbstractJPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -11,6 +14,7 @@ import com.querydsl.jpa.impl.JPAUpdateClause;
 import com.tamantaw.projectx.persistence.criteria.base.AbstractCriteria;
 import com.tamantaw.projectx.persistence.entity.base.AbstractEntity;
 import com.tamantaw.projectx.persistence.entity.base.QAbstractEntity;
+import jakarta.annotation.Nonnull;
 import jakarta.persistence.EntityManager;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.logging.log4j.LogManager;
@@ -23,7 +27,6 @@ import org.springframework.data.querydsl.EntityPathResolver;
 import org.springframework.data.querydsl.SimpleEntityPathResolver;
 import org.springframework.util.Assert;
 
-import javax.annotation.Nonnull;
 import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.time.LocalDateTime;
@@ -57,12 +60,6 @@ public abstract class AbstractRepositoryImpl<
 	// STATIC CONFIGURATION
 	// ----------------------------------------------------------------------
 
-	private static final EntityPathResolver PATH_RESOLVER =
-			SimpleEntityPathResolver.INSTANCE;
-
-	private static final Logger logger =
-			LogManager.getLogger("repositoryLogs." + AbstractRepositoryImpl.class.getName());
-
 	/**
 	 * Indicates whether the underlying database is PostgreSQL.
 	 *
@@ -94,11 +91,14 @@ public abstract class AbstractRepositoryImpl<
 	 * </p>
 	 */
 	public static final boolean IS_POSTGRES_DB = true;
+	private static final EntityPathResolver PATH_RESOLVER =
+			SimpleEntityPathResolver.INSTANCE;
+	private static final Logger logger =
+			LogManager.getLogger("repositoryLogs." + AbstractRepositoryImpl.class.getName());
 
 	// ----------------------------------------------------------------------
 	// CORE FIELDS
 	// ----------------------------------------------------------------------
-
 	protected final EntityManager entityManager;
 	protected final QCLAZZ path;
 	protected final QAbstractEntity audit;
@@ -145,6 +145,33 @@ public abstract class AbstractRepositoryImpl<
 	// READ OPERATIONS
 	// ----------------------------------------------------------------------
 
+	protected static QueryHints getRelatedDataHints(String... hints) {
+		if (ArrayUtils.isNotEmpty(hints)) {
+			MutableQueryHints qh = new MutableQueryHints();
+			qh.add("jakarta.persistence.fetchgraph", String.join(",", hints));
+			return qh;
+		}
+		return null;
+	}
+
+	private static <T> List<List<T>> chunk(
+			List<T> src,
+			int size) {
+
+		if (src == null || src.isEmpty()) {
+			return List.of();
+		}
+
+		List<List<T>> out =
+				new ArrayList<>((src.size() + size - 1) / size);
+
+		for (int i = 0; i < src.size(); i += size) {
+			out.add(src.subList(i, Math.min(src.size(), i + size)));
+		}
+
+		return out;
+	}
+
 	/**
 	 * Simple primary-key lookup.
 	 */
@@ -190,6 +217,10 @@ public abstract class AbstractRepositoryImpl<
 
 		return Optional.of(rows.getFirst());
 	}
+
+	// ----------------------------------------------------------------------
+	// ID / COUNT / EXISTS
+	// ----------------------------------------------------------------------
 
 	/**
 	 * Returns all matching entities without pagination.
@@ -303,10 +334,6 @@ public abstract class AbstractRepositoryImpl<
 		return new PageImpl<>(content, pageable, total);
 	}
 
-	// ----------------------------------------------------------------------
-	// ID / COUNT / EXISTS
-	// ----------------------------------------------------------------------
-
 	/**
 	 * Returns matching entity IDs.
 	 *
@@ -329,6 +356,10 @@ public abstract class AbstractRepositoryImpl<
 
 		return query.fetch();
 	}
+
+	// ----------------------------------------------------------------------
+	// WRITE OPERATIONS
+	// ----------------------------------------------------------------------
 
 	/**
 	 * Count query with identical filter but no joins or pagination.
@@ -364,7 +395,7 @@ public abstract class AbstractRepositoryImpl<
 	}
 
 	// ----------------------------------------------------------------------
-	// WRITE OPERATIONS
+	// BULK OPERATIONS (ID-FIRST, SAFE)
 	// ----------------------------------------------------------------------
 
 	@Override
@@ -378,7 +409,7 @@ public abstract class AbstractRepositoryImpl<
 	}
 
 	// ----------------------------------------------------------------------
-	// BULK OPERATIONS (ID-FIRST, SAFE)
+	// INTERNAL HELPERS
 	// ----------------------------------------------------------------------
 
 	@Override
@@ -440,10 +471,6 @@ public abstract class AbstractRepositoryImpl<
 
 		return affected;
 	}
-
-	// ----------------------------------------------------------------------
-	// INTERNAL HELPERS
-	// ----------------------------------------------------------------------
 
 	protected AbstractJPAQuery<?, ?> createQuery(
 			Predicate predicate,
@@ -537,15 +564,6 @@ public abstract class AbstractRepositoryImpl<
 		return true;
 	}
 
-	protected static QueryHints getRelatedDataHints(String... hints) {
-		if (ArrayUtils.isNotEmpty(hints)) {
-			MutableQueryHints qh = new MutableQueryHints();
-			qh.add("jakarta.persistence.fetchgraph", String.join(",", hints));
-			return qh;
-		}
-		return null;
-	}
-
 	private QAbstractEntity resolveAuditPath(EntityPath<?> p) {
 
 		if (p instanceof QAbstractEntity qa) {
@@ -564,23 +582,5 @@ public abstract class AbstractRepositoryImpl<
 		throw new IllegalStateException(
 				"QAbstractEntity audit path not resolvable"
 		);
-	}
-
-	private static <T> List<List<T>> chunk(
-			List<T> src,
-			int size) {
-
-		if (src == null || src.isEmpty()) {
-			return List.of();
-		}
-
-		List<List<T>> out =
-				new ArrayList<>((src.size() + size - 1) / size);
-
-		for (int i = 0; i < src.size(); i += size) {
-			out.add(src.subList(i, Math.min(src.size(), i + size)));
-		}
-
-		return out;
 	}
 }

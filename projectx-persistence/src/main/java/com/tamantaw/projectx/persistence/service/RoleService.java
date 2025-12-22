@@ -1,6 +1,7 @@
 package com.tamantaw.projectx.persistence.service;
 
 import com.tamantaw.projectx.persistence.config.PrimaryPersistenceContext;
+import com.tamantaw.projectx.persistence.criteria.ActionCriteria;
 import com.tamantaw.projectx.persistence.criteria.RoleCriteria;
 import com.tamantaw.projectx.persistence.dto.RoleDTO;
 import com.tamantaw.projectx.persistence.entity.Action;
@@ -17,15 +18,14 @@ import jakarta.persistence.EntityManager;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.tamantaw.projectx.persistence.utils.LoggerConstants.*;
@@ -53,20 +53,42 @@ public class RoleService
 		this.roleRepository = roleRepository;
 	}
 
-	@Transactional(transactionManager = PrimaryPersistenceContext.TX_MANAGER, rollbackFor = Exception.class, readOnly = true)
-	public List<String> selectRolesByActionURL(String actionUrl, String appName) throws PersistenceException {
-		Assert.notNull(actionUrl, "Action URL shouldn't be Null.");
-		Assert.notNull(appName, "App Name shouldn't be Null.");
-		serviceLogger.info(LOG_PREFIX + "Transaction start for fetching role names by given actionUrl : <{}> and appName : <{}>" + LOG_SUFFIX, actionUrl, appName);
-		List<String> roleNames;
+	@Cacheable(
+			cacheNames = "rolesByAction",
+			key = "#appName + '|' + #actionId"
+	)
+	@Transactional(transactionManager = PrimaryPersistenceContext.TX_MANAGER, readOnly = true)
+	public Set<String> selectRolesByActionId(Long actionId, String appName) throws PersistenceException {
+
+		Assert.notNull(actionId, "Action ID shouldn't be null.");
+		Assert.notNull(appName, "App Name shouldn't be null.");
+
+		serviceLogger.debug(LOG_PREFIX + "Fetching role names by actionId=<{}>, appName=<{}>" + LOG_SUFFIX, actionId, appName);
+
 		try {
-			roleNames = roleRepository.selectRolesByActionURL(actionUrl, appName);
+			RoleCriteria roleCriteria = new RoleCriteria();
+			roleCriteria.setAppName(appName);
+
+			ActionCriteria actionCriteria = new ActionCriteria();
+			actionCriteria.setId(actionId);
+			actionCriteria.setAppName(appName);
+
+			roleCriteria.setAction(actionCriteria);
+
+			List<Role> roles = roleRepository.findAll(roleCriteria);
+
+			if (roles == null || roles.isEmpty()) {
+				return Collections.emptySet();
+			}
+
+			return roles.stream()
+					.map(Role::getName)
+					.filter(Objects::nonNull)
+					.collect(Collectors.toSet());
 		}
 		catch (Exception e) {
-			throw new PersistenceException(e.getMessage(), e);
+			throw new PersistenceException("Failed to fetch role names for actionId=" + actionId + ", appName=" + appName, e);
 		}
-		serviceLogger.info(LOG_PREFIX + "Transaction finished successfully for fetching role names by given actionUrl : <{}> and appName : <{}>" + LOG_SUFFIX, actionUrl, appName);
-		return roleNames;
 	}
 
 	public Role create(RoleDTO dto, List<Long> actionIds, long createdBy)
@@ -124,6 +146,7 @@ public class RoleService
 		}
 	}
 
+	@CacheEvict(cacheNames = "rolesByAction", allEntries = true)
 	public void updateRoleAndActions(Long roleId, List<Long> actionIds)
 			throws PersistenceException, ConsistencyViolationException {
 

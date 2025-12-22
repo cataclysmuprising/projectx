@@ -4,9 +4,8 @@ import com.tamantaw.projectx.backend.BackendApplication;
 import com.tamantaw.projectx.backend.common.response.PageMessage;
 import com.tamantaw.projectx.backend.common.response.PageMessageStyle;
 import com.tamantaw.projectx.backend.config.security.AuthenticatedClient;
+import com.tamantaw.projectx.backend.utils.ActionRegistry;
 import com.tamantaw.projectx.persistence.dto.AdministratorDTO;
-import com.tamantaw.projectx.persistence.exception.PersistenceException;
-import com.tamantaw.projectx.persistence.service.ActionService;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.Getter;
@@ -25,14 +24,9 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 
 public abstract class BaseMVCController {
-	public static final Long SUPER_USER_ID = 1001L;
-	public static final Long SUPER_USER_ROLE_ID = 1L;
 	@Getter
 	private static String projectVersion;
 	@Getter
@@ -44,7 +38,7 @@ public abstract class BaseMVCController {
 	@Autowired
 	protected ObjectMapper mapper;
 	@Autowired
-	private ActionService actionService;
+	private ActionRegistry actionRegistry;
 	@Autowired
 	private ServletContext servletContext;
 
@@ -54,11 +48,11 @@ public abstract class BaseMVCController {
 	}
 
 	public static String getAppShortName() {
-		return "Reporting";
+		return "ProjectX";
 	}
 
 	public static String getAppFullName() {
-		return "Reporting Platform";
+		return "ProjectX";
 	}
 
 	@ModelAttribute
@@ -80,14 +74,8 @@ public abstract class BaseMVCController {
 			AuthenticatedClient loginAdmin = getSignInClientInfo();
 			if (loginAdmin != null) {
 				HashMap<String, Boolean> accessments = new HashMap<>();
-				List<String> actions;
-				try {
-					actions = actionService.selectAvailableActionsForUser(pageName, BackendApplication.APP_NAME, loginAdmin.getRoleIds());
-				}
-				catch (PersistenceException e) {
-					String errorMessage = "Failed to fetch available actions for administrator <" + loginAdmin + "> with given pageName = <" + pageName + "> ";
-					throw new RuntimeException(errorMessage);
-				}
+				Set<String> actions;
+				actions = actionRegistry.resolveAvailableActionsForUser(BackendApplication.APP_NAME, pageName, loginAdmin.getRoleNames());
 				if (actions != null) {
 					actions.forEach(actionName -> {
 						model.addAttribute(actionName, true);

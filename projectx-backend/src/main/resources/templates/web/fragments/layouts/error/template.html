@@ -7,10 +7,10 @@
 	<meta id="_csrf" name="_csrf" th:content="${_csrf.token}"/>
 	<meta id="_csrf_header" name="_csrf_header" th:content="${_csrf.headerName}"/>
 	<!-- Favicon -->
-	<link rel="shortcut icon" th:href="@{/static/images/site/favicon.ico}" type="image/x-icon"/>
+	<link rel="shortcut icon" th:href="@{/web/static/images/site/favicon.ico}" type="image/x-icon"/>
 	<title th:text="(${#strings.isEmpty(appShortName)}  ? 'APP' : ${appShortName}) + (${#strings.isEmpty(pageName)} ?  '' : ' | ' +${pageName})"></title>
 	<!-- Error style -->
-	<link rel="stylesheet" th:href="@{'/static/css/common/error'+ ${isProduction == true ? '.min.css' : '.css'}+'?v='+${buildNumber}}">
+	<link rel="stylesheet" th:href="@{'/web/static/css/common/error'+ ${isProduction == true ? '.min.css' : '.css'}+'?v='+${buildNumber}}">
 </head>
 <body class="text-sm">
 

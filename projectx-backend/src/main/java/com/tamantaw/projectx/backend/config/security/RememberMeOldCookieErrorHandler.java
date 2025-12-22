@@ -2,7 +2,6 @@ package com.tamantaw.projectx.backend.config.security;
 
 import com.tamantaw.projectx.backend.config.SecurityConfig;
 import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.Cookie;
@@ -18,7 +17,7 @@ public class RememberMeOldCookieErrorHandler extends GenericFilterBean {
 	private final RedirectStrategy redirectStrategy = new DefaultRedirectStrategy();
 
 	@Override
-	public void doFilter(ServletRequest request, ServletResponse response, FilterChain filterChain) throws IOException, ServletException {
+	public void doFilter(ServletRequest request, ServletResponse response, FilterChain filterChain) throws IOException {
 
 		HttpServletRequest httpServletRequest = ((HttpServletRequest) request);
 

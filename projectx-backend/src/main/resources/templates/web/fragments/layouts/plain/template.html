@@ -7,14 +7,14 @@
 	<meta id="_csrf" name="_csrf" th:content="${_csrf.token}"/>
 	<meta id="_csrf_header" name="_csrf_header" th:content="${_csrf.headerName}"/>
 	<!-- Favicon -->
-	<link rel="shortcut icon" th:href="@{/static/images/site/favicon.ico}" type="image/x-icon"/>
+	<link rel="shortcut icon" th:href="@{/web/static/images/site/favicon.ico}" type="image/x-icon"/>
 	<title th:text="(${#strings.isEmpty(appShortName)}  ? 'APP' : ${appShortName}) + (${#strings.isEmpty(pageName)} ?  '' : ' | ' +${pageName})"></title>
 	<!-- Font Awesome -->
-	<link rel="stylesheet" th:href="@{'/static/css/common/fontawesome.min.css?v='+${buildNumber}}">
+	<link rel="stylesheet" th:href="@{'/web/static/css/common/fontawesome.min.css?v='+${buildNumber}}">
 	<!-- Theme style -->
-	<link rel="stylesheet" th:href="@{'/static/css/common/theme.min.css?v='+${buildNumber}}">
+	<link rel="stylesheet" th:href="@{'/web/static/css/common/theme.min.css?v='+${buildNumber}}">
 	<!-- App style -->
-	<link rel="stylesheet" th:href="@{'/static/css/common/app'+ ${isProduction == true ? '.min.css' : '.css'}+'?v='+${buildNumber}}">
+	<link rel="stylesheet" th:href="@{'/web/static/css/common/app'+ ${isProduction == true ? '.min.css' : '.css'}+'?v='+${buildNumber}}">
 	<!-- page related styles -->
 	<meta th:replace="~{${view} :: styles}"/>
 </head>
@@ -26,13 +26,13 @@
 
 <!-- ./wrapper -->
 <!-- jQuery -->
-<script th:src="@{'/static/js/common/jquery.min.js?v='+${buildNumber}}"></script>
+<script th:src="@{'/web/static/js/common/jquery.min.js?v='+${buildNumber}}"></script>
 <!-- Bootstrap 4 -->
-<script th:src="@{'/static/js/common/bootstrap.bundle.min.js?v='+${buildNumber}}"></script>
+<script th:src="@{'/web/static/js/common/bootstrap.bundle.min.js?v='+${buildNumber}}"></script>
 <!-- Theme JS -->
-<script th:src="@{'/static/js/common/theme.min.js?v='+${buildNumber}}"></script>
+<script th:src="@{'/web/static/js/common/theme.min.js?v='+${buildNumber}}"></script>
 <!-- App JS -->
-<script th:src="@{'/static/js/common/app'+ ${isProduction == true ? '.min.js' : '.js'}+'?v='+${buildNumber}}"></script>
+<script th:src="@{'/web/static/js/common/app'+ ${isProduction == true ? '.min.js' : '.js'}+'?v='+${buildNumber}}"></script>
 <!-- page related scripts -->
 <div th:replace="~{${view} :: scripts}"></div>
 </body>

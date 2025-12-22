@@ -45,7 +45,9 @@ public class AdministratorLoginHistoryServiceIT extends CommonTestBase {
 		entityManager.flush();
 		entityManager.clear();
 
-		Optional<AdministratorLoginHistoryDTO> result = loginHistoryService.findById(saved.getId());
+		AdministratorLoginHistoryCriteria criteria = new AdministratorLoginHistoryCriteria();
+		criteria.setId(saved.getId());
+		Optional<AdministratorLoginHistoryDTO> result = loginHistoryService.findOne(criteria, "AdministratorLoginHistory(administrator)");
 
 		assertTrue(result.isPresent());
 		assertEquals(result.get().getAdministrator().getId(), 2L);
@@ -61,7 +63,7 @@ public class AdministratorLoginHistoryServiceIT extends CommonTestBase {
 		AdministratorLoginHistoryCriteria criteria = new AdministratorLoginHistoryCriteria();
 		criteria.setAdministratorId(1L);
 
-		List<AdministratorLoginHistoryDTO> histories = loginHistoryService.findAll(criteria);
+		List<AdministratorLoginHistoryDTO> histories = loginHistoryService.findAll(criteria, "AdministratorLoginHistory(administrator)");
 
 		assertFalse(histories.isEmpty());
 		assertTrue(histories.stream().allMatch(h -> h.getAdministrator().getId().equals(1L)));

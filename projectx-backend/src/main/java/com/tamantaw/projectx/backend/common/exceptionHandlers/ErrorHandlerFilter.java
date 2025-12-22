@@ -1,9 +1,6 @@
 package com.tamantaw.projectx.backend.common.exceptionHandlers;
 
-import jakarta.servlet.Filter;
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletRequest;
-import jakarta.servlet.ServletResponse;
+import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpStatus;
@@ -60,7 +57,13 @@ public class ErrorHandlerFilter implements Filter {
 				res.getWriter().write(objectMapper.writeValueAsString(problem));
 			}
 			else {
-				redirectStrategy.sendRedirect(req, res, "/error/500");
+				req.setAttribute(RequestDispatcher.ERROR_STATUS_CODE, 500);
+				try {
+					req.getRequestDispatcher("/web/pub/error/500").forward(req, res);
+				}
+				catch (ServletException e) {
+					throw new RuntimeException(e);
+				}
 			}
 		}
 	}

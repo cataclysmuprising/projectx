@@ -11,7 +11,7 @@ import java.util.Locale;
 @Controller
 public class AuthenticationController extends BaseMVCController {
 
-	@GetMapping("/login")
+	@GetMapping("/web/pub/login")
 	@Layout("plain")
 	public String login(Model model, @RequestParam(required = false, name = "error") String error) {
 		Locale locale = Locale.ENGLISH;

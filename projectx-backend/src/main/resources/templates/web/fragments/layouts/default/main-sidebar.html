@@ -2,7 +2,7 @@
 <aside class="main-sidebar sidebar-dark-info elevation-3" th:fragment="main-sidebar" xmlns:th="http://www.thymeleaf.org">
 	<!-- Brand Logo -->
 	<a class="brand-link" th:href="@{/}">
-		<img alt="Site Logo" class="brand-image img-circle elevation-3" style="opacity: .8" th:src="@{/static/images/site/logo_white.png}">
+		<img alt="Site Logo" class="brand-image img-circle elevation-3" style="opacity: .8" th:src="@{/web/static/images/site/logo_white.png}">
 		<span class="brand-text font-weight-light" th:text="${appFullName}"></span>
 	</a>
 
@@ -11,7 +11,7 @@
 		<!-- Sidebar user (optional) -->
 		<div class="user-panel mt-3 pb-3 mb-3 d-flex">
 			<div class="image">
-				<img alt="User Image" class="img-circle elevation-2" th:src="@{/static/images/avatar/guest.jpg}">
+				<img alt="User Image" class="img-circle elevation-2" th:src="@{/web/static/images/avatar/guest.jpg}">
 			</div>
 			<div class="info">
 				<a class="d-block" th:href="@{/}" th:text="${#strings.isEmpty(loginUserName)} ? 'Guest' : ${loginUserName}"></a>

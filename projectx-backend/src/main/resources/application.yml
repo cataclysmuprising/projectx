@@ -4,6 +4,16 @@ spring:
     deserialization:
       fail-on-unknown-properties: false
     time-zone: Asia/Rangoon
+  thymeleaf: # Thymeleaf
+    cache: false
+    mode: HTML
+    encoding: UTF-8
+    prefix: file:src/main/resources/templates/web/
+  web:
+    resources:
+      static-locations: src/main/resources/static/
+      cache:
+        period: 0
   aop:
     proxy-target-class: true
   main:

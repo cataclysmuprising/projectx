@@ -29,43 +29,19 @@
 		<maven.compiler.version>3.14.1</maven.compiler.version>
 		<maven.warplugin.version>3.5.0</maven.warplugin.version>
 		<testng.version>7.11.0</testng.version>
-		<guava.version>33.5.0-jre</guava.version>
-		<spotbugs.version>4.9.8</spotbugs.version>
-		<org.json.version>20250517</org.json.version>
 	</properties>
 
 	<dependencies>
-		<!-- JSON -->
-		<dependency>
-			<groupId>org.json</groupId>
-			<artifactId>json</artifactId>
-			<version>${org.json.version}</version>
-		</dependency>
 		<!-- Apache common libs -->
 		<dependency>
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-lang3</artifactId>
-		</dependency>
-		<!-- Guava: Google Core Libraries for Java -->
-		<dependency>
-			<groupId>com.google.guava</groupId>
-			<artifactId>guava</artifactId>
-			<version>${guava.version}</version>
 		</dependency>
 		<!-- Lombok -->
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
 			<optional>true</optional>
-		</dependency>
-		<!--
-		To fix build warnings for spring annotations
-		https://stackoverflow.com/questions/53326271/spring-nullable-annotation-generates-unknown-enum-constant-warning
-		 -->
-		<dependency>
-			<groupId>com.github.spotbugs</groupId>
-			<artifactId>spotbugs-annotations</artifactId>
-			<version>${spotbugs.version}</version>
 		</dependency>
 		<!-- To enable spring-boot property resources -->
 		<dependency>
@@ -110,11 +86,6 @@
 					<artifactId>jquery</artifactId>
 				</exclusion>
 			</exclusions>
-		</dependency>
-		<dependency>
-			<groupId>org.assertj</groupId>
-			<artifactId>assertj-core</artifactId>
-			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

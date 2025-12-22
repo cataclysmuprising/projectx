@@ -2,8 +2,8 @@
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <!-- Page Styles -->
 <div th:fragment="styles" th:remove="tag">
-	<link rel="stylesheet" th:href="@{'/static/css/common/icheck-bootstrap.min.css?v='+${buildNumber}}">
-	<link rel="stylesheet" th:href="@{'/static/css/app/login/page'+ ${isProduction == true ? '.min.css' : '.css'}+'?v='+${buildNumber}}">
+	<link rel="stylesheet" th:href="@{'/web/static/css/common/icheck-bootstrap.min.css?v='+${buildNumber}}">
+	<link rel="stylesheet" th:href="@{'/web/static/css/app/login/page'+ ${isProduction == true ? '.min.css' : '.css'}+'?v='+${buildNumber}}">
 </div>
 <!-- /Page Styles -->
 <!-- Page Scripts -->
@@ -14,7 +14,7 @@
 <div class="login-page" th:fragment="content">
 	<div class="login-box">
 		<div class="login-logo">
-			<img alt="" class="" th:src="@{/static/images/site/logo.png}">
+			<img alt="" class="" th:src="@{/web/static/images/site/logo.png}">
 			<span class="brand-text font-weight-bolder" th:text="${appShortName}"></span>
 		</div>
 		<!-- /.login-logo -->

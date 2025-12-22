@@ -3,18 +3,13 @@
 	  xmlns:th="http://www.thymeleaf.org">
 <!-- Page Styles -->
 <div th:fragment="styles" th:remove="tag">
-	<link rel="stylesheet" th:href="@{'/static/css/common/daterangepicker'+ ${isProduction == true ? '.min.css' : '.css'}+'?v='+${buildNumber}}">
-	<link rel="stylesheet" th:href="@{'/static/css/app/dashboard/page'+ ${isProduction == true ? '.min.css' : '.css'}+'?v='+${buildNumber}}">
+	<link rel="stylesheet" th:href="@{'/web/static/css/app/dashboard/page'+ ${isProduction == true ? '.min.css' : '.css'}+'?v='+${buildNumber}}">
 </div>
 <!-- /Page Styles -->
 
 <!-- Page Scripts -->
 <div th:fragment="scripts" th:remove="tag">
-	<script th:src="@{'/static/js/common/bootstrap-select.min.js?v='+${buildNumber}}"></script>
-	<script th:src="@{'/static/js/common/moment'+ ${isProduction == true ? '.min.js' : '.js'}+'?v='+${buildNumber}}"></script>
-	<script th:src="@{'/static/js/common/daterangepicker'+ ${isProduction == true ? '.min.js' : '.js'}+'?v='+${buildNumber}}"></script>
-	<script th:src="@{'/static/js/common/jquery.animateNumber.min.js?v='+${buildNumber}}"></script>
-	<script th:src="@{'/static/js/app/dashboard/page'+ ${isProduction == true ? '.min.js' : '.js'}+'?v='+${buildNumber}}"></script>
+	<script th:src="@{'/web/static/js/app/dashboard/page'+ ${isProduction == true ? '.min.js' : '.js'}+'?v='+${buildNumber}}"></script>
 </div>
 <!-- /Page Scripts -->
 
@@ -43,99 +38,9 @@
 
 	<!-- Main content -->
 	<section class="content">
-		<div class="card">
-			<div class="card-body">
-				<div class="text-right text-right mb-2">
-					<input class="form-control form-control-sm p-1" id="targetMonth" type="text" value="All"/>
-					<button class="btn btn-flat mr-1 btn-warning" id="btnReset" type="button">
-						<i class="fas fa-recycle"></i> Reset
-					</button>
-				</div>
-
-				<div class="row">
-					<div class="col-4">
-						<div class="small-box bg-info">
-							<div class="inner">
-								<h3 id="hdr-total-approved-report">0</h3>
-								<p> STR (
-									<span id="hdr-total-approved-str-report"> 0 </span>
-									) | TTR (
-									<span
-											id="hdr-total-approved-ttr-report"> 0 </span>
-									)
-								</p>
-							</div>
-							<div class="icon">
-								<i class="fas fa-file-alt"></i>
-							</div>
-							<a class="small-box-footer" th:href="@{/sec/reports}">
-								More info <i class="fas fa-arrow-circle-right"></i>
-							</a>
-						</div>
-					</div>
-					<div class="col-4" sec:authorize="!hasAuthority('SUPER-USER')">
-						<div class="small-box bg-gray">
-							<div class="inner">
-								<h3 id="hdr-total-draft-report">0</h3>
-								<p>Draft Report</p>
-							</div>
-							<div class="icon">
-								<i class="fas fa-sync"></i>
-							</div>
-							<a class="small-box-footer" th:href="@{/sec/reports}">
-								More info <i class="fas fa-arrow-circle-right"></i>
-							</a>
-						</div>
-					</div>
-
-					<div class="col-4" sec:authorize="!hasAuthority('SUPER-USER')">
-
-						<div class="small-box bg-warning">
-							<div class="inner">
-								<h3 id="hdr-total-waitingapproval-report">0</h3>
-								<p>Waiting Approval</p>
-							</div>
-							<div class="icon">
-								<i class="fas fa-user-clock"></i>
-							</div>
-							<a class="small-box-footer" th:href="@{/sec/reports}">
-								More info <i class="fas fa-arrow-circle-right"></i>
-							</a>
-						</div>
-					</div>
-
-					<!--/* Feedback Count */-->
-					<div class="col-4">
-						<div class="small-box bg-gradient-navy">
-							<div class="inner">
-								<h3>[[${totalFeedbackCount}]]</h3>
-								<p>All Feedbacks</p>
-							</div>
-							<div class="icon">
-								<i class="fas fa-sync"></i>
-							</div>
-							<a class="small-box-footer" th:href="@{/sec/reports}">
-								More info <i class="fas fa-arrow-circle-right"></i>
-							</a>
-						</div>
-					</div>
-					<div class="col-4">
-						<div class="small-box bg-red">
-							<div class="inner">
-								<h3>[[${todayFeedbackCount}]]</h3>
-								<p>Today's Feedbacks</p>
-							</div>
-							<div class="icon">
-								<i class="fas fa-sync"></i>
-							</div>
-							<a class="small-box-footer" th:href="@{/sec/reports}">
-								More info <i class="fas fa-arrow-circle-right"></i>
-							</a>
-						</div>
-					</div>
-				</div>
-
-			</div>
+		<div class="callout callout-info">
+			<h5><i class="fas fa-info"></i> Note:</h5>
+			This is our awesome dashboard screen.
 		</div>
 	</section>
 	<!-- /Main content -->

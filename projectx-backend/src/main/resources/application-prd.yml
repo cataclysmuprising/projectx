@@ -1,0 +1,7 @@
+### Define Logger config file directory ###
+logging:
+  config: classpath:logger/log4j2-prd.yml
+spring:
+  config:
+    import:
+      - classpath:persistence-prd.yml

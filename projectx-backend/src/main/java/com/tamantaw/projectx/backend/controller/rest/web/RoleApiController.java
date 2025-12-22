@@ -1,6 +1,7 @@
-package com.tamantaw.projectx.backend.controller.rest;
+package com.tamantaw.projectx.backend.controller.rest.web;
 
 import com.tamantaw.projectx.backend.BackendApplication;
+import com.tamantaw.projectx.backend.controller.rest.BaseRESTController;
 import com.tamantaw.projectx.persistence.criteria.RoleCriteria;
 import com.tamantaw.projectx.persistence.dto.RoleDTO;
 import com.tamantaw.projectx.persistence.dto.base.PaginatedResult;
@@ -17,8 +18,10 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.HashSet;
 import java.util.List;
 
+import static com.tamantaw.projectx.backend.BackendApplication.SUPER_USER_ROLE_ID;
+
 @RestController
-@RequestMapping("/api/sec/roles")
+@RequestMapping("/api/web/sec/roles")
 public class RoleApiController extends BaseRESTController {
 
 	@Autowired
@@ -28,7 +31,7 @@ public class RoleApiController extends BaseRESTController {
 	public ResponseEntity<?> dataTableSearch(@RequestBody RoleCriteria criteria) throws PersistenceException {
 		criteria.setAppName(BackendApplication.APP_NAME);
 		HashSet<Long> superUserRoleId = new HashSet<>();
-		//superUserRoleId.add(SUPER_USER_ROLE_ID);
+		superUserRoleId.add(SUPER_USER_ROLE_ID);
 		criteria.setExcludeIds(superUserRoleId);
 		PaginatedResult<RoleDTO> result = roleService.findByPaging(criteria);
 		return new ResponseEntity<>(result, HttpStatus.OK);
@@ -38,7 +41,7 @@ public class RoleApiController extends BaseRESTController {
 	public ResponseEntity<?> searchList(@RequestBody RoleCriteria criteria) throws PersistenceException {
 		criteria.setAppName(BackendApplication.APP_NAME);
 		HashSet<Long> superUserRoleId = new HashSet<>();
-		//superUserRoleId.add(SUPER_USER_ROLE_ID);
+		superUserRoleId.add(SUPER_USER_ROLE_ID);
 		criteria.setExcludeIds(superUserRoleId);
 		criteria.setAppName(BackendApplication.APP_NAME);
 		List<RoleDTO> results = roleService.findAll(criteria);

@@ -1,7 +1,6 @@
 package com.tamantaw.projectx.backend.controller.mvc;
 
 import com.tamantaw.projectx.backend.common.thymeleaf.Layout;
-import com.tamantaw.projectx.persistence.exception.PersistenceException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Controller;
@@ -17,17 +16,17 @@ public class HomeController extends BaseMVCController {
 
 	@GetMapping
 	public String home() {
-		return "redirect:/sec/dashboard";
+		return "redirect:/web/sec/dashboard";
 	}
 
-	@GetMapping("/sec/dashboard")
-	public String dashboardPage(Model model, HttpServletRequest request) throws PersistenceException {
+	@GetMapping("/web/sec/dashboard")
+	public String dashboardPage(Model model, HttpServletRequest request) {
 		setAuthorities(model, "Dashboard");
 		return "dashboard";
 	}
 
 	@Layout("error")
-	@GetMapping("/error/{code}")
+	@GetMapping("/web/pub/error/{code}")
 	public String errorPage(Model model, @RequestHeader(value = HttpHeaders.REFERER, required = false) String referer, @PathVariable String code) {
 		model.addAttribute("pageName", "Error !");
 		model.addAttribute("referer", referer);
@@ -35,14 +34,7 @@ public class HomeController extends BaseMVCController {
 	}
 
 	@Layout("error")
-	@GetMapping("/404.html")
-	public String pageNotFound(Model model) {
-		model.addAttribute("pageName", "Error !");
-		return "error/404";
-	}
-
-	@Layout("error")
-	@GetMapping("/accessDenied")
+	@GetMapping("/web/pub/accessDenied")
 	public String accessDenied(Model model) {
 		model.addAttribute("pageName", "Error !");
 		return "error/403";

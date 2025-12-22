@@ -45,11 +45,11 @@
 
 /*@font-face {*/
 /*    font-family: 'Roboto Regular';*/
-/*    src: url('http://localhost:8081/reporting-platform/static/fonts/Roboto-Regular/Roboto-Regular-webfont.eot');*/
-/*    src: url('http://localhost:8081/reporting-platform/static/fonts/Roboto-Regular/Roboto-Regular-webfont.eot?#iefix') format('embedded-opentype'),*/
-/*    url('http://localhost:8081/reporting-platform/static/fonts/Roboto-Regular/Roboto-Regular-webfont.woff') format('woff'),*/
-/*    url('http://localhost:8081/reporting-platform/static/fonts/Roboto-Regular/Roboto-Regular-webfont.ttf') format('truetype'),*/
-/*    url('http://localhost:8081/reporting-platform/static/fonts/Roboto-Regular/Roboto-Regular-webfont.svg#robotoregular') format('svg');*/
+/*    src: url('http://localhost:8282/projectx/web/static/fonts/Roboto-Regular/Roboto-Regular-webfont.eot');*/
+/*    src: url('http://localhost:8282/projectx/web/static/fonts/Roboto-Regular/Roboto-Regular-webfont.eot?#iefix') format('embedded-opentype'),*/
+/*    url('http://localhost:8282/projectx/web/static/fonts/Roboto-Regular/Roboto-Regular-webfont.woff') format('woff'),*/
+/*    url('http://localhost:8282/projectx/web/static/fonts/Roboto-Regular/Roboto-Regular-webfont.ttf') format('truetype'),*/
+/*    url('http://localhost:8282/projectx/web/static/fonts/Roboto-Regular/Roboto-Regular-webfont.svg#robotoregular') format('svg');*/
 /*    font-weight: normal;*/
 /*    font-style: normal;*/
 /*}*/
@@ -61,7 +61,7 @@
 
 /*@font-face {*/
 /*    font-family: 'Source Sans Pro';*/
-/*    src: url('http://localhost:8081/reporting-platform/static/fonts/SourceSansPro-Regular.woff2') format('woff2');*/
+/*    src: url('http://localhost:8282/projectx/web/static/fonts/SourceSansPro-Regular.woff2') format('woff2');*/
 /*}*/
 
 @font-face {
@@ -77,7 +77,7 @@
 /*    font-style: normal;*/
 /*    font-size: 11px;*/
 /*    font-weight: 400;*/
-/*    src: url('http://localhost:8081/reporting-platform/static/fonts/NotoSansMyanmar-Regular.ttf') format('truetype');*/
+/*    src: url('http://localhost:8282/projectx/web/static/fonts/NotoSansMyanmar-Regular.ttf') format('truetype');*/
 /*}*/
 
 body {

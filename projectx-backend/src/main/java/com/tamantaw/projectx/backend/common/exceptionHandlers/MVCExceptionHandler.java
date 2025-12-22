@@ -65,7 +65,7 @@ public class MVCExceptionHandler {
 					request);
 		}
 
-		return errorView(HttpStatus.NOT_FOUND, "error/404", auth, request);
+		return errorView(HttpStatus.NOT_FOUND, "/error/404", auth, request);
 	}
 
 	/* ============================================================
@@ -89,7 +89,7 @@ public class MVCExceptionHandler {
 					request);
 		}
 
-		return errorView(HttpStatus.UNAUTHORIZED, "error/401", auth, request);
+		return errorView(HttpStatus.UNAUTHORIZED, "/error/401", auth, request);
 	}
 
 	/* ============================================================
@@ -113,7 +113,7 @@ public class MVCExceptionHandler {
 					request);
 		}
 
-		return errorView(HttpStatus.FORBIDDEN, "error/403", auth, request);
+		return errorView(HttpStatus.FORBIDDEN, "/error/403", auth, request);
 	}
 
 	/* ============================================================
@@ -138,7 +138,7 @@ public class MVCExceptionHandler {
 					request);
 		}
 
-		return errorView(HttpStatus.BAD_REQUEST, "error/400", auth, request);
+		return errorView(HttpStatus.BAD_REQUEST, "/error/400", auth, request);
 	}
 
 	/* ============================================================
@@ -152,7 +152,7 @@ public class MVCExceptionHandler {
 	                               HttpServletRequest request) {
 
 		logError("handleGone", e);
-		return errorView(HttpStatus.GONE, "error/410", auth, request);
+		return errorView(HttpStatus.GONE, "/error/410", auth, request);
 	}
 
 	/* ============================================================
@@ -173,7 +173,7 @@ public class MVCExceptionHandler {
 					request);
 		}
 
-		return errorView(HttpStatus.CONFLICT, "error/409", auth, request);
+		return errorView(HttpStatus.CONFLICT, "/error/409", auth, request);
 	}
 
 	/* ============================================================
@@ -201,7 +201,7 @@ public class MVCExceptionHandler {
 			return pd;
 		}
 
-		return errorView(HttpStatus.INTERNAL_SERVER_ERROR, "error/500", auth, request);
+		return errorView(HttpStatus.INTERNAL_SERVER_ERROR, "/error/500", auth, request);
 	}
 
 	/* ============================================================
@@ -238,20 +238,33 @@ public class MVCExceptionHandler {
 	                               Authentication auth,
 	                               HttpServletRequest request) {
 
-		ModelAndView mv = new ModelAndView("fragments/layouts/error/template");
-		mv.setStatus(status);
-		mv.addObject("view", view);
-		mv.addObject("referer", request.getHeader("referer"));
+		ModelAndView mav = new ModelAndView();
 
-		mv.addObject("projectVersion", BaseMVCController.getProjectVersion());
-		mv.addObject("buildNumber", BaseMVCController.getBuildNumber());
-		mv.addObject("appShortName", BaseMVCController.getAppShortName());
-		mv.addObject("appFullName", BaseMVCController.getAppFullName());
-		mv.addObject("pageName", "Error!");
+		// ✅ THIS IS CRITICAL
+		mav.setViewName(normalizeErrorView(view));
+		mav.setStatus(status);
 
-		mv.addObject("isProduction",
+		mav.addObject("referer", request.getHeader("referer"));
+
+		mav.addObject("projectVersion", BaseMVCController.getProjectVersion());
+		mav.addObject("buildNumber", BaseMVCController.getBuildNumber());
+		mav.addObject("appShortName", BaseMVCController.getAppShortName());
+		mav.addObject("appFullName", BaseMVCController.getAppFullName());
+		mav.addObject("pageName", "Error!");
+
+		mav.addObject("isProduction",
 				Arrays.asList(environment.getActiveProfiles()).contains("prd"));
 
-		return mv;
+		return mav;
+	}
+
+	private String normalizeErrorView(String view) {
+		if (view == null) {
+			return null;
+		}
+
+		// accept "/error/404" or "error/404"
+		int idx = view.indexOf("/error/");
+		return (idx >= 0) ? view.substring(idx + 1) : view;
 	}
 }

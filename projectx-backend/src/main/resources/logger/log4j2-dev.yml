@@ -155,7 +155,7 @@ Configuration:
       - name: org.flywaydb.core # flyway SQL scripts
         level: DEBUG
       - name: org.thymeleaf.TemplateEngine.CONFIG
-        level: INFO
+        level: DEBUG
       - name: sun.rmi
         level: WARN
       - name: javax.management.remote

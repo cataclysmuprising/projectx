@@ -1,10 +1,5 @@
 package com.tamantaw.projectx.backend.config.security;
 
-import com.tamantaw.projectx.backend.utils.SecurityUtil;
-import com.tamantaw.projectx.persistence.dto.AdministratorDTO;
-import com.tamantaw.projectx.persistence.dto.AdministratorLoginHistoryDTO;
-import com.tamantaw.projectx.persistence.exception.ConsistencyViolationException;
-import com.tamantaw.projectx.persistence.exception.PersistenceException;
 import com.tamantaw.projectx.persistence.service.AdministratorLoginHistoryService;
 import jakarta.annotation.Nonnull;
 import jakarta.servlet.ServletException;
@@ -22,17 +17,16 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
-
-import static com.tamantaw.projectx.persistence.utils.LoggerConstants.LOG_PREFIX;
-import static com.tamantaw.projectx.persistence.utils.LoggerConstants.LOG_SUFFIX;
 
 @Component
 public class UrlRequestAuthenticationSuccessHandler extends SavedRequestAwareAuthenticationSuccessHandler {
 	private static final Logger applicationLogger = LogManager.getLogger("applicationLogs." + UrlRequestAuthenticationSuccessHandler.class.getName());
-	private static final Logger errorLogger = LogManager.getLogger("errorLogs." + UrlRequestAuthenticationSuccessHandler.class.getName());
 	@Autowired
 	private AdministratorLoginHistoryService administratorLoginHistoryService;
+
+	@Autowired
+	private AuthenticationAuditService authenticationAuditService;
+
 	private RequestCache requestCache = new HttpSessionRequestCache();
 
 	public UrlRequestAuthenticationSuccessHandler() {
@@ -41,26 +35,8 @@ public class UrlRequestAuthenticationSuccessHandler extends SavedRequestAwareAut
 	}
 
 	@Override
-	public void onAuthenticationSuccess(@Nonnull HttpServletRequest request, @Nonnull HttpServletResponse response, Authentication authentication) throws ServletException, IOException {
-		String loginId = authentication.getName();
-		applicationLogger.info(LOG_PREFIX + "Login Client with Login ID  '" + loginId + "' has successfully signed in." + LOG_SUFFIX);
-		AuthenticatedClient authClient = (AuthenticatedClient) authentication.getPrincipal();
-		if (authClient != null && authClient.getUserDetail() != null) {
-			try {
-				AdministratorDTO administrator = authClient.getUserDetail();
-				AdministratorLoginHistoryDTO loginHistory = new AdministratorLoginHistoryDTO();
-				loginHistory.setIpAddress(SecurityUtil.getClientIp(request));
-				loginHistory.setOs(SecurityUtil.getOperatingSystem(request));
-				loginHistory.setClientAgent(SecurityUtil.getUserAgent(request));
-				loginHistory.setLoginDate(LocalDateTime.now());
-				loginHistory.setAdministrator(administrator);
-				administratorLoginHistoryService.create(loginHistory, administrator.getId());
-				applicationLogger.info(LOG_PREFIX + "Recorded in loginHistory for Login ID '" + loginId + "'." + LOG_SUFFIX);
-			}
-			catch (PersistenceException | ConsistencyViolationException e) {
-				errorLogger.error(LOG_PREFIX + "Can't save in loginHistory for Login ID '" + loginId + "'" + LOG_SUFFIX, e);
-			}
-		}
+	public void onAuthenticationSuccess(@Nonnull HttpServletRequest request, @Nonnull HttpServletResponse response, @Nonnull Authentication authentication) throws ServletException, IOException {
+		authenticationAuditService.recordSuccess(authentication, request);
 		SavedRequest savedRequest = requestCache.getRequest(request, response);
 		if (savedRequest == null) {
 			getRedirectStrategy().sendRedirect(request, response, "/");
@@ -75,7 +51,7 @@ public class UrlRequestAuthenticationSuccessHandler extends SavedRequestAwareAut
 		clearAuthenticationAttributes(request);
 		// Use the DefaultSavedRequest URL
 		String targetUrl = savedRequest.getRedirectUrl();
-		applicationLogger.debug("Redirecting to DefaultSavedRequest Url: " + targetUrl);
+		applicationLogger.debug("Redirecting to DefaultSavedRequest Url: {}", targetUrl);
 		getRedirectStrategy().sendRedirect(request, response, targetUrl);
 	}
 
