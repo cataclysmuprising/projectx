@@ -1,0 +1,176 @@
+Configuration:
+  status: warn # log level for configuration errors
+  ##### Variables #####
+  Properties:
+    Property:
+      - name: log-file-dir # directory for where to save the log files
+        value: "/opt/projectx/logs/"
+      - name: default-msg-pattern
+        value: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5p %c{1}:%L %m%n\r\n"
+
+      - name: backup-file-pattern # define how should rollover files
+        value: "%d{_[yyyy_MM_dd]}" # must be SimpleDateFormat pattern
+
+  ##### Define logging appenders #####
+  Appenders:
+    # loggers for console
+    Console:
+      - name: root_logger
+        target: SYSTEM_OUT
+        PatternLayout:
+          Pattern: ${default-msg-pattern}
+
+    ### File appenders ###
+    RollingRandomAccessFile:
+      - name: FileLogger_app # use for application layer logs
+        fileName: ${log-file-dir}app_layer.log
+        immediateFlush: false # Async Loggers will auto-flush in batches, so switch off immediateFlush. #
+        DefaultRolloverStrategy:
+          max: 20 # https://logging.apache.org/log4j/2.x/manual/appenders.html # (24 x 30 + 30) * 3
+        filePattern: ${log-file-dir}app_layer${backup-file-pattern}(%i).log.gz # (%i) refer to split file counts for max file size
+        PatternLayout:
+          Pattern: ${default-msg-pattern}
+        Policies:
+          TimeBasedTriggeringPolicy:
+            interval: 1 # How often a rollover should occur based on the most specific time unit in the date pattern
+            modulate: true
+          SizeBasedTriggeringPolicy:
+            size: "10 MB" # each log file should not exceed more than 10 MB. If larger than it, this may be separate anothers
+      - name: FileLogger_error # use for application layer logs
+        fileName: ${log-file-dir}error_layer.log
+        immediateFlush: false
+        DefaultRolloverStrategy:
+          max: 20 # https://logging.apache.org/log4j/2.x/manual/appenders.html # (24 x 30 + 30) * 3
+        filePattern: ${log-file-dir}error_layer${backup-file-pattern}(%i).log.gz # (%i) refer to split file counts for max file size
+        PatternLayout:
+          Pattern: ${default-msg-pattern}
+        Policies:
+          TimeBasedTriggeringPolicy:
+            interval: 1 # How often a rollover should occur based on the most specific time unit in the date pattern
+            modulate: true
+          SizeBasedTriggeringPolicy:
+            size: "10 MB" # each log file should not exceed more than 10 MB. If larger than it, this may be separate anothers
+      - name: FileLogger_suspicious # use for suspicious requests logs
+        fileName: ${log-file-dir}suspicious.log
+        immediateFlush: true
+        DefaultRolloverStrategy:
+          max: 20 # https://logging.apache.org/log4j/2.x/manual/appenders.html # (24 x 30 + 30) * 3
+        filePattern: ${log-file-dir}suspicious_requests${backup-file-pattern}(%i).log.gz # (%i) refer to split file counts for max file size
+        PatternLayout:
+          Pattern: ${default-msg-pattern}
+        Policies:
+          TimeBasedTriggeringPolicy:
+            interval: 1 # How often a rollover should occur based on the most specific time unit in the date pattern
+            modulate: true
+          SizeBasedTriggeringPolicy:
+            size: "10 MB" # each log file should not exceed more than 10 MB. If larger than it, this may be separate anothers
+
+      - name: FileLogger_business # use for service and repository logs
+        fileName: ${log-file-dir}business_layer.log
+        immediateFlush: false
+        DefaultRolloverStrategy:
+          max: 20 # https://logging.apache.org/log4j/2.x/manual/appenders.html # (24 x 30 + 30) * 3
+        filePattern: ${log-file-dir}business_layer${backup-file-pattern}(%i).log.gz
+        PatternLayout:
+          Pattern: ${default-msg-pattern}
+        Policies:
+          TimeBasedTriggeringPolicy:
+            interval: 1
+            modulate: true
+          SizeBasedTriggeringPolicy:
+            size: "10 MB"
+
+
+  ##### Define loggers #####
+  Loggers:
+    Root: # This is root logger. Every logs with catch up.
+      level: WARN
+      AppenderRef:
+        - ref: root_logger
+
+    Logger: # User defined loggers go here
+
+      - name: applicationLogs   # application Logger
+        additivity: false # don't conflicts with root logger
+        level: INFO
+        AppenderRef:
+          - ref: FileLogger_app
+
+      - name: errorLogs   # error Logger
+        additivity: false # don't conflicts with root logger
+        level: DEBUG
+        AppenderRef:
+          - ref: FileLogger_error
+
+      - name: suspiciousLogs   # suspicious requests Logger
+        additivity: false # don't conflicts with root logger
+        level: DEBUG
+        AppenderRef:
+          - ref: FileLogger_suspicious
+
+      - name: serviceLogs  # service Logger
+        additivity: false
+        level: INFO
+        AppenderRef:
+          - ref: FileLogger_business
+
+      - name: repositoryLogs  # repository Logger
+        additivity: false
+        level: WARN
+        AppenderRef:
+          - ref: FileLogger_business
+
+      ### Spring framework ###
+      - name: org.springframework
+        level: INFO
+      - name: org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping
+        level: ERROR
+      - name: org.springframework.security
+        level: INFO
+      - name: org.springframework.boot.actuate
+        level: ERROR
+      - name: org.springframework.boot.autoconfigure
+        level: ERROR
+      ### Apache loggings ###
+      - name: org.apache.http # DEBUG to see full REST service requests info
+        level: INFO
+      - name: org.apache.commons
+        level: ERROR
+      - name: org.apache.tiles
+        level: INFO
+        ### JPA ###
+      - name: org.springframework.orm.jpa.SharedEntityManagerCreator$SharedEntityManagerInvocationHandler
+        level: INFO
+      - name: org.springframework.orm.jpa.support.OpenEntityManagerInViewInterceptor
+        level: INFO
+        ### Hibernate ###
+      - name: org.hibernate
+        level: INFO
+      - name: org.hibernate.type.BasicTypeRegistry
+        level: ERROR
+        # SQL statements and parameters
+      - name: org.hibernate.orm.jdbc.bind
+        level: INFO
+      - name: org.hibernate.type.descriptor.sql.BasicBinder
+        level: INFO
+      # Statistics and slow queries
+      - name: org.hibernate.stat
+        level: INFO
+      - name: org.hibernate.SQL_SLOW
+        level: INFO
+      ### Others ###
+      - name: javax.servlet.http.HttpServletRequestWrapper
+        level: WARN
+      - name: com.zaxxer # change below to DEBUG if you want to see transaction processes and connection pool properties
+        level: WARN
+      - name: org.apache.http.impl.conn.PoolingHttpClientConnectionManager
+        level: ERROR
+      - name: org.hibernate.validator.internal
+        level: ERROR
+      - name: com.sun.mail
+        level: INFO
+      - name: org.springframework.jmx.export.annotation
+        level: WARN
+      - name: SMTP
+        level: INFO
+
