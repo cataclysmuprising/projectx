@@ -1,0 +1,10 @@
+{
+  "name": "projectx-compressor",
+  "private": true,
+  "scripts": {
+    "minify": "esbuild"
+  },
+  "devDependencies": {
+    "esbuild": "^0.27.2"
+  }
+}

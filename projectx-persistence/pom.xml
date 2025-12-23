@@ -81,7 +81,6 @@
 						<directory>src/main/resources</directory>
 						<excludes>
 							<exclude>migration/**</exclude>
-							<exclude>others/**</exclude>
 							<exclude>persistence-dev.yml</exclude>
 						</excludes>
 					</resource>

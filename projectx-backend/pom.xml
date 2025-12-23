@@ -14,7 +14,7 @@
 	<version>1.0.0-SNAPSHOT</version>
 
 	<properties>
-		<war.ouput.dir>${project.parent.basedir}/target</war.ouput.dir>
+		<war.ouput.dir>${project.build.directory}</war.ouput.dir>
 	</properties>
 
 	<dependencies>
@@ -84,46 +84,28 @@
 			<id>_production</id>
 			<build>
 				<resources>
+
+					<!-- 1️⃣ Normal resources (without raw static) -->
 					<resource>
 						<directory>src/main/resources</directory>
 						<excludes>
 							<exclude>static/**</exclude>
-							<exclude>logger/**</exclude>
 							<exclude>application-dev.yml</exclude>
+							<exclude>log4j2-dev.yml</exclude>
 						</excludes>
 					</resource>
+
+					<!-- 2️⃣ Generated static resources (from compressor) -->
+					<resource>
+						<directory>
+							${project.build.directory}/static
+						</directory>
+						<targetPath>static</targetPath>
+						<filtering>false</filtering>
+					</resource>
+
 				</resources>
 				<plugins>
-					<!-- To create log4j2 config file under resource folder for production war file -->
-					<plugin>
-						<groupId>com.coderplus.maven.plugins</groupId>
-						<artifactId>copy-rename-maven-plugin</artifactId>
-						<version>1.0.1</version>
-						<executions>
-							<execution>
-								<id>copy-log-file</id>
-								<phase>prepare-package</phase>
-								<goals>
-									<goal>copy</goal>
-								</goals>
-								<configuration>
-									<sourceFile>src/main/resources/logger/log4j2-prd.yml</sourceFile>
-									<destinationFile>${project.build.outputDirectory}/log4j2.yml</destinationFile>
-								</configuration>
-							</execution>
-							<execution>
-								<id>rename-static-rss-files</id>
-								<phase>prepare-package</phase>
-								<goals>
-									<goal>rename</goal>
-								</goals>
-								<configuration>
-									<sourceFile>${war.ouput.dir}/static-resources/${project.artifactId}/static/</sourceFile>
-									<destinationFile>${project.build.outputDirectory}/static/</destinationFile>
-								</configuration>
-							</execution>
-						</executions>
-					</plugin>
 					<plugin>
 						<groupId>org.apache.maven.plugins</groupId>
 						<artifactId>maven-war-plugin</artifactId>

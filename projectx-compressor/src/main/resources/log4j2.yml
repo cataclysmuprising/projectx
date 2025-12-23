@@ -1,0 +1,25 @@
+Configutation:
+  status: warn # log level for configuration errors
+  shutdownHook: disable
+  ##### Variables #####
+  Properties:
+    Property:
+      - name: default-msg-pattern
+        value: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5p %c{1}:%L %m%n"
+
+  ##### Define logging appenders #####
+  Appenders:
+    # loggers for console
+    Console:
+      - name: root_logger
+        target: SYSTEM_OUT
+        PatternLayout:
+          Pattern: "${default-msg-pattern}"
+          disableAnsi: false
+
+  ##### Define loggers #####
+  Loggers:
+    Root: # This is root logger. Every logs with catch up.
+      level: TRACE
+      AppenderRef:
+        - ref: root_logger

@@ -19,6 +19,7 @@
 	<modules>
 		<module>projectx-persistence</module>
 		<module>projectx-backend</module>
+		<module>projectx-compressor</module>
 	</modules>
 
 	<properties>

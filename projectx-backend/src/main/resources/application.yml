@@ -27,4 +27,4 @@ spring:
   ### Set the active profile here ###
   profiles:
     #    active: stag
-    active: dev
+    active: prd
