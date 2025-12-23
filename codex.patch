@@ -1,61 +1,330 @@
-diff --git a/projectx-backend/src/main/java/com/tamantaw/projectx/backend/common/exceptionHandlers/MVCExceptionHandler.java b/projectx-backend/src/main/java/com/tamantaw/projectx/backend/common/exceptionHandlers/MVCExceptionHandler.java
-index a858f2e0f67547c6c3eda37c60e05f46f980946c..a039d7e8db2aa2cc012592e2b6303f61fb1cef83 100644
---- a/projectx-backend/src/main/java/com/tamantaw/projectx/backend/common/exceptionHandlers/MVCExceptionHandler.java
-+++ b/projectx-backend/src/main/java/com/tamantaw/projectx/backend/common/exceptionHandlers/MVCExceptionHandler.java
-@@ -218,52 +218,55 @@ public class MVCExceptionHandler {
- 		pd.setType(URI.create(typeUri));
- 		pd.setProperty("timestamp", Instant.now());
- 		pd.setProperty("path", request.getRequestURI());
- 		return pd;
+diff --git a/projectx-backend/src/main/java/com/tamantaw/projectx/backend/controller/rest/BaseRESTController.java b/projectx-backend/src/main/java/com/tamantaw/projectx/backend/controller/rest/BaseRESTController.java
+index e949b771a430064c0d963c12c401c6853323c8cb..16fcb9f8f8fd2d1f8f8a41c8d36691119727c09c 100644
+--- a/projectx-backend/src/main/java/com/tamantaw/projectx/backend/controller/rest/BaseRESTController.java
++++ b/projectx-backend/src/main/java/com/tamantaw/projectx/backend/controller/rest/BaseRESTController.java
+@@ -1,51 +1,51 @@
+ package com.tamantaw.projectx.backend.controller.rest;
+
+ import com.tamantaw.projectx.backend.config.security.AuthenticatedClient;
+ import jakarta.servlet.http.HttpServletRequest;
+ import org.apache.commons.lang3.StringUtils;
+ import org.apache.logging.log4j.LogManager;
+ import org.apache.logging.log4j.Logger;
+ import org.apache.logging.log4j.ThreadContext;
+ import org.springframework.beans.factory.annotation.Autowired;
+ import org.springframework.http.HttpStatus;
+ import org.springframework.security.core.Authentication;
+ import org.springframework.security.core.context.SecurityContextHolder;
+ import org.springframework.security.crypto.password.PasswordEncoder;
+ import org.springframework.web.context.request.RequestContextHolder;
+ import org.springframework.web.context.request.ServletRequestAttributes;
+ import tools.jackson.databind.ObjectMapper;
+
+ import java.net.Inet6Address;
+ import java.net.InetAddress;
+ import java.util.*;
+ import java.util.regex.Pattern;
+ import java.util.stream.Collectors;
+
+ public abstract class BaseRESTController {
+
+-	protected static final Logger mobileAppLogger = LogManager.getLogger("application.MOBILE_APP.Logs." + BaseRESTController.class.getName());
++	protected static final Logger applicationLogger = LogManager.getLogger("applicationLogs." + BaseRESTController.class.getName());
+
+ 	@Autowired
+ 	protected PasswordEncoder passwordEncoder;
+
+ 	@Autowired
+ 	private ObjectMapper mapper;
+
+ 	protected Long getSignInAdministratorId() {
+ 		AuthenticatedClient loginAdmin = getSignInAdministrator();
+ 		if (loginAdmin != null) {
+ 			return loginAdmin.getId();
+ 		}
+ 		return null;
  	}
 
- 	private boolean isApiRequest(HttpServletRequest request) {
- 		return request.getRequestURI().startsWith("/api/")
- 				|| "XMLHttpRequest".equals(request.getHeader("X-Requested-With"));
- 	}
-
- 	private void logError(String handler, Exception e) {
- 		errorLogger.error(LoggerConstants.LOG_BREAKER_OPEN);
- 		errorLogger.error("Handler ==> {}", handler);
- 		errorLogger.error(e.getMessage(), e);
- 		errorLogger.error(LoggerConstants.LOG_BREAKER_CLOSE);
- 	}
-
- 	private ModelAndView errorView(HttpStatus status,
- 	                               String view,
- 	                               Authentication auth,
- 	                               HttpServletRequest request) {
-
- 		ModelAndView mav = new ModelAndView();
-
-+		String normalizedView = normalizeErrorView(view);
-+
- 		// ✅ THIS IS CRITICAL
--		mav.setViewName(normalizeErrorView(view));
-+		mav.setViewName("fragments/layouts/error/template");
-+		mav.addObject("view", normalizedView);
- 		mav.setStatus(status);
-
- 		mav.addObject("referer", request.getHeader("referer"));
-
- 		mav.addObject("projectVersion", BaseMVCController.getProjectVersion());
- 		mav.addObject("buildNumber", BaseMVCController.getBuildNumber());
- 		mav.addObject("appShortName", BaseMVCController.getAppShortName());
- 		mav.addObject("appFullName", BaseMVCController.getAppFullName());
- 		mav.addObject("pageName", "Error!");
-
- 		mav.addObject("isProduction",
- 				Arrays.asList(environment.getActiveProfiles()).contains("prd"));
-
- 		return mav;
- 	}
-
- 	private String normalizeErrorView(String view) {
- 		if (view == null) {
+ 	protected AuthenticatedClient getSignInAdministrator() {
+ 		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+ 		if (auth == null || auth.getPrincipal() == null || !auth.isAuthenticated() || auth.getPrincipal().equals("anonymousUser")) {
  			return null;
  		}
-
- 		// accept "/error/404" or "error/404"
- 		int idx = view.indexOf("/error/");
- 		return (idx >= 0) ? view.substring(idx + 1) : view;
+ 		return mapper.convertValue(auth.getPrincipal(), AuthenticatedClient.class);
  	}
+
+ 	protected boolean containsIgnoreCase(List<String> list, String soughtFor) {
+ 		for (String current : list) {
+@@ -59,77 +59,77 @@ public abstract class BaseRESTController {
+ 	protected <T, U> List<U> convertList(List<T> sourceList, Class<U> targetClass) {
+ 		return sourceList.stream().map(source -> {
+ 			return mapper.convertValue(source, targetClass);
+ 		}).collect(Collectors.toList());
+ 	}
+
+ 	// ===================== UTILITIES (logging + helpers) =====================
+
+ 	protected String newRid() {
+ 		// Short, log-friendly request id
+ 		return UUID.randomUUID().toString().substring(0, 8);
+ 	}
+
+ 	//@formatter:off
+ 	protected void logOpen(String rid, String className, String method, HttpServletRequest req, Object bodyIfAny) {
+ 		// Put useful MDC so every downstream log line can include them via pattern: %X{rid} %X{cls} %X{mth}
+ 		ThreadContext.put("rid", rid);
+ 		ThreadContext.put("cls", className);
+ 		ThreadContext.put("mth", method);
+
+ 		String uri = (req != null) ? req.getRequestURI() : "(unknown)";
+ 		String qs  = (req != null && req.getQueryString() != null) ? ("?" + req.getQueryString()) : "";
+ 		String ip  = getClientIp();
+ 		String ua  = getUserAgent();
+
+-		mobileAppLogger.info(
++		applicationLogger.info(
+ 				"""
+
+ 				====================[ OPEN {}#{} ]==================== rid={}
+ 				Class: {}
+ 				URI: {}{}
+ 				IP: {}
+ 				User-Agent: {}
+ 				Headers:
+ 				{}
+ 				Body:
+ 				{}
+ 				""",
+ 				className, method, rid,
+ 				className,
+ 				uri, qs,
+ 				ip,
+ 				ua,
+ 				headersAsString(req),
+ 				safeJson(bodyIfAny)
+ 		);
+ 	}
+
+ 	protected void logClose(String rid, String className, String method, long startedNanos, Object resultBody, HttpStatus status) {
+ 		long tookMs = (System.nanoTime() - startedNanos) / 1_000_000L;
+
+-		mobileAppLogger.info(
++		applicationLogger.info(
+ 				"""
+
+ 					ResultStatus: {} (took {} ms) rid={} class={} method={}
+ 					ResultBody:
+ 					{}
+ 					====================[ CLOSE {}#{} ]====================
+ 					""",
+ 				status.value(), tookMs, rid, className, method,
+ 				safeJson(resultBody),
+ 				className, method
+ 		);
+
+ 		// Clean up MDC
+ 		ThreadContext.remove("rid");
+ 		ThreadContext.remove("cls");
+ 		ThreadContext.remove("mth");
+ 	}
+ 	//@formatter:on
+
+ 	protected String headersAsString(HttpServletRequest req) {
+ 		if (req == null) {
+ 			return "(no request)";
+ 		}
+ 		StringBuilder sb = new StringBuilder();
+ 		Enumeration<String> names = req.getHeaderNames();
+@@ -198,26 +198,25 @@ public abstract class BaseRESTController {
+ 			InetAddress addr = InetAddress.getByName(ip);
+
+ 			if (addr instanceof Inet6Address) {
+ 				byte[] full = addr.getAddress();      // 16 bytes
+ 				byte[] prefix = Arrays.copyOf(full, 8); // /64 prefix
+
+ 				StringBuilder sb = new StringBuilder("v6pfx:");
+ 				for (byte b : prefix) {
+ 					sb.append(String.format("%02x", b));
+ 				}
+ 				return sb.toString();  // normalized IPv6
+ 			}
+ 		}
+ 		catch (Exception ignored) {
+ 		}
+
+ 		// 3) IPv4 or invalid → return as-is
+ 		return ip;
+ 	}
+
+ 	protected String getUserAgent() {
+ 		HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes()).getRequest();
+ 		return request.getHeader("User-Agent");
+ 	}
+ }
+-
+diff --git a/projectx-backend/src/main/java/com/tamantaw/projectx/backend/controller/rest/pub/SampleCallbackApiController.java b/projectx-backend/src/main/java/com/tamantaw/projectx/backend/controller/rest/pub/SampleCallbackApiController.java
+index c30c3d9bc44ffd0e7770bc9fa373f39e3a780d98..9b872665561bd94d5e12b850f8dc078df83c87c4 100644
+--- a/projectx-backend/src/main/java/com/tamantaw/projectx/backend/controller/rest/pub/SampleCallbackApiController.java
++++ b/projectx-backend/src/main/java/com/tamantaw/projectx/backend/controller/rest/pub/SampleCallbackApiController.java
+@@ -1,31 +1,31 @@
+ package com.tamantaw.projectx.backend.controller.rest.pub;
+
+ import com.fasterxml.jackson.databind.JsonNode;
+ import com.tamantaw.projectx.backend.controller.rest.BaseRESTController;
+ import org.apache.logging.log4j.LogManager;
+ import org.apache.logging.log4j.Logger;
+ import org.springframework.http.ResponseEntity;
+ import org.springframework.web.bind.annotation.PostMapping;
+ import org.springframework.web.bind.annotation.RequestBody;
+ import org.springframework.web.bind.annotation.RequestMapping;
+ import org.springframework.web.bind.annotation.RestController;
+
+ import java.util.HashMap;
+ import java.util.Map;
+
+ @RestController
+ @RequestMapping("/api/pub/callback")
+ public class SampleCallbackApiController extends BaseRESTController {
+-	protected static final Logger callbackLogger = LogManager.getLogger("application.SampleCallback.Logs." + SampleCallbackApiController.class.getName());
++	protected static final Logger callbackLogger = LogManager.getLogger("applicationLogs." + SampleCallbackApiController.class.getName());
+
+ 	@PostMapping
+ 	public ResponseEntity<Map<String, String>> handleCallback(@RequestBody JsonNode callbackRequest) {
+ 		callbackLogger.info("📩 Received Sample Callback: {}", callbackRequest);
+
+ 		// ✅ Always reply exactly with the expected JSON format
+ 		Map<String, String> response = new HashMap<>();
+ 		response.put("status", "success");
+
+ 		return ResponseEntity.ok(response);
+ 	}
+ }
+diff --git a/projectx-backend/src/main/resources/log4j2-prd.yml b/projectx-backend/src/main/resources/log4j2-prd.yml
+index 02b1e01af02f65293dd17b37999c6371ab2155c0..2becf3b2846e8b221d6a19e773bab3ae5c455c44 100644
+--- a/projectx-backend/src/main/resources/log4j2-prd.yml
++++ b/projectx-backend/src/main/resources/log4j2-prd.yml
+@@ -2,94 +2,94 @@ Configuration:
+   status: warn # log level for configuration errors
+   ##### Variables #####
+   Properties:
+     Property:
+       - name: log-file-dir # directory for where to save the log files
+         value: "/opt/projectx/logs/"
+       - name: default-msg-pattern
+         value: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5p %c{1}:%L %m%n\r\n"
+
+       - name: backup-file-pattern # define how should rollover files
+         value: "%d{_[yyyy_MM_dd]}" # must be SimpleDateFormat pattern
+
+   ##### Define logging appenders #####
+   Appenders:
+     # loggers for console
+     Console:
+       - name: root_logger
+         target: SYSTEM_OUT
+         PatternLayout:
+           Pattern: ${default-msg-pattern}
+
+     ### File appenders ###
+     RollingRandomAccessFile:
+       - name: FileLogger_app # use for application layer logs
+         fileName: ${log-file-dir}app_layer.log
+-        immediateFlush: false # Async Loggers will auto-flush in batches, so switch off immediateFlush. #
++        immediateFlush: true # ensure log lines are written immediately for Tomcat deployments #
+         DefaultRolloverStrategy:
+           max: 20 # https://logging.apache.org/log4j/2.x/manual/appenders.html # (24 x 30 + 30) * 3
+         filePattern: ${log-file-dir}app_layer${backup-file-pattern}(%i).log.gz # (%i) refer to split file counts for max file size
+         PatternLayout:
+           Pattern: ${default-msg-pattern}
+         Policies:
+           TimeBasedTriggeringPolicy:
+             interval: 1 # How often a rollover should occur based on the most specific time unit in the date pattern
+             modulate: true
+           SizeBasedTriggeringPolicy:
+             size: "10 MB" # each log file should not exceed more than 10 MB. If larger than it, this may be separate anothers
+       - name: FileLogger_error # use for application layer logs
+         fileName: ${log-file-dir}error_layer.log
+-        immediateFlush: false
++        immediateFlush: true # ensure errors flush instantly to disk #
+         DefaultRolloverStrategy:
+           max: 20 # https://logging.apache.org/log4j/2.x/manual/appenders.html # (24 x 30 + 30) * 3
+         filePattern: ${log-file-dir}error_layer${backup-file-pattern}(%i).log.gz # (%i) refer to split file counts for max file size
+         PatternLayout:
+           Pattern: ${default-msg-pattern}
+         Policies:
+           TimeBasedTriggeringPolicy:
+             interval: 1 # How often a rollover should occur based on the most specific time unit in the date pattern
+             modulate: true
+           SizeBasedTriggeringPolicy:
+             size: "10 MB" # each log file should not exceed more than 10 MB. If larger than it, this may be separate anothers
+       - name: FileLogger_suspicious # use for suspicious requests logs
+         fileName: ${log-file-dir}suspicious.log
+         immediateFlush: true
+         DefaultRolloverStrategy:
+           max: 20 # https://logging.apache.org/log4j/2.x/manual/appenders.html # (24 x 30 + 30) * 3
+         filePattern: ${log-file-dir}suspicious_requests${backup-file-pattern}(%i).log.gz # (%i) refer to split file counts for max file size
+         PatternLayout:
+           Pattern: ${default-msg-pattern}
+         Policies:
+           TimeBasedTriggeringPolicy:
+             interval: 1 # How often a rollover should occur based on the most specific time unit in the date pattern
+             modulate: true
+           SizeBasedTriggeringPolicy:
+             size: "10 MB" # each log file should not exceed more than 10 MB. If larger than it, this may be separate anothers
+
+       - name: FileLogger_business # use for service and repository logs
+         fileName: ${log-file-dir}business_layer.log
+-        immediateFlush: false
++        immediateFlush: true # flush service/repository logs immediately in production #
+         DefaultRolloverStrategy:
+           max: 20 # https://logging.apache.org/log4j/2.x/manual/appenders.html # (24 x 30 + 30) * 3
+         filePattern: ${log-file-dir}business_layer${backup-file-pattern}(%i).log.gz
+         PatternLayout:
+           Pattern: ${default-msg-pattern}
+         Policies:
+           TimeBasedTriggeringPolicy:
+             interval: 1
+             modulate: true
+           SizeBasedTriggeringPolicy:
+             size: "10 MB"
+
+
+   ##### Define loggers #####
+   Loggers:
+     Root: # This is root logger. Every logs with catch up.
+       level: WARN
+       AppenderRef:
+         - ref: root_logger
+
+     Logger: # User defined loggers go here
+
+       - name: applicationLogs   # application Logger
+         additivity: false # don't conflicts with root logger
+         level: INFO
+@@ -151,26 +151,25 @@ Configuration:
+         # SQL statements and parameters
+       - name: org.hibernate.orm.jdbc.bind
+         level: INFO
+       - name: org.hibernate.type.descriptor.sql.BasicBinder
+         level: INFO
+       # Statistics and slow queries
+       - name: org.hibernate.stat
+         level: INFO
+       - name: org.hibernate.SQL_SLOW
+         level: INFO
+       ### Others ###
+       - name: javax.servlet.http.HttpServletRequestWrapper
+         level: WARN
+       - name: com.zaxxer # change below to DEBUG if you want to see transaction processes and connection pool properties
+         level: WARN
+       - name: org.apache.http.impl.conn.PoolingHttpClientConnectionManager
+         level: ERROR
+       - name: org.hibernate.validator.internal
+         level: ERROR
+       - name: com.sun.mail
+         level: INFO
+       - name: org.springframework.jmx.export.annotation
+         level: WARN
+       - name: SMTP
+         level: INFO
+-

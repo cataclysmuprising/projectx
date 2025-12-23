@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 
 public abstract class BaseRESTController {
 
-	protected static final Logger mobileAppLogger = LogManager.getLogger("application.MOBILE_APP.Logs." + BaseRESTController.class.getName());
+	protected static final Logger applicationLogger = LogManager.getLogger("applicationLogs." + BaseRESTController.class.getName());
 
 	@Autowired
 	protected PasswordEncoder passwordEncoder;
@@ -81,7 +81,7 @@ public abstract class BaseRESTController {
 		String ip  = getClientIp();
 		String ua  = getUserAgent();
 
-		mobileAppLogger.info(
+		applicationLogger.info(
 				"""
 				
 				====================[ OPEN {}#{} ]==================== rid={}
@@ -107,7 +107,7 @@ public abstract class BaseRESTController {
 	protected void logClose(String rid, String className, String method, long startedNanos, Object resultBody, HttpStatus status) {
 		long tookMs = (System.nanoTime() - startedNanos) / 1_000_000L;
 
-		mobileAppLogger.info(
+		applicationLogger.info(
 				"""
 
 					ResultStatus: {} (took {} ms) rid={} class={} method={}
@@ -220,4 +220,3 @@ public abstract class BaseRESTController {
 		return request.getHeader("User-Agent");
 	}
 }
-

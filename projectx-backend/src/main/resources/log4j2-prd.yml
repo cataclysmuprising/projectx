@@ -4,7 +4,7 @@ Configuration:
   Properties:
     Property:
       - name: log-file-dir # directory for where to save the log files
-        value: "/opt/projectx/logs/"
+        value: "D:/temp/logs/"
       - name: default-msg-pattern
         value: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5p %c{1}:%L %m%n\r\n"
 
@@ -24,7 +24,7 @@ Configuration:
     RollingRandomAccessFile:
       - name: FileLogger_app # use for application layer logs
         fileName: ${log-file-dir}app_layer.log
-        immediateFlush: false # Async Loggers will auto-flush in batches, so switch off immediateFlush. #
+        immediateFlush: true # ensure log lines are written immediately for Tomcat deployments #
         DefaultRolloverStrategy:
           max: 20 # https://logging.apache.org/log4j/2.x/manual/appenders.html # (24 x 30 + 30) * 3
         filePattern: ${log-file-dir}app_layer${backup-file-pattern}(%i).log.gz # (%i) refer to split file counts for max file size
@@ -38,7 +38,7 @@ Configuration:
             size: "10 MB" # each log file should not exceed more than 10 MB. If larger than it, this may be separate anothers
       - name: FileLogger_error # use for application layer logs
         fileName: ${log-file-dir}error_layer.log
-        immediateFlush: false
+        immediateFlush: true # ensure errors flush instantly to disk #
         DefaultRolloverStrategy:
           max: 20 # https://logging.apache.org/log4j/2.x/manual/appenders.html # (24 x 30 + 30) * 3
         filePattern: ${log-file-dir}error_layer${backup-file-pattern}(%i).log.gz # (%i) refer to split file counts for max file size
@@ -67,7 +67,7 @@ Configuration:
 
       - name: FileLogger_business # use for service and repository logs
         fileName: ${log-file-dir}business_layer.log
-        immediateFlush: false
+        immediateFlush: true # flush service/repository logs immediately in production #
         DefaultRolloverStrategy:
           max: 20 # https://logging.apache.org/log4j/2.x/manual/appenders.html # (24 x 30 + 30) * 3
         filePattern: ${log-file-dir}business_layer${backup-file-pattern}(%i).log.gz
@@ -84,7 +84,7 @@ Configuration:
   ##### Define loggers #####
   Loggers:
     Root: # This is root logger. Every logs with catch up.
-      level: WARN
+      level: DEBUG
       AppenderRef:
         - ref: root_logger
 
@@ -173,4 +173,3 @@ Configuration:
         level: WARN
       - name: SMTP
         level: INFO
-

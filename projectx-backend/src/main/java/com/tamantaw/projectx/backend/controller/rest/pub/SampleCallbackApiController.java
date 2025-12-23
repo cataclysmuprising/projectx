@@ -16,7 +16,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/pub/callback")
 public class SampleCallbackApiController extends BaseRESTController {
-	protected static final Logger callbackLogger = LogManager.getLogger("application.SampleCallback.Logs." + SampleCallbackApiController.class.getName());
+	protected static final Logger callbackLogger = LogManager.getLogger("applicationLogs." + SampleCallbackApiController.class.getName());
 
 	@PostMapping
 	public ResponseEntity<Map<String, String>> handleCallback(@RequestBody JsonNode callbackRequest) {
