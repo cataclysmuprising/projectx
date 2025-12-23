@@ -37,13 +37,13 @@ public class ActionServiceIT extends CommonTestBase {
 	@Test
 	public void findOne_byUrl() throws Exception {
 		ActionCriteria criteria = new ActionCriteria();
-		criteria.setUrl("^/sec/users$");
+		criteria.setUrl("/web/sec/administrator");
 
 		Optional<ActionDTO> result = actionService.findOne(criteria);
 
 		assertTrue(result.isPresent());
-		assertEquals(result.get().getActionName(), "userList");
-		assertEquals(result.get().getPage(), "User");
+		assertEquals(result.get().getActionName(), "administratorList");
+		assertEquals(result.get().getPage(), "Administrator");
 	}
 
 	@Test
@@ -71,7 +71,7 @@ public class ActionServiceIT extends CommonTestBase {
 		dto.setActionName("reportsOverview");
 		dto.setDisplayName("Reports overview");
 		dto.setActionType(Action.ActionType.SUB);
-		dto.setUrl("^/sec/reports/overview$");
+		dto.setUrl("/web/sec/report");
 		dto.setDescription("Report overview action for integration test");
 
 		Action saved = actionService.create(dto, TEST_CREATE_USER_ID);
@@ -89,7 +89,7 @@ public class ActionServiceIT extends CommonTestBase {
 		dto.setActionName("tempActionUpdate");
 		dto.setDisplayName("Temp action");
 		dto.setActionType(Action.ActionType.SUB);
-		dto.setUrl("^/sec/temp/update-action$");
+		dto.setUrl("/web/sec/temp");
 		dto.setDescription("Temporary action for update test");
 
 		actionService.create(dto, TEST_CREATE_USER_ID);
@@ -124,7 +124,7 @@ public class ActionServiceIT extends CommonTestBase {
 		dto.setActionName("tempDeleteAction");
 		dto.setDisplayName("Temp delete action");
 		dto.setActionType(Action.ActionType.SUB);
-		dto.setUrl("^/sec/temp/delete-action$");
+		dto.setUrl("/web/sec/delete-action");
 		dto.setDescription("Temporary action for delete test");
 
 		Action saved = actionService.create(dto, TEST_CREATE_USER_ID);

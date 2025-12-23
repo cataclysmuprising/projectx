@@ -61,7 +61,7 @@ public class CustomAuthenticationFailureHandler
 		request.getSession()
 				.setAttribute(WebAttributes.AUTHENTICATION_EXCEPTION, errorMessage);
 
-		setDefaultFailureUrl("/login?error=" + errorKey);
+		setDefaultFailureUrl("/web/pub/login?error=" + errorKey);
 		super.onAuthenticationFailure(request, response, exception);
 	}
 }

@@ -197,25 +197,55 @@ public abstract class AbstractRepositoryImpl<
 
 		Predicate filter = criteria.getFilter(path);
 
-		JPQLQuery<ENTITY> query =
-				createQuery(filter, hints).select(path);
+		boolean requiresIdFirst = !fetchGraphIsToOneOnly(hints);
 
-		// Enforce deterministic ordering even for single-row queries
-		applySort(query, criteria);
+		// ------------------------------------------------------------
+		// FAST PATH — to-one fetch only
+		// ------------------------------------------------------------
+		if (!requiresIdFirst) {
 
-		List<ENTITY> rows = query.limit(2).fetch();
+			JPQLQuery<ENTITY> query =
+					createQuery(filter, hints).select(path);
 
-		if (rows.isEmpty()) {
-			return Optional.empty();
+			applySort(query, criteria);
+
+			List<ENTITY> rows = query.limit(2).fetch();
+
+			if (rows.isEmpty()) {
+				return Optional.empty();
+			}
+			if (rows.size() > 1) {
+				throw new IllegalStateException(
+						"findOne() returned more than one result"
+				);
+			}
+			return Optional.of(rows.getFirst());
 		}
 
-		if (rows.size() > 1) {
+		// ------------------------------------------------------------
+		// SAFE PATH — collection fetch (ID first)
+		// ------------------------------------------------------------
+		JPQLQuery<Long> idQuery =
+				createQuery(filter).select(audit.id);
+
+		applySort(idQuery, criteria);
+
+		List<Long> ids = idQuery.limit(2).fetch();
+
+		if (ids.isEmpty()) {
+			return Optional.empty();
+		}
+		if (ids.size() > 1) {
 			throw new IllegalStateException(
 					"findOne() returned more than one result"
 			);
 		}
 
-		return Optional.of(rows.getFirst());
+		JPQLQuery<ENTITY> entityQuery =
+				createQuery(audit.id.eq(ids.getFirst()), hints)
+						.select(path);
+
+		return Optional.ofNullable(entityQuery.fetchOne());
 	}
 
 	// ----------------------------------------------------------------------

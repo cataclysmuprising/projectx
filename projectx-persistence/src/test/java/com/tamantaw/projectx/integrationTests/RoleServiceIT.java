@@ -254,7 +254,7 @@ public class RoleServiceIT extends CommonTestBase {
 	public void findRole_byActionCriteria_returnsRoleWithActions() throws PersistenceException {
 		// given
 		ActionCriteria actionCriteria = new ActionCriteria();
-		actionCriteria.setPage("User");
+		actionCriteria.setPage("Administrator");
 		RoleCriteria roleCriteria = new RoleCriteria();
 		roleCriteria.setAppName("projectx");
 		roleCriteria.setAction(actionCriteria);
@@ -362,7 +362,7 @@ public class RoleServiceIT extends CommonTestBase {
 	@Test
 	public void findByPaging_withNestedActionCriteria() throws Exception {
 		ActionCriteria actionCriteria = new ActionCriteria();
-		actionCriteria.setPage("User");
+		actionCriteria.setPage("Administrator");
 
 		RoleCriteria roleCriteria = new RoleCriteria();
 		roleCriteria.setAppName("projectx");
@@ -409,7 +409,7 @@ public class RoleServiceIT extends CommonTestBase {
 		// ------------------------------------------------------------------
 
 		ActionCriteria actionCriteria = new ActionCriteria();
-		actionCriteria.setPage("User");
+		actionCriteria.setPage("Administrator");
 
 		RoleCriteria criteria = new RoleCriteria();
 		criteria.setAppName("projectx");
