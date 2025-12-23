@@ -22,7 +22,6 @@ public class SecurityConfig {
 	private final UrlRequestAuthenticationSuccessHandler urlSuccessHandler;
 	private final RememberMeAuthenticationSuccessHandler rememberMeSuccessHandler;
 	private final CustomAuthenticationFailureHandler failureHandler;
-	private final RoleService roleService;
 	private final ActionRegistry actionRegistry;
 
 	public SecurityConfig(
@@ -35,7 +34,6 @@ public class SecurityConfig {
 		this.urlSuccessHandler = urlSuccessHandler;
 		this.rememberMeSuccessHandler = rememberMeSuccessHandler;
 		this.failureHandler = failureHandler;
-		this.roleService = roleService;
 		this.actionRegistry = actionRegistry;
 	}
 
@@ -63,7 +61,7 @@ public class SecurityConfig {
 								"/api/pub/**"
 						).permitAll()
 						.requestMatchers("/web/sec/**")
-						.access(new RoleBasedAccessDecisionManager(roleService, actionRegistry))
+						.access(new RoleBasedAccessDecisionManager(actionRegistry))
 						.anyRequest().authenticated()
 				)
 

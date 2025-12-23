@@ -21,7 +21,7 @@ spring:
       ddl-auto: validate   # Ensure entity ↔ schema consistency early
     properties:
       hibernate:
-
+        multi_tenant: NONE
         # -------------------------------
         # SQL visibility (DEV ONLY)
         # -------------------------------

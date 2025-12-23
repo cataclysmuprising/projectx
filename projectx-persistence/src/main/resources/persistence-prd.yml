@@ -21,7 +21,7 @@ spring:
       ddl-auto: validate   # NEVER auto-create or update schema in prod
     properties:
       hibernate:
-
+        multi_tenant: NONE
         # -------------------------------
         # SQL logging (PROD SAFE)
         # -------------------------------

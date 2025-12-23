@@ -76,7 +76,7 @@ public class WebConfig implements WebMvcConfigurer {
 	@Bean
 	public WebClient webClient() {
 		HttpClient httpClient = HttpClient.create()
-				.responseTimeout(Duration.ofSeconds(60));
+				.responseTimeout(Duration.ofSeconds(120));
 
 		return WebClient.builder()
 				.clientConnector(new ReactorClientHttpConnector(httpClient))

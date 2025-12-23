@@ -1,9 +1,7 @@
 package com.tamantaw.projectx.backend.config.security;
 
-import com.tamantaw.projectx.backend.BackendApplication;
 import com.tamantaw.projectx.backend.dto.ActionDefinition;
 import com.tamantaw.projectx.backend.utils.ActionRegistry;
-import com.tamantaw.projectx.persistence.service.RoleService;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jspecify.annotations.Nullable;
@@ -21,22 +19,26 @@ import java.util.Set;
 import java.util.function.Supplier;
 
 @Component
-public class RoleBasedAccessDecisionManager implements AuthorizationManager<RequestAuthorizationContext> {
+public class RoleBasedAccessDecisionManager
+		implements AuthorizationManager<RequestAuthorizationContext> {
 
 	private static final Logger applicationLogger =
-			LogManager.getLogger("applicationLogs." + RoleBasedAccessDecisionManager.class.getName());
+			LogManager.getLogger(
+					"applicationLogs." + RoleBasedAccessDecisionManager.class.getName()
+			);
 
-	private final RoleService roleService;
 	private final ActionRegistry actionRegistry;
 
-	public RoleBasedAccessDecisionManager(RoleService roleService, ActionRegistry actionRegistry) {
-		this.roleService = roleService;
+	public RoleBasedAccessDecisionManager(ActionRegistry actionRegistry) {
 		this.actionRegistry = actionRegistry;
 	}
 
 	@Override
-	public void verify(@Nullable Supplier<? extends @Nullable Authentication> authentication, RequestAuthorizationContext context) {
-		// Keep your override if Spring Security in your version calls it.
+	public void verify(
+			@Nullable Supplier<? extends @Nullable Authentication> authentication,
+			RequestAuthorizationContext context
+	) {
+		// Keep override for Spring Security compatibility
 		if (authentication != null) {
 			AuthorizationManager.super.verify(authentication, context);
 		}
@@ -45,7 +47,8 @@ public class RoleBasedAccessDecisionManager implements AuthorizationManager<Requ
 	@Override
 	public @Nullable AuthorizationResult authorize(
 			Supplier<? extends @Nullable Authentication> authentication,
-			RequestAuthorizationContext context) {
+			RequestAuthorizationContext context
+	) {
 
 		Authentication auth = authentication.get();
 		applicationLogger.debug("Authentication : {}", auth);
@@ -55,7 +58,9 @@ public class RoleBasedAccessDecisionManager implements AuthorizationManager<Requ
 				|| auth.getPrincipal() == null
 				|| "anonymousUser".equals(auth.getPrincipal())) {
 
-			applicationLogger.debug("Invalid authentication : need to reauthenticate for current user.");
+			applicationLogger.debug(
+					"Invalid authentication : need to reauthenticate for current user."
+			);
 			return new AuthorizationDecision(false);
 		}
 
@@ -78,7 +83,7 @@ public class RoleBasedAccessDecisionManager implements AuthorizationManager<Requ
 					requestURL,
 					e
 			);
-			// Safer default: deny if action resolution fails
+			// Safer default: deny if registry resolution fails
 			return new AuthorizationDecision(false);
 		}
 
@@ -98,24 +103,11 @@ public class RoleBasedAccessDecisionManager implements AuthorizationManager<Requ
 		);
 
 		// ---------------------------------------------------------------------
-		// Load allowed roles for resolved ACTION
+		// Load allowed roles for resolved ACTION (FROM REGISTRY – NO DB)
 		// ---------------------------------------------------------------------
-		Set<String> actionAssociatedRoles;
-		try {
-			actionAssociatedRoles = roleService.selectRolesByActionId(action.id(), BackendApplication.APP_NAME);
-		}
-		catch (Exception e) {
-			applicationLogger.error(
-					"Failed to load associated roles for actionId={} (URL ==> {})",
-					action.id(),
-					requestURL,
-					e
-			);
-			// Safer default: deny if role rules can't be loaded
-			return new AuthorizationDecision(false);
-		}
+		Set<String> actionAssociatedRoles = action.allowedRoleNames();
 
-		if (actionAssociatedRoles.isEmpty()) {
+		if (actionAssociatedRoles == null || actionAssociatedRoles.isEmpty()) {
 			applicationLogger.debug(
 					"No role restrictions defined for actionId={} (URL ==> {}). Allowing.",
 					action.id(),
@@ -159,4 +151,3 @@ public class RoleBasedAccessDecisionManager implements AuthorizationManager<Requ
 		return new AuthorizationDecision(false);
 	}
 }
-

@@ -13,7 +13,9 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.pattern.PathPatternParser;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -37,6 +39,7 @@ public class ActionRegistry {
 	}
 
 	public void reload() {
+
 		ActionCriteria criteria = new ActionCriteria();
 		criteria.setAppName(BackendApplication.APP_NAME);
 
@@ -48,30 +51,36 @@ public class ActionRegistry {
 			throw new RuntimeException(e);
 		}
 
-		actions = dbActions.stream()
-				.map(a -> {
-					Set<String> roleNames;
-					try {
-						roleNames = roleService.selectRolesByActionId(
-								a.getId(),
-								a.getAppName()
-						);
-					}
-					catch (PersistenceException e) {
-						throw new RuntimeException(e);
-					}
+		Set<Long> actionIds = dbActions.stream()
+				.map(ActionDTO::getId)
+				.collect(Collectors.toSet());
 
-					return new ActionDefinition(
-							a.getId(),
-							a.getAppName(),
-							a.getPage(),
-							a.getActionName(),
-							a.getDisplayName(),
-							a.getActionType(),
-							patternParser.parse(a.getUrl()),
-							roleNames
+		Map<Long, Set<String>> roleNamesByActionId;
+		try {
+			roleNamesByActionId =
+					roleService.selectRoleNamesByActionIds(
+							actionIds,
+							BackendApplication.APP_NAME
 					);
-				})
+		}
+		catch (PersistenceException e) {
+			throw new RuntimeException(e);
+		}
+
+		actions = dbActions.stream()
+				.map(a -> new ActionDefinition(
+						a.getId(),
+						a.getAppName(),
+						a.getPage(),
+						a.getActionName(),
+						a.getDisplayName(),
+						a.getActionType(),
+						patternParser.parse(a.getUrl()),
+						roleNamesByActionId.getOrDefault(
+								a.getId(),
+								Collections.emptySet()
+						)
+				))
 				.toList();
 	}
 

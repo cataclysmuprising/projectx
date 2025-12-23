@@ -84,12 +84,6 @@ Configuration:
         AppenderRef:
           - ref: console_repository_logger
 
-      - name: org.hibernate.SQL # sql Logger
-        additivity: false
-        level: DEBUG
-        AppenderRef:
-          - ref: console_sql_logger
-
       ### Spring framework ###
       - name: org.springframework
         level: DEBUG
@@ -131,6 +125,8 @@ Configuration:
         level: ERROR
         # SQL statements and parameters
       - name: org.hibernate.orm.jdbc.bind
+        level: TRACE
+      - name: org.hibernate.type.descriptor.sql.BasicBinder
         level: TRACE
       # Statistics and slow queries
       - name: org.hibernate.stat
