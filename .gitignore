@@ -29,3 +29,5 @@ nbdist/
 **/test-output/
 **/**.jar
 **/*.jar
+node/
+node_modules/
