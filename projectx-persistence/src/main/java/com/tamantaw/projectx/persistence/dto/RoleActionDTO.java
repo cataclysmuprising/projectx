@@ -10,6 +10,9 @@ import lombok.ToString;
 @ToString(callSuper = true)
 public class RoleActionDTO extends AbstractDTO {
 
+	private Long roleId;
+	private Long actionId;
+
 	private RoleDTO role;
 
 	private ActionDTO action;

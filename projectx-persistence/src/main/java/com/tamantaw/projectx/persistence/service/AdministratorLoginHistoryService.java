@@ -47,12 +47,13 @@ public class AdministratorLoginHistoryService
 	}
 
 	@Override
-	public AdministratorLoginHistoryDTO create(AdministratorLoginHistoryDTO dto, long createdBy)
-			throws PersistenceException, ConsistencyViolationException {
+	public AdministratorLoginHistoryDTO create(
+			AdministratorLoginHistoryDTO dto,
+			long createdBy
+	) throws PersistenceException, ConsistencyViolationException {
 
 		Assert.notNull(dto, "DTO must not be null");
-		Assert.notNull(dto.getAdministrator(), "Administrator must not be null");
-		Assert.notNull(dto.getAdministrator().getId(), "Administrator id must not be null");
+		Assert.notNull(dto.getAdministratorId(), "administratorId must not be null");
 
 		String c = String.format(
 				"[service=%s][dto=%s]",
@@ -63,22 +64,35 @@ public class AdministratorLoginHistoryService
 		log.info("{} CREATE start createdBy={}", c, createdBy);
 
 		try {
+			// ------------------------------------------------------------
+			// DTO → ENTITY (no relations)
+			// ------------------------------------------------------------
 			AdministratorLoginHistory entity = mapper.toEntity(dto);
 			entity.setCreatedBy(createdBy);
 			entity.setUpdatedBy(createdBy);
 
+			// ------------------------------------------------------------
+			// Attach relation via reference (NO SQL, BeanValidation-safe)
+			// ------------------------------------------------------------
 			entity.setAdministrator(
-					entityManager.getReference(Administrator.class, dto.getAdministrator().getId())
+					entityManager.getReference(
+							Administrator.class,
+							dto.getAdministratorId()
+					)
 			);
 
-			AdministratorLoginHistory saved = administratorLoginHistoryRepository.saveRecord(entity);
+			AdministratorLoginHistory saved =
+					administratorLoginHistoryRepository.saveRecord(entity);
 
 			log.info("{} CREATE success id={}", c, saved.getId());
+
 			return mapper.toDto(saved, mappingContext);
 		}
 		catch (DataIntegrityViolationException e) {
 			log.error("{} CREATE integrity violation dto={}", c, dto, e);
-			throw new ConsistencyViolationException(DATA_INTEGRITY_VIOLATION_MSG, e);
+			throw new ConsistencyViolationException(
+					DATA_INTEGRITY_VIOLATION_MSG, e
+			);
 		}
 		catch (Exception e) {
 			log.error("{} CREATE failed dto={}", c, dto, e);

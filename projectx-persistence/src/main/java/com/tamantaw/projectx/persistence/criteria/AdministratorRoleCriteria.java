@@ -38,11 +38,11 @@ public class AdministratorRoleCriteria extends AbstractCriteria<QAdministratorRo
 		BooleanBuilder predicate = commonFilter(ar._super);
 
 		if (administratorId != null) {
-			predicate.and(ar.administrator.id.eq(administratorId));
+			predicate.and(ar.administratorId.eq(administratorId));
 		}
 
 		if (roleId != null) {
-			predicate.and(ar.role.id.eq(roleId));
+			predicate.and(ar.roleId.eq(roleId));
 		}
 
 		// --------------------------------------------------------------

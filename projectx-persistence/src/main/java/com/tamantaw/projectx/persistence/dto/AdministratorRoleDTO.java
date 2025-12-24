@@ -9,6 +9,8 @@ import lombok.ToString;
 @Setter
 @ToString(callSuper = true)
 public class AdministratorRoleDTO extends AbstractDTO {
+	private Long administratorId;
+	private Long roleId;
 	private AdministratorDTO administrator;
 	private RoleDTO role;
 }

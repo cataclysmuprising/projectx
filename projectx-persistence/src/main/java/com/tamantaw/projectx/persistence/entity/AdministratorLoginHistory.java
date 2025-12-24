@@ -22,11 +22,24 @@ public class AdministratorLoginHistory extends AbstractEntity implements Seriali
 	@Serial
 	private static final long serialVersionUID = 1L;
 
+	// ------------------------------------------------------------------
+	// RELATION (lazy, safe)
+	// ------------------------------------------------------------------
 	@NotNull
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
-	@JoinColumn(name = "admin_id", nullable = false, foreignKey = @ForeignKey(name = "mjr_admin_login_history_admin"))
+	@JoinColumn(
+			name = "admin_id",
+			nullable = false,
+			foreignKey = @ForeignKey(name = "mjr_admin_login_history_admin")
+	)
 	@ToString.Exclude
 	private Administrator administrator;
+
+	// ------------------------------------------------------------------
+	// FK ID (read-only mirror)
+	// ------------------------------------------------------------------
+	@Column(name = "admin_id", nullable = false, updatable = false, insertable = false)
+	private Long administratorId;
 
 	@Length(max = 100)
 	@Column(name = "ip_address", length = 100)

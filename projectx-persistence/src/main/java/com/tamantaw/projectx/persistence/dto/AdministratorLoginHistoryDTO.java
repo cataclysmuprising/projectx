@@ -14,6 +14,8 @@ import java.time.LocalDateTime;
 @ToString(callSuper = true)
 public class AdministratorLoginHistoryDTO extends AbstractDTO {
 
+	private Long administratorId;
+
 	private AdministratorDTO administrator;
 
 	private String ipAddress;

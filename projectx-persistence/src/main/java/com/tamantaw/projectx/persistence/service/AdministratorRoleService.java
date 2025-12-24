@@ -48,10 +48,14 @@ public class AdministratorRoleService
 	}
 
 	@Override
-	public AdministratorRoleDTO create(AdministratorRoleDTO dto, long createdBy)
+	public AdministratorRoleDTO create(
+			AdministratorRoleDTO dto,
+			long createdBy)
 			throws PersistenceException, ConsistencyViolationException {
 
 		Assert.notNull(dto, "DTO must not be null");
+		Assert.notNull(dto.getAdministratorId(), "administratorId must not be null");
+		Assert.notNull(dto.getRoleId(), "roleId must not be null");
 
 		String c = String.format(
 				"[service=%s][dto=%s]",
@@ -62,39 +66,50 @@ public class AdministratorRoleService
 		log.info("{} CREATE start createdBy={}", c, createdBy);
 
 		try {
+			// ------------------------------------------------------------
+			// Map scalar fields only
+			// ------------------------------------------------------------
 			AdministratorRole entity = mapper.toEntity(dto);
 			entity.setCreatedBy(createdBy);
 			entity.setUpdatedBy(createdBy);
 
-			applyRelations(entity, dto);
+			// ------------------------------------------------------------
+			// Attach relations via references (NO SQL)
+			// ------------------------------------------------------------
+			entity.setAdministrator(
+					entityManager.getReference(
+							Administrator.class,
+							dto.getAdministratorId()
+					)
+			);
 
-			AdministratorRole saved = administratorRoleRepository.saveRecord(entity);
+			entity.setRole(
+					entityManager.getReference(
+							Role.class,
+							dto.getRoleId()
+					)
+			);
+
+			// ------------------------------------------------------------
+			// Persist
+			// ------------------------------------------------------------
+			AdministratorRole saved =
+					administratorRoleRepository.saveRecord(entity);
 
 			log.info("{} CREATE success id={}", c, saved.getId());
+
 			return mapper.toDto(saved, mappingContext);
 		}
 		catch (DataIntegrityViolationException e) {
 			log.error("{} CREATE integrity violation dto={}", c, dto, e);
-			throw new ConsistencyViolationException(DATA_INTEGRITY_VIOLATION_MSG, e);
+			throw new ConsistencyViolationException(
+					DATA_INTEGRITY_VIOLATION_MSG, e
+			);
 		}
 		catch (Exception e) {
 			log.error("{} CREATE failed dto={}", c, dto, e);
 			throw new PersistenceException(
 					"Create failed dto=" + dto.getClass().getSimpleName(), e
-			);
-		}
-	}
-
-	private void applyRelations(AdministratorRole entity, AdministratorRoleDTO dto) {
-		if (dto.getAdministrator() != null && dto.getAdministrator().getId() != null) {
-			entity.setAdministrator(
-					entityManager.getReference(Administrator.class, dto.getAdministrator().getId())
-			);
-		}
-
-		if (dto.getRole() != null && dto.getRole().getId() != null) {
-			entity.setRole(
-					entityManager.getReference(Role.class, dto.getRole().getId())
 			);
 		}
 	}

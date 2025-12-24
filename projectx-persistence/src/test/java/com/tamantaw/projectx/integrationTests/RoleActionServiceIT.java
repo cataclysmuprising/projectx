@@ -32,137 +32,169 @@ public class RoleActionServiceIT extends CommonTestBase {
 	@Autowired
 	private ActionService actionService;
 
+	// ----------------------------------------------------------------------
+	// FIND
+	// ----------------------------------------------------------------------
+
 	@Test
 	public void findById_existingRoleAction() throws Exception {
-		Optional<RoleActionDTO> result = roleActionService.findById(1L);
+
+		Optional<RoleActionDTO> result =
+				roleActionService.findById(1L);
 
 		assertTrue(result.isPresent());
-		RoleAction entity = entityManager.find(RoleAction.class, result.get().getId());
-		assertNotNull(entity);
-		assertEquals(entity.getRole().getId(), 1L);
-		assertEquals(entity.getAction().getId(), 10011L);
+
+		RoleActionDTO dto = result.get();
+
+		assertEquals(dto.getRoleId(), 1L);
+		assertEquals(dto.getActionId(), 10011L);
 	}
 
 	@Test
 	public void findAll_byRoleId() throws Exception {
+
 		RoleActionCriteria criteria = new RoleActionCriteria();
 		criteria.setRoleId(2L);
 
-		List<RoleActionDTO> mappings = roleActionService.findAll(criteria);
+		List<RoleActionDTO> mappings =
+				roleActionService.findAll(criteria);
 
 		assertEquals(mappings.size(), 3);
+
 		assertTrue(
 				mappings.stream()
-						.allMatch(m -> {
-							RoleAction entity = entityManager.find(RoleAction.class, m.getId());
-							return entity != null && entity.getRole().getId().equals(2L);
-						})
+						.allMatch(m -> m.getRoleId().equals(2L))
 		);
 	}
+
+	// ----------------------------------------------------------------------
+	// CREATE
+	// ----------------------------------------------------------------------
 
 	@Test
-	public void create_persistsRoleAction() throws ConsistencyViolationException, PersistenceException {
-		RoleDTO newRole = createRole("TEMP_ROLE_ACTION");
+	public void create_persistsRoleAction()
+			throws ConsistencyViolationException, PersistenceException {
 
-		RoleDTO roleRef = new RoleDTO();
-		roleRef.setId(newRole.getId());
+		RoleDTO newRole =
+				createRole("TEMP_ROLE_ACTION");
 
 		RoleActionDTO dto = new RoleActionDTO();
-		dto.setRole(roleRef);
+		dto.setRoleId(newRole.getId());
+		dto.setActionId(10021L);
 
-		RoleActionDTO saved = roleActionService.create(
-				populateAction(dto, 10021L),
-				TEST_CREATE_USER_ID
-		);
+		RoleActionDTO saved =
+				roleActionService.create(dto, TEST_CREATE_USER_ID);
 
 		assertNotNull(saved.getId());
-		assertEquals(saved.getRole().getId(), newRole.getId());
-		assertEquals(saved.getAction().getId(), 10021L);
+		assertEquals(newRole.getId(), saved.getRoleId());
+		assertEquals(saved.getActionId(), 10021L);
+		assertEquals(saved.getCreatedBy(), TEST_CREATE_USER_ID);
 	}
+
+	// ----------------------------------------------------------------------
+	// UPDATE
+	// ----------------------------------------------------------------------
 
 	@Test
 	public void update_withDto_changesActionLink() throws Exception {
-		RoleDTO newRole = createRole("TEMP_ROLE_UPDATE_LINK");
 
-		RoleDTO roleRef = new RoleDTO();
-		roleRef.setId(newRole.getId());
+		RoleDTO newRole =
+				createRole("TEMP_ROLE");
 
-		RoleActionDTO dto = new RoleActionDTO();
-		dto.setRole(roleRef);
+		RoleActionDTO createDto = new RoleActionDTO();
+		createDto.setRoleId(newRole.getId());
+		createDto.setActionId(10021L);
 
-		RoleActionDTO saved = roleActionService.create(
-				populateAction(dto, 10021L),
-				TEST_CREATE_USER_ID
-		);
-
-		ActionDTO updatedActionRef = new ActionDTO();
-		updatedActionRef.setId(10022L);
+		RoleActionDTO saved =
+				roleActionService.create(createDto, TEST_CREATE_USER_ID);
 
 		RoleActionDTO updateDto = new RoleActionDTO();
 		updateDto.setId(saved.getId());
-		updateDto.setAction(updatedActionRef);
+		updateDto.setActionId(10022L);
 
-		RoleActionDTO updated = roleActionService.update(updateDto, TEST_UPDATE_USER_ID);
+		RoleActionDTO updated =
+				roleActionService.update(updateDto, TEST_UPDATE_USER_ID);
 
-		assertEquals(updated.getAction().getId(), 10022L);
+		assertEquals(updated.getActionId(), 10022L);
 		assertEquals(updated.getUpdatedBy(), TEST_UPDATE_USER_ID);
 	}
 
+	// ----------------------------------------------------------------------
+	// DELETE
+	// ----------------------------------------------------------------------
+
 	@Test
-	public void delete_removesRoleAction() throws ConsistencyViolationException, PersistenceException {
-		RoleDTO newRole = createRole("TEMP_ROLE");
-		ActionDTO newAction = createAction("deleteActionLink", "^/sec/actions/delete-link$");
+	public void delete_removesRoleAction()
+			throws ConsistencyViolationException, PersistenceException {
 
-		RoleDTO roleRef = new RoleDTO();
-		roleRef.setId(newRole.getId());
+		RoleDTO newRole =
+				createRole("TEMP_ROLE");
 
-		ActionDTO actionRef = new ActionDTO();
-		actionRef.setId(newAction.getId());
+		ActionDTO newAction =
+				createAction(
+						"deleteActionLink",
+						"^/sec/actions/delete-link$"
+				);
 
 		RoleActionDTO dto = new RoleActionDTO();
-		dto.setRole(roleRef);
-		dto.setAction(actionRef);
+		dto.setRoleId(newRole.getId());
+		dto.setActionId(newAction.getId());
 
-		RoleActionDTO saved = roleActionService.create(dto, TEST_CREATE_USER_ID);
+		RoleActionDTO saved =
+				roleActionService.create(dto, TEST_CREATE_USER_ID);
 
 		RoleActionCriteria criteria = new RoleActionCriteria();
 		criteria.setRoleId(newRole.getId());
 		criteria.setActionId(newAction.getId());
 
-		long deleted = roleActionService.delete(criteria);
+		long deleted =
+				roleActionService.delete(criteria);
 
 		assertEquals(deleted, 1L);
 
 		entityManager.flush();
 		entityManager.clear();
 
-		assertNull(entityManager.find(RoleAction.class, saved.getId()));
+		assertNull(
+				entityManager.find(RoleAction.class, saved.getId())
+		);
 	}
 
 	@Test
 	public void deleteById_removesRoleActionByIdentifier() throws Exception {
-		RoleDTO newRole = createRole("TEMP_ROLE_DELETE_BY_ID");
-		ActionDTO newAction = createAction("deleteByIdActionLink", "^/sec/actions/delete-by-id-link$");
 
-		RoleDTO roleRef = new RoleDTO();
-		roleRef.setId(newRole.getId());
+		RoleDTO newRole =
+				createRole("TEMP_ROLE");
 
-		ActionDTO actionRef = new ActionDTO();
-		actionRef.setId(newAction.getId());
+		ActionDTO newAction =
+				createAction(
+						"deleteByIdActionLink",
+						"^/sec/actions/delete-by-id-link$"
+				);
 
 		RoleActionDTO dto = new RoleActionDTO();
-		dto.setRole(roleRef);
-		dto.setAction(actionRef);
+		dto.setRoleId(newRole.getId());
+		dto.setActionId(newAction.getId());
 
-		RoleActionDTO saved = roleActionService.create(dto, TEST_CREATE_USER_ID);
+		RoleActionDTO saved =
+				roleActionService.create(dto, TEST_CREATE_USER_ID);
 
-		boolean deleted = roleActionService.deleteById(saved.getId());
+		boolean deleted =
+				roleActionService.deleteById(saved.getId());
 
 		assertTrue(deleted);
-		assertNull(entityManager.find(RoleAction.class, saved.getId()));
+		assertNull(
+				entityManager.find(RoleAction.class, saved.getId())
+		);
 	}
 
-	private RoleDTO createRole(String name) throws ConsistencyViolationException, PersistenceException {
+	// ----------------------------------------------------------------------
+	// HELPERS
+	// ----------------------------------------------------------------------
+
+	private RoleDTO createRole(String name)
+			throws ConsistencyViolationException, PersistenceException {
+
 		RoleDTO dto = new RoleDTO();
 		dto.setAppName("projectx");
 		dto.setName(name);
@@ -170,13 +202,6 @@ public class RoleActionServiceIT extends CommonTestBase {
 		dto.setDescription("Role for role-action integration test");
 
 		return roleService.create(dto, TEST_CREATE_USER_ID);
-	}
-
-	private RoleActionDTO populateAction(RoleActionDTO dto, long actionId) {
-		ActionDTO actionRef = new ActionDTO();
-		actionRef.setId(actionId);
-		dto.setAction(actionRef);
-		return dto;
 	}
 
 	private ActionDTO createAction(String actionName, String url)
@@ -189,7 +214,7 @@ public class RoleActionServiceIT extends CommonTestBase {
 		dto.setDisplayName("Integration Action " + actionName);
 		dto.setActionType(Action.ActionType.SUB);
 		dto.setUrl(url);
-		dto.setDescription("Action for role-action delete test");
+		dto.setDescription("Action for role-action integration test");
 
 		return actionService.create(dto, TEST_CREATE_USER_ID);
 	}

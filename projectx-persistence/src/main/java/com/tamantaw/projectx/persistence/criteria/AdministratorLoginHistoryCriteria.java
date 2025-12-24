@@ -39,7 +39,7 @@ public class AdministratorLoginHistoryCriteria extends AbstractCriteria<QAdminis
 		BooleanBuilder predicate = commonFilter(h._super);
 
 		if (administratorId != null) {
-			predicate.and(h.administrator.id.eq(administratorId));
+			predicate.and(h.administratorId.eq(administratorId));
 		}
 
 		if (StringUtils.isNotBlank(ipAddress)) {

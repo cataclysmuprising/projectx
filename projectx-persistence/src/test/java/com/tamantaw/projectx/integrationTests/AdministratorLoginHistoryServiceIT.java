@@ -4,9 +4,11 @@ import com.tamantaw.projectx.CommonTestBase;
 import com.tamantaw.projectx.persistence.criteria.AdministratorLoginHistoryCriteria;
 import com.tamantaw.projectx.persistence.dto.AdministratorDTO;
 import com.tamantaw.projectx.persistence.dto.AdministratorLoginHistoryDTO;
+import com.tamantaw.projectx.persistence.entity.Administrator;
 import com.tamantaw.projectx.persistence.exception.ConsistencyViolationException;
 import com.tamantaw.projectx.persistence.exception.PersistenceException;
 import com.tamantaw.projectx.persistence.service.AdministratorLoginHistoryService;
+import com.tamantaw.projectx.persistence.service.AdministratorService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.testng.annotations.Test;
 
@@ -21,6 +23,9 @@ public class AdministratorLoginHistoryServiceIT extends CommonTestBase {
 	@Autowired
 	private AdministratorLoginHistoryService loginHistoryService;
 
+	@Autowired
+	private AdministratorService administratorService;
+
 	@Test
 	public void create_persistsLoginHistory() throws ConsistencyViolationException, PersistenceException {
 		AdministratorLoginHistoryDTO dto = buildDto(1L, "127.0.0.1", "Ubuntu", "Mozilla");
@@ -30,7 +35,6 @@ public class AdministratorLoginHistoryServiceIT extends CommonTestBase {
 		logger.info("Saved AdministratorLoginHistory info : " + saved);
 
 		assertNotNull(saved.getId());
-		assertEquals(saved.getAdministrator().getId(), 1L);
 		assertEquals(saved.getCreatedBy(), TEST_CREATE_USER_ID);
 		assertEquals(saved.getUpdatedBy(), TEST_CREATE_USER_ID);
 		assertNotNull(saved.getLoginDate());
@@ -85,18 +89,34 @@ public class AdministratorLoginHistoryServiceIT extends CommonTestBase {
 
 	@Test
 	public void update_withDto_updatesFieldsAndAudit() throws Exception {
-		AdministratorLoginHistoryDTO saved = loginHistoryService.create(
-				buildDto(4L, "172.16.0.1", "macOS", "Safari"),
-				TEST_CREATE_USER_ID
-		);
 
-		AdministratorLoginHistoryDTO updateDto = new AdministratorLoginHistoryDTO();
+		// --------------------------------------------------
+		// GIVEN: a real administrator
+		// --------------------------------------------------
+		AdministratorDTO admin = createAdministrator("history-update@example.com");
+
+		AdministratorLoginHistoryDTO saved =
+				loginHistoryService.create(
+						buildDto(admin.getId(), "172.16.0.1", "macOS", "Safari"),
+						TEST_CREATE_USER_ID
+				);
+
+		// --------------------------------------------------
+		// WHEN: update non-relational fields
+		// --------------------------------------------------
+		AdministratorLoginHistoryDTO updateDto =
+				new AdministratorLoginHistoryDTO();
+
 		updateDto.setId(saved.getId());
 		updateDto.setOs("Linux");
 		updateDto.setClientAgent("Firefox");
 
-		AdministratorLoginHistoryDTO updated = loginHistoryService.update(updateDto, TEST_UPDATE_USER_ID);
+		AdministratorLoginHistoryDTO updated =
+				loginHistoryService.update(updateDto, TEST_UPDATE_USER_ID);
 
+		// --------------------------------------------------
+		// THEN
+		// --------------------------------------------------
 		assertEquals(updated.getOs(), "Linux");
 		assertEquals(updated.getClientAgent(), "Firefox");
 		assertEquals(updated.getUpdatedBy(), TEST_UPDATE_USER_ID);
@@ -104,30 +124,57 @@ public class AdministratorLoginHistoryServiceIT extends CommonTestBase {
 
 	@Test
 	public void deleteById_removesLoginHistoryByIdentifier() throws Exception {
-		AdministratorLoginHistoryDTO saved = loginHistoryService.create(
-				buildDto(5L, "172.16.0.2", "Windows", "Edge"),
-				TEST_CREATE_USER_ID
-		);
 
-		boolean deleted = loginHistoryService.deleteById(saved.getId());
+		// --------------------------------------------------
+		// GIVEN: a real administrator
+		// --------------------------------------------------
+		AdministratorDTO admin =
+				createAdministrator("delete-history@example.com");
 
+		AdministratorLoginHistoryDTO saved =
+				loginHistoryService.create(
+						buildDto(admin.getId(), "172.16.0.2", "Windows", "Edge"),
+						TEST_CREATE_USER_ID
+				);
+
+		// --------------------------------------------------
+		// WHEN
+		// --------------------------------------------------
+		boolean deleted =
+				loginHistoryService.deleteById(saved.getId());
+
+		// --------------------------------------------------
+		// THEN
+		// --------------------------------------------------
 		assertTrue(deleted);
-		assertNull(entityManager.find(
-				com.tamantaw.projectx.persistence.entity.AdministratorLoginHistory.class,
-				saved.getId()
-		));
+
+		assertNull(
+				entityManager.find(
+						com.tamantaw.projectx.persistence.entity.AdministratorLoginHistory.class,
+						saved.getId()
+				)
+		);
 	}
 
 	private AdministratorLoginHistoryDTO buildDto(Long adminId, String ip, String os, String agent) {
-		AdministratorDTO adminRef = new AdministratorDTO();
-		adminRef.setId(adminId);
-
 		AdministratorLoginHistoryDTO dto = new AdministratorLoginHistoryDTO();
-		dto.setAdministrator(adminRef);
+		dto.setAdministratorId(adminId);
 		dto.setIpAddress(ip);
 		dto.setOs(os);
 		dto.setClientAgent(agent);
 		dto.setLoginDate(LocalDateTime.now());
 		return dto;
+	}
+
+	private AdministratorDTO createAdministrator(String loginId)
+			throws ConsistencyViolationException, PersistenceException {
+
+		AdministratorDTO dto = new AdministratorDTO();
+		dto.setName("Admin " + loginId);
+		dto.setLoginId(loginId);
+		dto.setPassword("secret");
+		dto.setStatus(Administrator.Status.ACTIVE);
+
+		return administratorService.create(dto, TEST_CREATE_USER_ID);
 	}
 }

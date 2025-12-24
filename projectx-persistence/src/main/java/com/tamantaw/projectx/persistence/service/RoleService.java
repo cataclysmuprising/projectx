@@ -16,7 +16,6 @@ import com.tamantaw.projectx.persistence.repository.RoleRepository;
 import com.tamantaw.projectx.persistence.repository.base.UpdateSpec;
 import com.tamantaw.projectx.persistence.service.base.BaseService;
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.EntityNotFoundException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -160,45 +159,61 @@ public class RoleService
 		}
 	}
 
-	public void updateRoleAndActions(RoleDTO roleDTO, Set<Long> actionIds, long updatedBy)
-			throws PersistenceException, ConsistencyViolationException {
+	public void updateRoleAndActions(
+			RoleDTO roleDTO,
+			Set<Long> actionIds,
+			long updatedBy
+	) throws PersistenceException, ConsistencyViolationException {
 
 		Assert.notNull(roleDTO, "roleDTO must not be null");
-		Long roleId = roleDTO.getId();
-		Assert.notNull(roleId, "Role ID must not be null");
+		Assert.notNull(roleDTO.getId(), "Role ID must not be null");
 		Assert.notNull(actionIds, "actionIds must not be null");
 		Assert.noNullElements(actionIds, "actionIds must not contain null elements");
 
+		Long roleId = roleDTO.getId();
+
 		String c = String.format(
-				"[service=%s][domain=%s][id=%d]",
+				"[service=%s][domain=Role][id=%d]",
 				serviceName(),
-				"Role",
 				roleId
 		);
 
 		serviceLogger.info("{} UPDATE_WITH_ACTIONS start actionCount={}", c, actionIds.size());
 
 		try {
+			// ------------------------------------------------------------
+			// 1. Update scalar fields only (safe, no joins)
+			// ------------------------------------------------------------
 			UpdateSpec<Role> spec = buildUpdateSpecFromDto(roleDTO);
 
 			long affected = roleRepository.updateById(spec, roleId, updatedBy);
-
 			if (affected == 0) {
-				throw new EntityNotFoundException(
-						"Entity not found for id=" + roleId
-				);
+				throw new ContentNotFoundException("Role not found id=" + roleId);
 			}
 
+			// ------------------------------------------------------------
+			// 2. Reload managed Role entity
+			// ------------------------------------------------------------
 			Role role = roleRepository.findById(roleId)
 					.orElseThrow(() -> new ContentNotFoundException("Role not found id=" + roleId));
 
-			List<RoleAction> existingRoleActions = role.getRoleActions();
+			// ------------------------------------------------------------
+			// 3. Force collection initialization (CRITICAL)
+			// ------------------------------------------------------------
+			List<RoleAction> roleActions = role.getRoleActions();
+			roleActions.size(); // force init
 
-			// remove associations that are no longer requested
-			existingRoleActions.removeIf(ra -> !actionIds.contains(ra.getAction().getId()));
+			// ------------------------------------------------------------
+			// 4. Remove obsolete relations
+			// ------------------------------------------------------------
+			roleActions.removeIf(
+					ra -> !actionIds.contains(ra.getAction().getId())
+			);
 
-			// add any missing associations
-			Set<Long> existingActionIds = existingRoleActions.stream()
+			// ------------------------------------------------------------
+			// 5. Add missing relations
+			// ------------------------------------------------------------
+			Set<Long> existingActionIds = roleActions.stream()
 					.map(ra -> ra.getAction().getId())
 					.collect(Collectors.toSet());
 
@@ -207,36 +222,50 @@ public class RoleService
 					continue;
 				}
 
-				RoleAction roleAction = new RoleAction();
-				roleAction.setRole(role);
-				roleAction.setAction(entityManager.getReference(Action.class, actionId));
-				roleAction.setCreatedBy(role.getUpdatedBy());
-				roleAction.setUpdatedBy(role.getUpdatedBy());
-				existingRoleActions.add(roleAction);
+				RoleAction ra = new RoleAction();
+				ra.setRole(role);
+				ra.setAction(entityManager.getReference(Action.class, actionId));
+				ra.setCreatedBy(updatedBy);
+				ra.setUpdatedBy(updatedBy);
+
+				roleActions.add(ra);
 			}
 
-			Role saved = roleRepository.saveRecord(role);
+			// ------------------------------------------------------------
+			// 6. Flush changes (no reassign collection!)
+			// ------------------------------------------------------------
+			entityManager.flush();
 
-			serviceLogger.info("{} UPDATE_WITH_ACTIONS success id={} actions={} updatedBy={} actionIds={}",
+			serviceLogger.info(
+					"{} UPDATE_WITH_ACTIONS success roleId={} actions={} updatedBy={}",
 					c,
-					saved.getId(),
-					saved.getRoleActions().size(),
-					saved.getUpdatedBy(),
-					saved.getRoleActions()
-							.stream()
-							.map(RoleAction::getAction)
-							.map(Action::getId)
-							.collect(Collectors.toSet())
+					roleId,
+					roleActions.size(),
+					updatedBy
 			);
 		}
 		catch (DataIntegrityViolationException e) {
-			serviceLogger.error("{} UPDATE_WITH_ACTIONS integrity violation roleId={} actionIds={}",
-					c, roleId, actionIds, e);
+			serviceLogger.error(
+					"{} UPDATE_WITH_ACTIONS integrity violation roleId={} actionIds={}",
+					c,
+					roleId,
+					actionIds,
+					e
+			);
 			throw new ConsistencyViolationException(DATA_INTEGRITY_VIOLATION_MSG, e);
 		}
 		catch (Exception e) {
-			serviceLogger.error("{} UPDATE_WITH_ACTIONS failed roleId={} actionIds={}", c, roleId, actionIds, e);
-			throw new PersistenceException("UpdateWithActions failed roleId=" + roleId, e);
+			serviceLogger.error(
+					"{} UPDATE_WITH_ACTIONS failed roleId={} actionIds={}",
+					c,
+					roleId,
+					actionIds,
+					e
+			);
+			throw new PersistenceException(
+					"UpdateRoleAndActions failed roleId=" + roleId,
+					e
+			);
 		}
 	}
 }

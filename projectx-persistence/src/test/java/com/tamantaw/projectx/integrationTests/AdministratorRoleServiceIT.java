@@ -31,138 +31,167 @@ public class AdministratorRoleServiceIT extends CommonTestBase {
 	@Autowired
 	private RoleService roleService;
 
+	// ----------------------------------------------------------------------
+	// FIND
+	// ----------------------------------------------------------------------
+
 	@Test
 	public void findById_existingAdministratorRole() throws Exception {
-		Optional<AdministratorRoleDTO> result = administratorRoleService.findById(1L);
+
+		Optional<AdministratorRoleDTO> result =
+				administratorRoleService.findById(1L);
 
 		assertTrue(result.isPresent());
-		AdministratorRole entity = entityManager.find(AdministratorRole.class, result.get().getId());
-		assertNotNull(entity);
-		assertEquals(entity.getAdministrator().getId(), 1L);
-		assertEquals(entity.getRole().getId(), 1L);
+
+		AdministratorRoleDTO dto = result.get();
+
+		assertEquals(dto.getAdministratorId(), 1L);
+		assertEquals(dto.getRoleId(), 1L);
 	}
 
 	@Test
 	public void findAll_byRoleId() throws Exception {
+
 		AdministratorRoleCriteria criteria = new AdministratorRoleCriteria();
 		criteria.setRoleId(1L);
 
-		List<AdministratorRoleDTO> mappings = administratorRoleService.findAll(criteria);
+		List<AdministratorRoleDTO> mappings =
+				administratorRoleService.findAll(criteria);
 
 		assertFalse(mappings.isEmpty());
+
 		assertTrue(
-				mappings.stream().allMatch(m -> {
-					AdministratorRole entity = entityManager.find(AdministratorRole.class, m.getId());
-					return entity != null && entity.getRole().getId().equals(1L);
-				})
+				mappings.stream()
+						.allMatch(m -> m.getRoleId().equals(1L))
 		);
 	}
 
-	@Test
-	public void create_persistsAdministratorRole() throws ConsistencyViolationException, PersistenceException {
-		AdministratorDTO newAdmin = createAdministrator("link-admin@example.com");
-		RoleDTO role = roleService.findById(2L).orElseThrow();
+	// ----------------------------------------------------------------------
+	// CREATE
+	// ----------------------------------------------------------------------
 
-		AdministratorDTO adminRef = new AdministratorDTO();
-		adminRef.setId(newAdmin.getId());
+	@Test
+	public void create_persistsAdministratorRole()
+			throws ConsistencyViolationException, PersistenceException {
+
+		AdministratorDTO newAdmin =
+				createAdministrator("link-admin@example.com");
+
+		RoleDTO role =
+				roleService.findById(2L).orElseThrow();
 
 		AdministratorRoleDTO dto = new AdministratorRoleDTO();
-		dto.setAdministrator(adminRef);
+		dto.setAdministratorId(newAdmin.getId());
+		dto.setRoleId(role.getId());
 
-		RoleDTO roleRef = new RoleDTO();
-		roleRef.setId(role.getId());
-		dto.setRole(roleRef);
-
-		AdministratorRoleDTO saved = administratorRoleService.create(dto, TEST_CREATE_USER_ID);
+		AdministratorRoleDTO saved =
+				administratorRoleService.create(dto, TEST_CREATE_USER_ID);
 
 		assertNotNull(saved.getId());
-		assertEquals(saved.getAdministrator().getId(), newAdmin.getId());
-		assertEquals(saved.getRole().getId(), role.getId());
+		assertEquals(newAdmin.getId(), saved.getAdministratorId());
+		assertEquals(role.getId(), saved.getRoleId());
+		assertEquals(saved.getCreatedBy(), TEST_CREATE_USER_ID);
 	}
+
+	// ----------------------------------------------------------------------
+	// UPDATE
+	// ----------------------------------------------------------------------
 
 	@Test
 	public void update_withDto_changesRoleAssociation() throws Exception {
-		AdministratorDTO newAdmin = createAdministrator("dto-link-admin@example.com");
-		RoleDTO initialRole = roleService.findById(1L).orElseThrow();
-		RoleDTO updatedRole = roleService.findById(2L).orElseThrow();
 
-		AdministratorDTO adminRef = new AdministratorDTO();
-		adminRef.setId(newAdmin.getId());
+		AdministratorDTO newAdmin =
+				createAdministrator("dto-link-admin@example.com");
 
-		RoleDTO roleRef = new RoleDTO();
-		roleRef.setId(initialRole.getId());
+		RoleDTO initialRole =
+				roleService.findById(1L).orElseThrow();
 
-		AdministratorRoleDTO dto = new AdministratorRoleDTO();
-		dto.setAdministrator(adminRef);
-		dto.setRole(roleRef);
+		RoleDTO updatedRole =
+				roleService.findById(2L).orElseThrow();
 
-		AdministratorRoleDTO saved = administratorRoleService.create(dto, TEST_CREATE_USER_ID);
+		AdministratorRoleDTO createDto = new AdministratorRoleDTO();
+		createDto.setAdministratorId(newAdmin.getId());
+		createDto.setRoleId(initialRole.getId());
+
+		AdministratorRoleDTO saved =
+				administratorRoleService.create(createDto, TEST_CREATE_USER_ID);
 
 		AdministratorRoleDTO updateDto = new AdministratorRoleDTO();
 		updateDto.setId(saved.getId());
+		updateDto.setRoleId(updatedRole.getId());
 
-		RoleDTO updatedRoleRef = new RoleDTO();
-		updatedRoleRef.setId(updatedRole.getId());
-		updateDto.setRole(updatedRoleRef);
+		AdministratorRoleDTO updated =
+				administratorRoleService.update(updateDto, TEST_UPDATE_USER_ID);
 
-		AdministratorRoleDTO updated = administratorRoleService.update(updateDto, TEST_UPDATE_USER_ID);
-
-		assertEquals(updated.getRole().getId(), updatedRole.getId());
+		assertEquals(updatedRole.getId(), updated.getRoleId());
 		assertEquals(updated.getUpdatedBy(), TEST_UPDATE_USER_ID);
 	}
 
+	// ----------------------------------------------------------------------
+	// DELETE
+	// ----------------------------------------------------------------------
+
 	@Test
-	public void delete_removesAdministratorRole() throws ConsistencyViolationException, PersistenceException {
-		AdministratorDTO newAdmin = createAdministrator("unlink-admin@example.com");
-		RoleDTO role = roleService.findById(1L).orElseThrow();
+	public void delete_removesAdministratorRole()
+			throws ConsistencyViolationException, PersistenceException {
 
-		AdministratorDTO adminRef = new AdministratorDTO();
-		adminRef.setId(newAdmin.getId());
+		AdministratorDTO newAdmin =
+				createAdministrator("unlink-admin@example.com");
 
-		RoleDTO roleRef = new RoleDTO();
-		roleRef.setId(role.getId());
+		RoleDTO role =
+				roleService.findById(1L).orElseThrow();
 
 		AdministratorRoleDTO dto = new AdministratorRoleDTO();
-		dto.setAdministrator(adminRef);
-		dto.setRole(roleRef);
+		dto.setAdministratorId(newAdmin.getId());
+		dto.setRoleId(role.getId());
 
-		AdministratorRoleDTO saved = administratorRoleService.create(dto, TEST_CREATE_USER_ID);
+		AdministratorRoleDTO saved =
+				administratorRoleService.create(dto, TEST_CREATE_USER_ID);
 
 		AdministratorRoleCriteria criteria = new AdministratorRoleCriteria();
 		criteria.setAdministratorId(newAdmin.getId());
 
-		long deleted = administratorRoleService.delete(criteria);
+		long deleted =
+				administratorRoleService.delete(criteria);
 
 		assertEquals(deleted, 1L);
 
 		entityManager.flush();
 		entityManager.clear();
 
-		assertNull(entityManager.find(AdministratorRole.class, saved.getId()));
+		assertNull(
+				entityManager.find(AdministratorRole.class, saved.getId())
+		);
 	}
 
 	@Test
 	public void deleteById_removesAdministratorRoleByIdentifier() throws Exception {
-		AdministratorDTO newAdmin = createAdministrator("delete-by-id-admin@example.com");
-		RoleDTO role = roleService.findById(1L).orElseThrow();
 
-		AdministratorDTO adminRef = new AdministratorDTO();
-		adminRef.setId(newAdmin.getId());
+		AdministratorDTO newAdmin =
+				createAdministrator("delete-by-id-admin@example.com");
 
-		RoleDTO roleRef = new RoleDTO();
-		roleRef.setId(role.getId());
+		RoleDTO role =
+				roleService.findById(1L).orElseThrow();
 
 		AdministratorRoleDTO dto = new AdministratorRoleDTO();
-		dto.setAdministrator(adminRef);
-		dto.setRole(roleRef);
+		dto.setAdministratorId(newAdmin.getId());
+		dto.setRoleId(role.getId());
 
-		AdministratorRoleDTO saved = administratorRoleService.create(dto, TEST_CREATE_USER_ID);
+		AdministratorRoleDTO saved =
+				administratorRoleService.create(dto, TEST_CREATE_USER_ID);
 
-		boolean deleted = administratorRoleService.deleteById(saved.getId());
+		boolean deleted =
+				administratorRoleService.deleteById(saved.getId());
 
 		assertTrue(deleted);
-		assertNull(entityManager.find(AdministratorRole.class, saved.getId()));
+		assertNull(
+				entityManager.find(AdministratorRole.class, saved.getId())
+		);
 	}
+
+	// ----------------------------------------------------------------------
+	// HELPERS
+	// ----------------------------------------------------------------------
 
 	private AdministratorDTO createAdministrator(String loginId)
 			throws ConsistencyViolationException, PersistenceException {

@@ -38,11 +38,11 @@ public class RoleActionCriteria extends AbstractCriteria<QRoleAction> {
 		BooleanBuilder predicate = commonFilter(ra._super);
 
 		if (roleId != null) {
-			predicate.and(ra.role.id.eq(roleId));
+			predicate.and(ra.roleId.eq(roleId));
 		}
 
 		if (actionId != null) {
-			predicate.and(ra.action.id.eq(actionId));
+			predicate.and(ra.actionId.eq(actionId));
 		}
 
 		// --------------------------------------------------------------

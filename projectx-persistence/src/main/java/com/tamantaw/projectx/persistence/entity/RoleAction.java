@@ -11,7 +11,15 @@ import java.io.Serial;
 import java.io.Serializable;
 
 @Entity
-@Table(name = "mjr_role_x_action", uniqueConstraints = {@UniqueConstraint(name = "uq_mjr_role_action", columnNames = {"role_id", "action_id"})})
+@Table(
+		name = "mjr_role_x_action",
+		uniqueConstraints = {
+				@UniqueConstraint(
+						name = "uq_mjr_role_action",
+						columnNames = {"role_id", "action_id"}
+				)
+		}
+)
 @Getter
 @Setter
 @ToString(callSuper = true)
@@ -20,14 +28,38 @@ public class RoleAction extends AbstractEntity implements Serializable {
 	@Serial
 	private static final long serialVersionUID = 6350526648908543212L;
 
+	// ------------------------------------------------------------------
+	// RELATIONS (lazy navigation only)
+	// ------------------------------------------------------------------
+
 	@NotNull
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "role_id", nullable = false, foreignKey = @ForeignKey(name = "fk_mjr_role_action_role"))
+	@ManyToOne(fetch = FetchType.LAZY, optional = false)
+	@JoinColumn(
+			name = "role_id",
+			nullable = false,
+			foreignKey = @ForeignKey(name = "fk_mjr_role_action_role")
+	)
+	@ToString.Exclude
 	private Role role;
 
 	@NotNull
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "action_id", nullable = false, foreignKey = @ForeignKey(name = "fk_mjr_role_action_action"))
+	@ManyToOne(fetch = FetchType.LAZY, optional = false)
+	@JoinColumn(
+			name = "action_id",
+			nullable = false,
+			foreignKey = @ForeignKey(name = "fk_mjr_role_action_action")
+	)
+	@ToString.Exclude
 	private Action action;
+
+	// ------------------------------------------------------------------
+	// FK IDS (scalar, safe, zero-SQL)
+	// ------------------------------------------------------------------
+
+	@Column(name = "role_id", nullable = false, insertable = false, updatable = false)
+	private Long roleId;
+
+	@Column(name = "action_id", nullable = false, insertable = false, updatable = false)
+	private Long actionId;
 }
 
