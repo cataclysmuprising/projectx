@@ -117,6 +117,31 @@ public class ActionServiceIT extends CommonTestBase {
 	}
 
 	@Test
+	public void update_withDto_appliesChangesAndAudit() throws Exception {
+		ActionDTO dto = new ActionDTO();
+		dto.setAppName("projectx");
+		dto.setPage("DtoPage");
+		dto.setActionName("dtoUpdateAction");
+		dto.setDisplayName("DTO update action");
+		dto.setActionType(Action.ActionType.SUB);
+		dto.setUrl("/web/sec/dto-update-action");
+		dto.setDescription("Temporary action for DTO update test");
+
+		ActionDTO saved = actionService.create(dto, TEST_CREATE_USER_ID);
+
+		ActionDTO updateDto = new ActionDTO();
+		updateDto.setId(saved.getId());
+		updateDto.setDisplayName("DTO Updated Action");
+		updateDto.setDescription("Updated via DTO update method");
+
+		ActionDTO updated = actionService.update(updateDto, TEST_UPDATE_USER_ID);
+
+		assertEquals(updated.getDisplayName(), "DTO Updated Action");
+		assertEquals(updated.getDescription(), "Updated via DTO update method");
+		assertEquals(updated.getUpdatedBy(), TEST_UPDATE_USER_ID);
+	}
+
+	@Test
 	public void delete_removesAction() throws ConsistencyViolationException, PersistenceException {
 		ActionDTO dto = new ActionDTO();
 		dto.setAppName("projectx");
@@ -139,6 +164,25 @@ public class ActionServiceIT extends CommonTestBase {
 		entityManager.flush();
 		entityManager.clear();
 
+		assertNull(entityManager.find(Action.class, saved.getId()));
+	}
+
+	@Test
+	public void deleteById_removesActionByIdentifier() throws ConsistencyViolationException, PersistenceException {
+		ActionDTO dto = new ActionDTO();
+		dto.setAppName("projectx");
+		dto.setPage("TempPage");
+		dto.setActionName("tempDeleteByIdAction");
+		dto.setDisplayName("Temp delete-by-id action");
+		dto.setActionType(Action.ActionType.SUB);
+		dto.setUrl("/web/sec/delete-by-id-action");
+		dto.setDescription("Temporary action for deleteById test");
+
+		ActionDTO saved = actionService.create(dto, TEST_CREATE_USER_ID);
+
+		boolean deleted = actionService.deleteById(saved.getId());
+
+		assertTrue(deleted);
 		assertNull(entityManager.find(Action.class, saved.getId()));
 	}
 }

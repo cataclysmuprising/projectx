@@ -226,6 +226,28 @@ public class RoleServiceIT extends CommonTestBase {
 		assertEquals(updated.getUpdatedBy(), 200L);
 	}
 
+	@Test
+	public void update_withDto_updatesRoleFieldsAndAudit() throws Exception {
+		RoleDTO dto = new RoleDTO();
+		dto.setAppName("projectx");
+		dto.setName("DTO_UPDATE_ROLE");
+		dto.setRoleType(Role.RoleType.CUSTOM);
+		dto.setDescription("Role for DTO update");
+
+		RoleDTO saved = roleService.create(dto, TEST_CREATE_USER_ID);
+
+		RoleDTO updateDto = new RoleDTO();
+		updateDto.setId(saved.getId());
+		updateDto.setName("DTO_UPDATED_ROLE");
+		updateDto.setDescription("Updated via DTO update");
+
+		RoleDTO updated = roleService.update(updateDto, TEST_UPDATE_USER_ID);
+
+		assertEquals(updated.getName(), "DTO_UPDATED_ROLE");
+		assertEquals(updated.getDescription(), "Updated via DTO update");
+		assertEquals(updated.getUpdatedBy(), TEST_UPDATE_USER_ID);
+	}
+
 	// ----------------------------------------------------------------------
 	// DELETE
 	// ----------------------------------------------------------------------
@@ -249,6 +271,22 @@ public class RoleServiceIT extends CommonTestBase {
 		entityManager.flush();
 		entityManager.clear();
 
+		assertNull(entityManager.find(Role.class, saved.getId()));
+	}
+
+	@Test
+	public void deleteById_removesRoleByIdentifier() throws ConsistencyViolationException, PersistenceException {
+		RoleDTO dto = new RoleDTO();
+		dto.setAppName("projectx");
+		dto.setName("DELETE_BY_ID_ROLE");
+		dto.setRoleType(Role.RoleType.CUSTOM);
+		dto.setDescription("Role for deleteById test");
+
+		RoleDTO saved = roleService.create(dto, 1L);
+
+		boolean deleted = roleService.deleteById(saved.getId());
+
+		assertTrue(deleted);
 		assertNull(entityManager.find(Role.class, saved.getId()));
 	}
 

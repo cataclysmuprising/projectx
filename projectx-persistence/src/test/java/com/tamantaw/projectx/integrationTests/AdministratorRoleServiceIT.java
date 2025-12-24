@@ -81,6 +81,37 @@ public class AdministratorRoleServiceIT extends CommonTestBase {
 	}
 
 	@Test
+	public void update_withDto_changesRoleAssociation() throws Exception {
+		AdministratorDTO newAdmin = createAdministrator("dto-link-admin@example.com");
+		RoleDTO initialRole = roleService.findById(1L).orElseThrow();
+		RoleDTO updatedRole = roleService.findById(2L).orElseThrow();
+
+		AdministratorDTO adminRef = new AdministratorDTO();
+		adminRef.setId(newAdmin.getId());
+
+		RoleDTO roleRef = new RoleDTO();
+		roleRef.setId(initialRole.getId());
+
+		AdministratorRoleDTO dto = new AdministratorRoleDTO();
+		dto.setAdministrator(adminRef);
+		dto.setRole(roleRef);
+
+		AdministratorRoleDTO saved = administratorRoleService.create(dto, TEST_CREATE_USER_ID);
+
+		AdministratorRoleDTO updateDto = new AdministratorRoleDTO();
+		updateDto.setId(saved.getId());
+
+		RoleDTO updatedRoleRef = new RoleDTO();
+		updatedRoleRef.setId(updatedRole.getId());
+		updateDto.setRole(updatedRoleRef);
+
+		AdministratorRoleDTO updated = administratorRoleService.update(updateDto, TEST_UPDATE_USER_ID);
+
+		assertEquals(updated.getRole().getId(), updatedRole.getId());
+		assertEquals(updated.getUpdatedBy(), TEST_UPDATE_USER_ID);
+	}
+
+	@Test
 	public void delete_removesAdministratorRole() throws ConsistencyViolationException, PersistenceException {
 		AdministratorDTO newAdmin = createAdministrator("unlink-admin@example.com");
 		RoleDTO role = roleService.findById(1L).orElseThrow();
@@ -107,6 +138,29 @@ public class AdministratorRoleServiceIT extends CommonTestBase {
 		entityManager.flush();
 		entityManager.clear();
 
+		assertNull(entityManager.find(AdministratorRole.class, saved.getId()));
+	}
+
+	@Test
+	public void deleteById_removesAdministratorRoleByIdentifier() throws Exception {
+		AdministratorDTO newAdmin = createAdministrator("delete-by-id-admin@example.com");
+		RoleDTO role = roleService.findById(1L).orElseThrow();
+
+		AdministratorDTO adminRef = new AdministratorDTO();
+		adminRef.setId(newAdmin.getId());
+
+		RoleDTO roleRef = new RoleDTO();
+		roleRef.setId(role.getId());
+
+		AdministratorRoleDTO dto = new AdministratorRoleDTO();
+		dto.setAdministrator(adminRef);
+		dto.setRole(roleRef);
+
+		AdministratorRoleDTO saved = administratorRoleService.create(dto, TEST_CREATE_USER_ID);
+
+		boolean deleted = administratorRoleService.deleteById(saved.getId());
+
+		assertTrue(deleted);
 		assertNull(entityManager.find(AdministratorRole.class, saved.getId()));
 	}
 

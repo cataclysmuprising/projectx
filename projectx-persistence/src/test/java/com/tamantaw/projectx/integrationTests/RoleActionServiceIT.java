@@ -81,6 +81,34 @@ public class RoleActionServiceIT extends CommonTestBase {
 	}
 
 	@Test
+	public void update_withDto_changesActionLink() throws Exception {
+		RoleDTO newRole = createRole("TEMP_ROLE_UPDATE_LINK");
+
+		RoleDTO roleRef = new RoleDTO();
+		roleRef.setId(newRole.getId());
+
+		RoleActionDTO dto = new RoleActionDTO();
+		dto.setRole(roleRef);
+
+		RoleActionDTO saved = roleActionService.create(
+				populateAction(dto, 10021L),
+				TEST_CREATE_USER_ID
+		);
+
+		ActionDTO updatedActionRef = new ActionDTO();
+		updatedActionRef.setId(10022L);
+
+		RoleActionDTO updateDto = new RoleActionDTO();
+		updateDto.setId(saved.getId());
+		updateDto.setAction(updatedActionRef);
+
+		RoleActionDTO updated = roleActionService.update(updateDto, TEST_UPDATE_USER_ID);
+
+		assertEquals(updated.getAction().getId(), 10022L);
+		assertEquals(updated.getUpdatedBy(), TEST_UPDATE_USER_ID);
+	}
+
+	@Test
 	public void delete_removesRoleAction() throws ConsistencyViolationException, PersistenceException {
 		RoleDTO newRole = createRole("TEMP_ROLE");
 		ActionDTO newAction = createAction("deleteActionLink", "^/sec/actions/delete-link$");
@@ -108,6 +136,29 @@ public class RoleActionServiceIT extends CommonTestBase {
 		entityManager.flush();
 		entityManager.clear();
 
+		assertNull(entityManager.find(RoleAction.class, saved.getId()));
+	}
+
+	@Test
+	public void deleteById_removesRoleActionByIdentifier() throws Exception {
+		RoleDTO newRole = createRole("TEMP_ROLE_DELETE_BY_ID");
+		ActionDTO newAction = createAction("deleteByIdActionLink", "^/sec/actions/delete-by-id-link$");
+
+		RoleDTO roleRef = new RoleDTO();
+		roleRef.setId(newRole.getId());
+
+		ActionDTO actionRef = new ActionDTO();
+		actionRef.setId(newAction.getId());
+
+		RoleActionDTO dto = new RoleActionDTO();
+		dto.setRole(roleRef);
+		dto.setAction(actionRef);
+
+		RoleActionDTO saved = roleActionService.create(dto, TEST_CREATE_USER_ID);
+
+		boolean deleted = roleActionService.deleteById(saved.getId());
+
+		assertTrue(deleted);
 		assertNull(entityManager.find(RoleAction.class, saved.getId()));
 	}
 

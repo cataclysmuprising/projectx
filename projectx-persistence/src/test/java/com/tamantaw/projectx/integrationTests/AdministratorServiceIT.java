@@ -185,6 +185,28 @@ public class AdministratorServiceIT extends CommonTestBase {
 	}
 
 	@Test
+	public void update_withDto_updatesFieldsAndAudit() throws Exception {
+		AdministratorDTO dto = new AdministratorDTO();
+		dto.setName("Dto Update Admin");
+		dto.setLoginId("dto-update-admin@example.com");
+		dto.setPassword("secret");
+		dto.setStatus(Administrator.Status.ACTIVE);
+
+		AdministratorDTO saved = administratorService.create(dto, TEST_CREATE_USER_ID);
+
+		AdministratorDTO updateDto = new AdministratorDTO();
+		updateDto.setId(saved.getId());
+		updateDto.setName("Updated DTO Admin");
+		updateDto.setStatus(Administrator.Status.SUSPENDED);
+
+		AdministratorDTO updated = administratorService.update(updateDto, TEST_UPDATE_USER_ID);
+
+		assertEquals(updated.getName(), "Updated DTO Admin");
+		assertEquals(updated.getStatus(), Administrator.Status.SUSPENDED);
+		assertEquals(updated.getUpdatedBy(), TEST_UPDATE_USER_ID);
+	}
+
+	@Test
 	public void delete_removesAdministrator() throws ConsistencyViolationException, PersistenceException {
 		AdministratorDTO dto = new AdministratorDTO();
 		dto.setName("Deletable Admin");
@@ -204,6 +226,22 @@ public class AdministratorServiceIT extends CommonTestBase {
 		entityManager.flush();
 		entityManager.clear();
 
+		assertNull(entityManager.find(Administrator.class, saved.getId()));
+	}
+
+	@Test
+	public void deleteById_removesAdministratorByIdentifier() throws ConsistencyViolationException, PersistenceException {
+		AdministratorDTO dto = new AdministratorDTO();
+		dto.setName("DeleteById Admin");
+		dto.setLoginId("delete-by-id-admin@example.com");
+		dto.setPassword("secret");
+		dto.setStatus(Administrator.Status.ACTIVE);
+
+		AdministratorDTO saved = administratorService.create(dto, TEST_CREATE_USER_ID);
+
+		boolean deleted = administratorService.deleteById(saved.getId());
+
+		assertTrue(deleted);
 		assertNull(entityManager.find(Administrator.class, saved.getId()));
 	}
 }

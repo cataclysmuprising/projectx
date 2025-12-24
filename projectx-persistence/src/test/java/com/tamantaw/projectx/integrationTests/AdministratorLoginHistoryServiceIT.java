@@ -27,6 +27,8 @@ public class AdministratorLoginHistoryServiceIT extends CommonTestBase {
 
 		AdministratorLoginHistoryDTO saved = loginHistoryService.create(dto, TEST_CREATE_USER_ID);
 
+		logger.info("Saved AdministratorLoginHistory info : " + saved);
+
 		assertNotNull(saved.getId());
 		assertEquals(saved.getAdministrator().getId(), 1L);
 		assertEquals(saved.getCreatedBy(), TEST_CREATE_USER_ID);
@@ -79,6 +81,41 @@ public class AdministratorLoginHistoryServiceIT extends CommonTestBase {
 		long deleted = loginHistoryService.delete(criteria);
 
 		assertEquals(deleted, 1L);
+	}
+
+	@Test
+	public void update_withDto_updatesFieldsAndAudit() throws Exception {
+		AdministratorLoginHistoryDTO saved = loginHistoryService.create(
+				buildDto(4L, "172.16.0.1", "macOS", "Safari"),
+				TEST_CREATE_USER_ID
+		);
+
+		AdministratorLoginHistoryDTO updateDto = new AdministratorLoginHistoryDTO();
+		updateDto.setId(saved.getId());
+		updateDto.setOs("Linux");
+		updateDto.setClientAgent("Firefox");
+
+		AdministratorLoginHistoryDTO updated = loginHistoryService.update(updateDto, TEST_UPDATE_USER_ID);
+
+		assertEquals(updated.getOs(), "Linux");
+		assertEquals(updated.getClientAgent(), "Firefox");
+		assertEquals(updated.getUpdatedBy(), TEST_UPDATE_USER_ID);
+	}
+
+	@Test
+	public void deleteById_removesLoginHistoryByIdentifier() throws Exception {
+		AdministratorLoginHistoryDTO saved = loginHistoryService.create(
+				buildDto(5L, "172.16.0.2", "Windows", "Edge"),
+				TEST_CREATE_USER_ID
+		);
+
+		boolean deleted = loginHistoryService.deleteById(saved.getId());
+
+		assertTrue(deleted);
+		assertNull(entityManager.find(
+				com.tamantaw.projectx.persistence.entity.AdministratorLoginHistory.class,
+				saved.getId()
+		));
 	}
 
 	private AdministratorLoginHistoryDTO buildDto(Long adminId, String ip, String os, String agent) {
