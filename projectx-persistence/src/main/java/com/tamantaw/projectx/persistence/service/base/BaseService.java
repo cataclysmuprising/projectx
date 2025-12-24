@@ -1,5 +1,6 @@
 package com.tamantaw.projectx.persistence.service.base;
 
+import com.querydsl.core.types.Path;
 import com.querydsl.core.types.dsl.EntityPathBase;
 import com.tamantaw.projectx.persistence.config.PrimaryPersistenceContext;
 import com.tamantaw.projectx.persistence.criteria.base.AbstractCriteria;
@@ -12,6 +13,7 @@ import com.tamantaw.projectx.persistence.mapper.base.AbstractMapper;
 import com.tamantaw.projectx.persistence.mapper.base.MappingContext;
 import com.tamantaw.projectx.persistence.repository.base.AbstractRepository;
 import com.tamantaw.projectx.persistence.repository.base.UpdateSpec;
+import jakarta.persistence.EntityNotFoundException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +23,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -37,10 +41,8 @@ public abstract class BaseService<
 
 	private static final Logger log =
 			LogManager.getLogger("serviceLogs." + BaseService.class.getSimpleName());
-
-	private final AbstractRepository<ENTITY, QCLAZZ, CRITERIA, Long> repository;
 	protected final MAPPER mapper;
-
+	private final AbstractRepository<ENTITY, QCLAZZ, CRITERIA, Long> repository;
 	@Autowired
 	protected MappingContext mappingContext;
 
@@ -244,7 +246,7 @@ public abstract class BaseService<
 	// CREATE
 	// ----------------------------------------------------------------------
 
-	public ENTITY create(DTO dto, long createdBy) throws PersistenceException, ConsistencyViolationException {
+	public DTO create(DTO dto, long createdBy) throws PersistenceException, ConsistencyViolationException {
 
 		Assert.notNull(dto, "DTO must not be null");
 
@@ -264,7 +266,7 @@ public abstract class BaseService<
 			ENTITY saved = repository.saveRecord(entity);
 
 			log.info("{} CREATE success id={}", c, saved.getId());
-			return saved;
+			return mapper.toDto(saved, mappingContext);
 		}
 		catch (DataIntegrityViolationException e) {
 			log.error("{} CREATE integrity violation dto={}", c, dto, e);
@@ -329,6 +331,53 @@ public abstract class BaseService<
 	// UPDATE / DELETE
 	// ----------------------------------------------------------------------
 
+	public DTO update(DTO dto, long updatedBy) throws PersistenceException, ConsistencyViolationException {
+
+		Assert.notNull(dto, "DTO must not be null");
+		Assert.notNull(dto.getId(), "DTO id must not be null");
+
+		long id = dto.getId();
+
+		String c = String.format(
+				"[service=%s][dto=%s][id=%d]",
+				serviceName(),
+				dto.getClass().getSimpleName(),
+				id
+		);
+
+		log.info("{} UPDATE_BY_ID start updatedBy={}", c, updatedBy);
+
+		try {
+			UpdateSpec<ENTITY> spec = buildUpdateSpecFromDto(dto);
+
+			long affected = repository.updateById(spec, id, updatedBy);
+
+			if (affected == 0) {
+				throw new EntityNotFoundException(
+						"Entity not found for id=" + id
+				);
+			}
+
+			return findById(id).orElseThrow(
+					() -> new IllegalStateException(
+							"Entity disappeared after update id=" + id
+					)
+			);
+		}
+		catch (DataIntegrityViolationException e) {
+			log.error("{} UPDATE_BY_ID integrity violation dto={}", c, dto, e);
+			throw new ConsistencyViolationException(
+					DATA_INTEGRITY_VIOLATION_MSG, e
+			);
+		}
+		catch (Exception e) {
+			log.error("{} UPDATE_BY_ID failed dto={}", c, dto, e);
+			throw new PersistenceException(
+					"UpdateById failed dto=" + dto.getClass().getSimpleName(), e
+			);
+		}
+	}
+
 	public long update(UpdateSpec<ENTITY> spec, CRITERIA criteria, long updatedBy)
 			throws PersistenceException, ConsistencyViolationException {
 
@@ -359,6 +408,24 @@ public abstract class BaseService<
 		}
 	}
 
+	public boolean deleteById(long id) throws PersistenceException {
+
+		String c = String.format(
+				"[service=%s][domain=%s][id=%d]",
+				serviceName(),
+				"DeleteById",
+				id
+		);
+
+		try {
+			return repository.deleteWithId(id);
+		}
+		catch (Exception e) {
+			log.error("{} FIND_BY_ID failed", c, e);
+			throw new PersistenceException("DeleteById failed id=" + id, e);
+		}
+	}
+
 	public long delete(CRITERIA criteria)
 			throws PersistenceException, ConsistencyViolationException {
 
@@ -385,5 +452,64 @@ public abstract class BaseService<
 					"Delete failed criteria=" + criteriaName(criteria), e
 			);
 		}
+	}
+
+	protected UpdateSpec<ENTITY> buildUpdateSpecFromDto(DTO dto) {
+
+		return (update, root) -> {
+
+			Class<?> dtoClass = dto.getClass();
+
+			for (Field f : dtoClass.getDeclaredFields()) {
+				f.setAccessible(true);
+
+				if (isIgnoredUpdateField(f)) {
+					continue;
+				}
+
+				try {
+					Object value = f.get(dto);
+					if (value == null) {
+						continue;
+					}
+
+					Path<?> path = resolveEntityPath(root, f.getName());
+					if (path == null) {
+						continue; // DTO-only field
+					}
+
+					@SuppressWarnings("unchecked")
+					Path<Object> typedPath = (Path<Object>) path;
+
+					update.set(typedPath, value);
+				}
+				catch (IllegalAccessException ignored) {
+				}
+			}
+		};
+	}
+
+	protected Path<?> resolveEntityPath(
+			EntityPathBase<?> root,
+			String fieldName) {
+
+		try {
+			Field f = root.getClass().getField(fieldName);
+			Object v = f.get(root);
+
+			return (v instanceof Path<?> p) ? p : null;
+		}
+		catch (NoSuchFieldException | IllegalAccessException e) {
+			return null;
+		}
+	}
+
+	protected boolean isIgnoredUpdateField(Field f) {
+		return Modifier.isStatic(f.getModifiers())
+				|| "id".equals(f.getName())
+				|| "createdBy".equals(f.getName())
+				|| "createdDate".equals(f.getName())
+				|| "updatedBy".equals(f.getName())
+				|| "updatedDate".equals(f.getName());
 	}
 }

@@ -13,8 +13,10 @@ import com.tamantaw.projectx.persistence.exception.ContentNotFoundException;
 import com.tamantaw.projectx.persistence.exception.PersistenceException;
 import com.tamantaw.projectx.persistence.mapper.RoleMapper;
 import com.tamantaw.projectx.persistence.repository.RoleRepository;
+import com.tamantaw.projectx.persistence.repository.base.UpdateSpec;
 import com.tamantaw.projectx.persistence.service.base.BaseService;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityNotFoundException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -158,10 +160,12 @@ public class RoleService
 		}
 	}
 
-	public void updateRoleAndActions(Long roleId, List<Long> actionIds)
+	public void updateRoleAndActions(RoleDTO roleDTO, Set<Long> actionIds, long updatedBy)
 			throws PersistenceException, ConsistencyViolationException {
 
-		Assert.notNull(roleId, "roleId must not be null");
+		Assert.notNull(roleDTO, "roleDTO must not be null");
+		Long roleId = roleDTO.getId();
+		Assert.notNull(roleId, "Role ID must not be null");
 		Assert.notNull(actionIds, "actionIds must not be null");
 		Assert.noNullElements(actionIds, "actionIds must not contain null elements");
 
@@ -175,21 +179,30 @@ public class RoleService
 		serviceLogger.info("{} UPDATE_WITH_ACTIONS start actionCount={}", c, actionIds.size());
 
 		try {
+			UpdateSpec<Role> spec = buildUpdateSpecFromDto(roleDTO);
+
+			long affected = roleRepository.updateById(spec, roleId, updatedBy);
+
+			if (affected == 0) {
+				throw new EntityNotFoundException(
+						"Entity not found for id=" + roleId
+				);
+			}
+
 			Role role = roleRepository.findById(roleId)
 					.orElseThrow(() -> new ContentNotFoundException("Role not found id=" + roleId));
 
-			Set<Long> uniqueActionIds = new LinkedHashSet<>(actionIds);
 			List<RoleAction> existingRoleActions = role.getRoleActions();
 
 			// remove associations that are no longer requested
-			existingRoleActions.removeIf(ra -> !uniqueActionIds.contains(ra.getAction().getId()));
+			existingRoleActions.removeIf(ra -> !actionIds.contains(ra.getAction().getId()));
 
 			// add any missing associations
 			Set<Long> existingActionIds = existingRoleActions.stream()
 					.map(ra -> ra.getAction().getId())
 					.collect(Collectors.toSet());
 
-			for (Long actionId : uniqueActionIds) {
+			for (Long actionId : actionIds) {
 				if (existingActionIds.contains(actionId)) {
 					continue;
 				}

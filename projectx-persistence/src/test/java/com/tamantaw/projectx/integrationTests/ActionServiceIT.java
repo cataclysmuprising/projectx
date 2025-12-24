@@ -74,7 +74,7 @@ public class ActionServiceIT extends CommonTestBase {
 		dto.setUrl("/web/sec/report");
 		dto.setDescription("Report overview action for integration test");
 
-		Action saved = actionService.create(dto, TEST_CREATE_USER_ID);
+		ActionDTO saved = actionService.create(dto, TEST_CREATE_USER_ID);
 
 		assertNotNull(saved.getId());
 		assertEquals(saved.getCreatedBy(), TEST_CREATE_USER_ID);
@@ -127,7 +127,7 @@ public class ActionServiceIT extends CommonTestBase {
 		dto.setUrl("/web/sec/delete-action");
 		dto.setDescription("Temporary action for delete test");
 
-		Action saved = actionService.create(dto, TEST_CREATE_USER_ID);
+		ActionDTO saved = actionService.create(dto, TEST_CREATE_USER_ID);
 
 		ActionCriteria criteria = new ActionCriteria();
 		criteria.setActionName("tempDeleteAction");

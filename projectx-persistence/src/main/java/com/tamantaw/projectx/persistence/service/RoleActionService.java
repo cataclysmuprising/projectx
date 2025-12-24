@@ -9,6 +9,7 @@ import com.tamantaw.projectx.persistence.entity.RoleAction;
 import com.tamantaw.projectx.persistence.exception.ConsistencyViolationException;
 import com.tamantaw.projectx.persistence.exception.PersistenceException;
 import com.tamantaw.projectx.persistence.mapper.RoleActionMapper;
+import com.tamantaw.projectx.persistence.mapper.base.MappingContext;
 import com.tamantaw.projectx.persistence.repository.RoleActionRepository;
 import com.tamantaw.projectx.persistence.service.base.BaseService;
 import jakarta.persistence.EntityManager;
@@ -35,20 +36,22 @@ public class RoleActionService
 
 	private final EntityManager entityManager;
 	private final RoleActionRepository roleActionRepository;
+	private final MappingContext mappingContext;
 
 	@Autowired
 	public RoleActionService(
 			RoleActionRepository roleActionRepository,
 			RoleActionMapper mapper,
-			EntityManager entityManager
-	) {
+			EntityManager entityManager,
+			MappingContext mappingContext) {
 		super(roleActionRepository, mapper);
 		this.entityManager = entityManager;
 		this.roleActionRepository = roleActionRepository;
+		this.mappingContext = mappingContext;
 	}
 
 	@Override
-	public RoleAction create(RoleActionDTO dto, long createdBy)
+	public RoleActionDTO create(RoleActionDTO dto, long createdBy)
 			throws PersistenceException, ConsistencyViolationException {
 
 		Assert.notNull(dto, "DTO must not be null");
@@ -71,7 +74,7 @@ public class RoleActionService
 			RoleAction saved = roleActionRepository.saveRecord(entity);
 
 			log.info("{} CREATE success id={}", c, saved.getId());
-			return saved;
+			return mapper.toDto(saved, mappingContext);
 		}
 		catch (DataIntegrityViolationException e) {
 			log.error("{} CREATE integrity violation dto={}", c, dto, e);

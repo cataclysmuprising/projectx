@@ -6,6 +6,7 @@ import com.tamantaw.projectx.backend.common.response.PageMode;
 import jakarta.annotation.Nonnull;
 import lombok.Getter;
 import lombok.Setter;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.validation.Errors;
 import org.springframework.validation.Validator;
@@ -41,18 +42,14 @@ public class BaseValidator implements Validator {
 	private static final Pattern EMAIL =
 			Pattern.compile("^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,6}$",
 					Pattern.CASE_INSENSITIVE);
-
-	/* ============================================================
-	 * Regex patterns (precompiled)
-	 * ============================================================ */
-	private final LocalizedMessageResolver messageSource;
 	@Getter
 	@Setter
 	protected PageMode pageMode;
-
-	public BaseValidator(LocalizedMessageResolver messageSource) {
-		this.messageSource = messageSource;
-	}
+	/* ============================================================
+	 * Regex patterns (precompiled)
+	 * ============================================================ */
+	@Autowired
+	private LocalizedMessageResolver messageSource;
 
 	protected void reject(FieldValidator fv, String messageKey, Object... args) {
 		fv.getErrors().rejectValue(

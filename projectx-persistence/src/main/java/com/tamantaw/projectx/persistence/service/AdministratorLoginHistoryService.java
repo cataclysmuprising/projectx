@@ -47,7 +47,7 @@ public class AdministratorLoginHistoryService
 	}
 
 	@Override
-	public AdministratorLoginHistory create(AdministratorLoginHistoryDTO dto, long createdBy)
+	public AdministratorLoginHistoryDTO create(AdministratorLoginHistoryDTO dto, long createdBy)
 			throws PersistenceException, ConsistencyViolationException {
 
 		Assert.notNull(dto, "DTO must not be null");
@@ -74,7 +74,7 @@ public class AdministratorLoginHistoryService
 			AdministratorLoginHistory saved = administratorLoginHistoryRepository.saveRecord(entity);
 
 			log.info("{} CREATE success id={}", c, saved.getId());
-			return saved;
+			return mapper.toDto(saved, mappingContext);
 		}
 		catch (DataIntegrityViolationException e) {
 			log.error("{} CREATE integrity violation dto={}", c, dto, e);

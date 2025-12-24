@@ -5,8 +5,11 @@ import com.tamantaw.projectx.persistence.entity.Role;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
+import org.springframework.util.CollectionUtils;
 
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Getter
 @Setter
@@ -23,4 +26,28 @@ public class RoleDTO extends AbstractDTO {
 	private List<AdministratorDTO> administrators;
 
 	private List<ActionDTO> actions;
+
+	private Set<Long> actionIds;
+
+	private Set<Long> administratorIds;
+
+	public Set<Long> getActionIds() {
+		if (actionIds != null) {
+			return actionIds;
+		}
+		else if (!CollectionUtils.isEmpty(actions)) {
+			return actions.stream().map(ActionDTO::getId).collect(Collectors.toSet());
+		}
+		return null;
+	}
+
+	public Set<Long> getAdministratorIds() {
+		if (administratorIds != null) {
+			return administratorIds;
+		}
+		else if (!CollectionUtils.isEmpty(administrators)) {
+			return administrators.stream().map(AdministratorDTO::getId).collect(Collectors.toSet());
+		}
+		return null;
+	}
 }

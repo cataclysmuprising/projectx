@@ -22,53 +22,33 @@
 		<nav class="mt-2">
 			<ul class="nav nav-pills nav-sidebar flex-column" data-accordion="false" data-widget="treeview" role="menu">
 				<li class="nav-item" th:if="${dashboard == true}">
-					<a class="nav-link" th:classappend="${pageName == 'Dashboard' } ? 'active' : ''" th:href="@{/sec/dashboard}">
+					<a class="nav-link" th:classappend="${pageName == 'Dashboard' } ? 'active' : ''" th:href="@{/web/sec/dashboard}">
 						<i class="nav-icon icon-display"></i>
 						<p>Dashboard</p>
 					</a>
 				</li>
 
-				<li class="nav-item" th:if="${reportList == true}">
-					<a class="nav-link" th:classappend="${pageName == 'Report' } ? 'active' : ''" th:href="@{/sec/reports}">
-						<i class="nav-icon icon-certificate"></i>
-						<p>Reports</p>
-					</a>
-				</li>
-
-				<li class="nav-item" th:if="${reportList == true or transactionsOfReportList == true}">
-					<a class="nav-link" th:classappend="${pageName == 'Transaction' } ? 'active' : ''" th:href="@{/sec/transactions}">
-						<i class="nav-icon icon-stats-growth"></i>
-						<p>Transactions</p>
-					</a>
-				</li>
-
-				<li class="nav-item treeview" th:classappend="${pageName == 'User' or pageName == 'Role' or pageName == 'Branch'} ? 'menu-open' : ''" th:if="${userList == true or roleList == true or branchAdd == true}">
+				<li class="nav-item treeview" th:classappend="${ pageName == 'Role' or pageName == 'Administrator'} ? 'menu-open' : ''" th:if="${administratorList == true or roleList == true}">
 					<a class="nav-link" href="#">
 						<i class="nav-icon icon-cog3"></i>
 						<p>Settings <i class="fas fa-angle-left right"></i></p>
 					</a>
 
 					<ul class="nav nav-treeview">
-						<li class="nav-item" th:if="${userList == true}">
-							<a class="nav-link" th:classappend="${pageName == 'User' } ? 'active' : ''" th:href="@{/sec/staffs}">
+						<li class="nav-item" th:if="${administratorList == true}">
+							<a class="nav-link" th:classappend="${pageName == 'Administrator' } ? 'active' : ''" th:href="@{/web/sec/administrator}">
 								<i class="nav-icon icon-users2"></i>
-								<p>Staffs</p>
+								<p>Administrators</p>
 							</a>
 						</li>
 
 						<li class="nav-item" th:if="${roleList == true}">
-							<a class="nav-link" th:classappend="${pageName == 'Role' } ? 'active' : ''" th:href="@{/sec/role}">
+							<a class="nav-link" th:classappend="${pageName == 'Role' } ? 'active' : ''" th:href="@{/web/sec/role}">
 								<i class="nav-icon icon-medal-star"></i>
 								<p>Roles</p>
 							</a>
 						</li>
 
-						<li class="nav-item" th:if="${branchAdd == true}">
-							<a class="nav-link" th:classappend="${pageName == 'Branch' } ? 'active' : ''" th:href="@{/sec/branch/add}">
-								<i class="nav-icon icon-split"></i>
-								<p>Branches</p>
-							</a>
-						</li>
 					</ul>
 				</li>
 

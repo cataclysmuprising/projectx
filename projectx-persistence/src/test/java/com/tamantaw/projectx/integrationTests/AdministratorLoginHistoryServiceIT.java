@@ -4,7 +4,6 @@ import com.tamantaw.projectx.CommonTestBase;
 import com.tamantaw.projectx.persistence.criteria.AdministratorLoginHistoryCriteria;
 import com.tamantaw.projectx.persistence.dto.AdministratorDTO;
 import com.tamantaw.projectx.persistence.dto.AdministratorLoginHistoryDTO;
-import com.tamantaw.projectx.persistence.entity.AdministratorLoginHistory;
 import com.tamantaw.projectx.persistence.exception.ConsistencyViolationException;
 import com.tamantaw.projectx.persistence.exception.PersistenceException;
 import com.tamantaw.projectx.persistence.service.AdministratorLoginHistoryService;
@@ -26,7 +25,7 @@ public class AdministratorLoginHistoryServiceIT extends CommonTestBase {
 	public void create_persistsLoginHistory() throws ConsistencyViolationException, PersistenceException {
 		AdministratorLoginHistoryDTO dto = buildDto(1L, "127.0.0.1", "Ubuntu", "Mozilla");
 
-		AdministratorLoginHistory saved = loginHistoryService.create(dto, TEST_CREATE_USER_ID);
+		AdministratorLoginHistoryDTO saved = loginHistoryService.create(dto, TEST_CREATE_USER_ID);
 
 		assertNotNull(saved.getId());
 		assertEquals(saved.getAdministrator().getId(), 1L);
@@ -37,7 +36,7 @@ public class AdministratorLoginHistoryServiceIT extends CommonTestBase {
 
 	@Test
 	public void findById_existingLoginHistory() throws Exception {
-		AdministratorLoginHistory saved = loginHistoryService.create(
+		AdministratorLoginHistoryDTO saved = loginHistoryService.create(
 				buildDto(2L, "10.0.0.2", "Windows", "Chrome"),
 				TEST_CREATE_USER_ID
 		);

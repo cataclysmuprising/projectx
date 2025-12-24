@@ -438,9 +438,26 @@ public abstract class AbstractRepositoryImpl<
 		return super.saveAllAndFlush(entities);
 	}
 
-	// ----------------------------------------------------------------------
-	// INTERNAL HELPERS
-	// ----------------------------------------------------------------------
+	@Override
+	public long updateById(
+			UpdateSpec<ENTITY> spec,
+			long id,
+			long updatedBy) {
+
+		Assert.notNull(spec, "UpdateSpec must not be null");
+
+		JPAUpdateClause update = queryFactory.update(path);
+
+		applyAudit(update, updatedBy);
+
+		spec.apply(update, path);
+
+		long affected = update.where(audit.id.eq(id)).execute();
+
+		entityManager.clear();
+
+		return affected;
+	}
 
 	@Override
 	public <E extends ENTITY> long updateByCriteria(
@@ -476,6 +493,23 @@ public abstract class AbstractRepositoryImpl<
 		entityManager.clear();
 
 		return affected;
+	}
+
+	@Override
+	public boolean deleteWithId(@Nonnull ID id) {
+		Assert.notNull(id, "Id must not be null");
+
+		long affected =
+				queryFactory
+						.delete(path)
+						.where(audit.id.eq((Long) id))
+						.execute();
+
+		if (affected > 0) {
+			entityManager.clear();
+			return true;
+		}
+		return false;
 	}
 
 	@Override

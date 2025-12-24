@@ -20,6 +20,7 @@ import org.testng.annotations.Test;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.testng.Assert.assertEquals;
@@ -42,11 +43,12 @@ public class RoleServiceIT extends CommonTestBase {
 		dto.setRoleType(Role.RoleType.CUSTOM);
 
 		Role saved = roleService.create(dto, List.of(10021L), TEST_CREATE_USER_ID);
+		dto.setId(saved.getId());
 
 		entityManager.flush();
 		entityManager.clear();
 
-		roleService.updateRoleAndActions(saved.getId(), List.of(10022L, 10021L));
+		roleService.updateRoleAndActions(dto, Set.of(10022L, 10021L), TEST_UPDATE_USER_ID);
 
 		entityManager.flush();
 		entityManager.clear();
@@ -149,7 +151,7 @@ public class RoleServiceIT extends CommonTestBase {
 		dto.setRoleType(Role.RoleType.CUSTOM);
 		dto.setDescription("Temporary role for IT test");
 
-		Role saved = roleService.create(dto, 100L);
+		RoleDTO saved = roleService.create(dto, 100L);
 
 		assertNotNull(saved.getId());
 		assertEquals(saved.getName(), "TEMP_ROLE");
@@ -235,7 +237,7 @@ public class RoleServiceIT extends CommonTestBase {
 		dto.setName("DELETE_ME");
 		dto.setRoleType(Role.RoleType.CUSTOM);
 
-		Role saved = roleService.create(dto, 1L);
+		RoleDTO saved = roleService.create(dto, 1L);
 
 		RoleCriteria criteria = new RoleCriteria();
 		criteria.setName("DELETE_ME");

@@ -42,7 +42,16 @@ public interface AbstractRepository<
 
 	List<ENTITY> saveAllRecords(Iterable<ENTITY> entities);
 
+	long updateById(UpdateSpec<ENTITY> spec, long id, long updatedBy);
+
 	<E extends ENTITY> long updateByCriteria(UpdateSpec<E> spec, CRITERIA criteria, Long updatedBy);
+
+	/**
+	 * Deletes a single entity by ID.
+	 *
+	 * @return true if deleted, false if not found
+	 */
+	boolean deleteWithId(ID id);
 
 	long deleteByCriteria(CRITERIA criteria);
 }

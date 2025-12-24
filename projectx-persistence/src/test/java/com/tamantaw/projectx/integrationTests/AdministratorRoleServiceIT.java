@@ -7,7 +7,6 @@ import com.tamantaw.projectx.persistence.dto.AdministratorRoleDTO;
 import com.tamantaw.projectx.persistence.dto.RoleDTO;
 import com.tamantaw.projectx.persistence.entity.Administrator;
 import com.tamantaw.projectx.persistence.entity.AdministratorRole;
-import com.tamantaw.projectx.persistence.entity.Role;
 import com.tamantaw.projectx.persistence.exception.ConsistencyViolationException;
 import com.tamantaw.projectx.persistence.exception.PersistenceException;
 import com.tamantaw.projectx.persistence.service.AdministratorRoleService;
@@ -61,7 +60,7 @@ public class AdministratorRoleServiceIT extends CommonTestBase {
 
 	@Test
 	public void create_persistsAdministratorRole() throws ConsistencyViolationException, PersistenceException {
-		Administrator newAdmin = createAdministrator("link-admin@example.com");
+		AdministratorDTO newAdmin = createAdministrator("link-admin@example.com");
 		RoleDTO role = roleService.findById(2L).orElseThrow();
 
 		AdministratorDTO adminRef = new AdministratorDTO();
@@ -74,7 +73,7 @@ public class AdministratorRoleServiceIT extends CommonTestBase {
 		roleRef.setId(role.getId());
 		dto.setRole(roleRef);
 
-		AdministratorRole saved = administratorRoleService.create(dto, TEST_CREATE_USER_ID);
+		AdministratorRoleDTO saved = administratorRoleService.create(dto, TEST_CREATE_USER_ID);
 
 		assertNotNull(saved.getId());
 		assertEquals(saved.getAdministrator().getId(), newAdmin.getId());
@@ -83,7 +82,7 @@ public class AdministratorRoleServiceIT extends CommonTestBase {
 
 	@Test
 	public void delete_removesAdministratorRole() throws ConsistencyViolationException, PersistenceException {
-		Administrator newAdmin = createAdministrator("unlink-admin@example.com");
+		AdministratorDTO newAdmin = createAdministrator("unlink-admin@example.com");
 		RoleDTO role = roleService.findById(1L).orElseThrow();
 
 		AdministratorDTO adminRef = new AdministratorDTO();
@@ -96,7 +95,7 @@ public class AdministratorRoleServiceIT extends CommonTestBase {
 		dto.setAdministrator(adminRef);
 		dto.setRole(roleRef);
 
-		AdministratorRole saved = administratorRoleService.create(dto, TEST_CREATE_USER_ID);
+		AdministratorRoleDTO saved = administratorRoleService.create(dto, TEST_CREATE_USER_ID);
 
 		AdministratorRoleCriteria criteria = new AdministratorRoleCriteria();
 		criteria.setAdministratorId(newAdmin.getId());
@@ -111,7 +110,7 @@ public class AdministratorRoleServiceIT extends CommonTestBase {
 		assertNull(entityManager.find(AdministratorRole.class, saved.getId()));
 	}
 
-	private Administrator createAdministrator(String loginId)
+	private AdministratorDTO createAdministrator(String loginId)
 			throws ConsistencyViolationException, PersistenceException {
 
 		AdministratorDTO dto = new AdministratorDTO();

@@ -145,7 +145,7 @@ public class AdministratorServiceIT extends CommonTestBase {
 		dto.setPassword("secret");
 		dto.setStatus(Administrator.Status.ACTIVE);
 
-		Administrator saved = administratorService.create(dto, TEST_CREATE_USER_ID);
+		AdministratorDTO saved = administratorService.create(dto, TEST_CREATE_USER_ID);
 
 		assertNotNull(saved.getId());
 		assertEquals(saved.getCreatedBy(), TEST_CREATE_USER_ID);
@@ -192,7 +192,7 @@ public class AdministratorServiceIT extends CommonTestBase {
 		dto.setPassword("secret");
 		dto.setStatus(Administrator.Status.ACTIVE);
 
-		Administrator saved = administratorService.create(dto, TEST_CREATE_USER_ID);
+		AdministratorDTO saved = administratorService.create(dto, TEST_CREATE_USER_ID);
 
 		AdministratorCriteria criteria = new AdministratorCriteria();
 		criteria.setLoginId("delete-admin@example.com");

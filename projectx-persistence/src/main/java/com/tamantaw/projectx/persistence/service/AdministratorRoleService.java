@@ -48,7 +48,7 @@ public class AdministratorRoleService
 	}
 
 	@Override
-	public AdministratorRole create(AdministratorRoleDTO dto, long createdBy)
+	public AdministratorRoleDTO create(AdministratorRoleDTO dto, long createdBy)
 			throws PersistenceException, ConsistencyViolationException {
 
 		Assert.notNull(dto, "DTO must not be null");
@@ -71,7 +71,7 @@ public class AdministratorRoleService
 			AdministratorRole saved = administratorRoleRepository.saveRecord(entity);
 
 			log.info("{} CREATE success id={}", c, saved.getId());
-			return saved;
+			return mapper.toDto(saved, mappingContext);
 		}
 		catch (DataIntegrityViolationException e) {
 			log.error("{} CREATE integrity violation dto={}", c, dto, e);

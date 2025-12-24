@@ -62,7 +62,7 @@ public class RoleActionServiceIT extends CommonTestBase {
 
 	@Test
 	public void create_persistsRoleAction() throws ConsistencyViolationException, PersistenceException {
-		Role newRole = createRole("TEMP_ROLE_ACTION");
+		RoleDTO newRole = createRole("TEMP_ROLE_ACTION");
 
 		RoleDTO roleRef = new RoleDTO();
 		roleRef.setId(newRole.getId());
@@ -70,7 +70,7 @@ public class RoleActionServiceIT extends CommonTestBase {
 		RoleActionDTO dto = new RoleActionDTO();
 		dto.setRole(roleRef);
 
-		RoleAction saved = roleActionService.create(
+		RoleActionDTO saved = roleActionService.create(
 				populateAction(dto, 10021L),
 				TEST_CREATE_USER_ID
 		);
@@ -82,8 +82,8 @@ public class RoleActionServiceIT extends CommonTestBase {
 
 	@Test
 	public void delete_removesRoleAction() throws ConsistencyViolationException, PersistenceException {
-		Role newRole = createRole("TEMP_ROLE");
-		Action newAction = createAction("deleteActionLink", "^/sec/actions/delete-link$");
+		RoleDTO newRole = createRole("TEMP_ROLE");
+		ActionDTO newAction = createAction("deleteActionLink", "^/sec/actions/delete-link$");
 
 		RoleDTO roleRef = new RoleDTO();
 		roleRef.setId(newRole.getId());
@@ -95,7 +95,7 @@ public class RoleActionServiceIT extends CommonTestBase {
 		dto.setRole(roleRef);
 		dto.setAction(actionRef);
 
-		RoleAction saved = roleActionService.create(dto, TEST_CREATE_USER_ID);
+		RoleActionDTO saved = roleActionService.create(dto, TEST_CREATE_USER_ID);
 
 		RoleActionCriteria criteria = new RoleActionCriteria();
 		criteria.setRoleId(newRole.getId());
@@ -111,7 +111,7 @@ public class RoleActionServiceIT extends CommonTestBase {
 		assertNull(entityManager.find(RoleAction.class, saved.getId()));
 	}
 
-	private Role createRole(String name) throws ConsistencyViolationException, PersistenceException {
+	private RoleDTO createRole(String name) throws ConsistencyViolationException, PersistenceException {
 		RoleDTO dto = new RoleDTO();
 		dto.setAppName("projectx");
 		dto.setName(name);
@@ -128,7 +128,7 @@ public class RoleActionServiceIT extends CommonTestBase {
 		return dto;
 	}
 
-	private Action createAction(String actionName, String url)
+	private ActionDTO createAction(String actionName, String url)
 			throws ConsistencyViolationException, PersistenceException {
 
 		ActionDTO dto = new ActionDTO();
