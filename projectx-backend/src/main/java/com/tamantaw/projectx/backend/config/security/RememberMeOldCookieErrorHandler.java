@@ -29,7 +29,7 @@ public class RememberMeOldCookieErrorHandler extends GenericFilterBean {
 			Cookie rememberMeCookie = new Cookie(SecurityConfig.REMEMBER_ME_COOKIE, "");
 			rememberMeCookie.setMaxAge(0);
 			httpServletResponse.addCookie(rememberMeCookie);
-			redirectStrategy.sendRedirect(httpServletRequest, httpServletResponse, "/login");
+			redirectStrategy.sendRedirect(httpServletRequest, httpServletResponse, "/web/pub/login");
 		}
 	}
 }

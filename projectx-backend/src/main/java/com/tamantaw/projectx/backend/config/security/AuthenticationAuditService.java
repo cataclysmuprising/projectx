@@ -43,7 +43,7 @@ public class AuthenticationAuditService {
 		}
 		applicationLogger.info(LOG_PREFIX + "Login Client with Login ID  '{}' has successfully signed in." + LOG_SUFFIX, authentication.getName());
 		AdministratorLoginHistoryDTO history = new AdministratorLoginHistoryDTO();
-		history.setAdministrator(admin);
+		history.setAdministratorId(admin.getId());
 		history.setIpAddress(SecurityUtil.getClientIp(request));
 		history.setOs(SecurityUtil.getOperatingSystem(request));
 		history.setClientAgent(SecurityUtil.getUserAgent(request));
