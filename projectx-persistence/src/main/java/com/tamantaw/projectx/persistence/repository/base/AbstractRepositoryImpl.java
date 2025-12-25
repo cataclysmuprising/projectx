@@ -60,9 +60,9 @@ import java.util.*;
  */
 public abstract class AbstractRepositoryImpl<
 		ID extends Serializable,
-		ENTITY extends AbstractEntity<ID>,
+		ENTITY extends AbstractEntity,
 		QCLAZZ extends EntityPathBase<ENTITY>,
-		CRITERIA extends AbstractCriteria<QCLAZZ, ID>>
+		CRITERIA extends AbstractCriteria<QCLAZZ>>
 		extends SimpleJpaRepository<ENTITY, ID>
 		implements AbstractRepository<ID, ENTITY, QCLAZZ, CRITERIA> {
 
@@ -353,7 +353,7 @@ public abstract class AbstractRepositoryImpl<
 		// JPA may return duplicate roots when fetching collections.
 		// Dedup is REQUIRED here to preserve set semantics.
 		// This does NOT hide paging bugs because paging is forbidden.
-		Map<ID, ENTITY> unique = new LinkedHashMap<>(rows.size());
+		Map<Long, ENTITY> unique = new LinkedHashMap<>(rows.size());
 
 		for (ENTITY e : rows) {
 			unique.putIfAbsent(e.getId(), e);

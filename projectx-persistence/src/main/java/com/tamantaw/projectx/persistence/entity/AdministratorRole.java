@@ -14,7 +14,7 @@ import java.io.Serializable;
 @Getter
 @Setter
 @ToString(callSuper = true)
-public class AdministratorRole extends AbstractEntity<Long> implements Serializable {
+public class AdministratorRole extends AbstractEntity implements Serializable {
 
 	@Serial
 	private static final long serialVersionUID = 1L;

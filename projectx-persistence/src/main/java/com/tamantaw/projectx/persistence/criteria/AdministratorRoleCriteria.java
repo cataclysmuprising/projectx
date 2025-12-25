@@ -15,7 +15,7 @@ import lombok.ToString;
 @Getter
 @Setter
 @ToString(callSuper = true)
-public class AdministratorRoleCriteria extends AbstractCriteria<QAdministratorRole, Long> {
+public class AdministratorRoleCriteria extends AbstractCriteria<QAdministratorRole> {
 
 	private Long administratorId;
 	private Long roleId;

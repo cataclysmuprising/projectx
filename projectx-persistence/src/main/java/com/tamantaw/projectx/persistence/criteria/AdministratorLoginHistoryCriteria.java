@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @ToString(callSuper = true)
-public class AdministratorLoginHistoryCriteria extends AbstractCriteria<QAdministratorLoginHistory, Long> {
+public class AdministratorLoginHistoryCriteria extends AbstractCriteria<QAdministratorLoginHistory> {
 
 	private Long administratorId;
 	private String ipAddress;

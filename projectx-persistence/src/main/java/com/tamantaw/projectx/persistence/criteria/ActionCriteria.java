@@ -16,7 +16,7 @@ import org.apache.commons.lang3.StringUtils;
 @Getter
 @Setter
 @ToString(callSuper = true)
-public class ActionCriteria extends AbstractCriteria<QAction, Long> {
+public class ActionCriteria extends AbstractCriteria<QAction> {
 
 	private String appName;
 	private String page;

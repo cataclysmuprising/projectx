@@ -11,9 +11,9 @@ import java.util.Optional;
 
 public interface AbstractRepository<
 		ID extends Serializable,
-		ENTITY extends AbstractEntity<ID>,
+		ENTITY extends AbstractEntity,
 		QCLAZZ extends EntityPathBase<ENTITY>,
-		CRITERIA extends AbstractCriteria<QCLAZZ, ID>
+		CRITERIA extends AbstractCriteria<QCLAZZ>
 		> {
 
 	// ------------------------------

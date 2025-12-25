@@ -12,7 +12,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.util.CollectionUtils;
 
-import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -20,7 +19,7 @@ import java.util.List;
 import java.util.Set;
 
 @Data
-public abstract class AbstractCriteria<A extends EntityPathBase<?>, ID extends Serializable> {
+public abstract class AbstractCriteria<A extends EntityPathBase<?>> {
 
 	// ----------------------------------------------------------------------
 	// DEFAULTS
@@ -34,8 +33,8 @@ public abstract class AbstractCriteria<A extends EntityPathBase<?>, ID extends S
 	// ----------------------------------------------------------------------
 
 	protected final List<OrderSpecifier<?>> orderSpecifiers = new ArrayList<>();
-	protected Set<ID> includeIds;
-	protected Set<ID> excludeIds;
+	protected Set<Long> includeIds;
+	protected Set<Long> excludeIds;
 	protected Long createdBy;
 	protected Long updatedBy;
 	protected LocalDateTime createdDateFrom;
@@ -64,7 +63,7 @@ public abstract class AbstractCriteria<A extends EntityPathBase<?>, ID extends S
 	// PAGING INPUTS
 	// ----------------------------------------------------------------------
 	protected Integer limit;
-	private ID id;
+	private Long id;
 
 	// ----------------------------------------------------------------------
 	// COMMON FILTER LOGIC

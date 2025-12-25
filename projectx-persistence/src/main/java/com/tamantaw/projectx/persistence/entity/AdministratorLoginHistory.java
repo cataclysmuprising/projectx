@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @ToString(callSuper = true)
-public class AdministratorLoginHistory extends AbstractEntity<Long> implements Serializable {
+public class AdministratorLoginHistory extends AbstractEntity implements Serializable {
 
 	@Serial
 	private static final long serialVersionUID = 1L;

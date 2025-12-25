@@ -19,7 +19,7 @@ import java.util.List;
 @Getter
 @Setter
 @ToString(callSuper = true)
-public class Administrator extends AbstractEntity<Long> implements Serializable {
+public class Administrator extends AbstractEntity implements Serializable {
 
 	@Serial
 	private static final long serialVersionUID = 1L;
