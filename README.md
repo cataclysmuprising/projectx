@@ -166,11 +166,11 @@ Ensures:
 
 ## 🐘 DB-aware pagination ordering
 
-- No more `IS_POSTGRES_DB` flag to toggle by hand.
-- Phase 2 (entity fetch) now auto-selects the safe ordering strategy:
-    - PostgreSQL: re-apply the original `ORDER BY`.
-    - Other databases: preserve ID order explicitly via `CASE` over the page IDs.
-- Keeps pagination deterministic without hidden auto-detection while avoiding config switches.
+- **Explicit toggle:** `AbstractRepositoryImpl.IS_POSTGRES_DB` controls the second-phase ordering strategy (default `true` for PostgreSQL).
+- Phase 2 (entity fetch) uses:
+    - PostgreSQL path (`IS_POSTGRES_DB = true`): re-apply the original `ORDER BY`.
+    - Other databases (`IS_POSTGRES_DB = false`): preserve ID order explicitly via `CASE` over the page IDs.
+- Keeps pagination deterministic without hidden auto-detection while making the database assumption reviewable in code.
 
 ---
 
