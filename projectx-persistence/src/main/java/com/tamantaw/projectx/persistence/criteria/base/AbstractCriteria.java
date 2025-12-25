@@ -34,36 +34,38 @@ public abstract class AbstractCriteria<A extends EntityPathBase<?>> {
 	// ----------------------------------------------------------------------
 	// COMMON FILTER FIELDS
 	// ----------------------------------------------------------------------
+
 	protected final List<OrderSpecifier<?>> orderSpecifiers = new ArrayList<>();
+
 	protected Long id;
 	protected Long fromId;
 	protected Set<Long> includeIds;
 	protected Set<Long> excludeIds;
+
 	protected Long createdBy;
 	protected Long updatedBy;
+
 	protected LocalDateTime createdDateFrom;
 	protected LocalDateTime createdDateTo;
 	protected LocalDateTime updatedDateFrom;
 	protected LocalDateTime updatedDateTo;
 
-	// ----------------------------------------------------------------------
-	// SORTING (JAVA SIDE – TYPE SAFE)
-	// ----------------------------------------------------------------------
 	protected String keyword;
 
 	// ----------------------------------------------------------------------
-	// SORTING (CLIENT SIDE – STRING BASED)
+	// SORTING (CLIENT / JAVA – STRING BASED)
 	// ----------------------------------------------------------------------
+
 	/**
-	 * Client-provided sort keys (column names).
-	 * Order matters.
+	 * Client / Java provided sort keys.
+	 * Examples:
+	 * "id"
+	 * "name"
+	 * "department.name"        (to-one)
+	 * "createdBy.username"    (to-one)
 	 */
 	protected List<String> sortKeys;
 
-	/**
-	 * Client-provided sort directions.
-	 * Must align with sortKeys by index.
-	 */
 	protected List<Sort.Direction> sortDirs;
 
 	// ----------------------------------------------------------------------
@@ -117,7 +119,7 @@ public abstract class AbstractCriteria<A extends EntityPathBase<?>> {
 	}
 
 	// ----------------------------------------------------------------------
-	// SORTING – JAVA SIDE
+	// SORTING – JAVA SIDE (TYPE SAFE)
 	// ----------------------------------------------------------------------
 
 	public void addSort(
@@ -133,7 +135,35 @@ public abstract class AbstractCriteria<A extends EntityPathBase<?>> {
 	}
 
 	// ----------------------------------------------------------------------
-	// SORTING – RESOLUTION (JAVA + CLIENT)
+	// SORTING – STRING SIDE (ROOT + TO-ONE)
+	// ----------------------------------------------------------------------
+
+	public void addSortKey(String key, Sort.Direction direction) {
+
+		if (key == null || direction == null) {
+			return;
+		}
+
+		if (sortKeys == null) {
+			sortKeys = new ArrayList<>();
+			sortDirs = new ArrayList<>();
+		}
+
+		sortKeys.add(key);
+		sortDirs.add(direction);
+	}
+
+	public void clearStringSorts() {
+		if (sortKeys != null) {
+			sortKeys.clear();
+		}
+		if (sortDirs != null) {
+			sortDirs.clear();
+		}
+	}
+
+	// ----------------------------------------------------------------------
+	// SORT RESOLUTION (JAVA + STRING)
 	// ----------------------------------------------------------------------
 
 	public List<OrderSpecifier<?>> resolveOrderSpecifiers(EntityPathBase<?> root) {
@@ -143,30 +173,28 @@ public abstract class AbstractCriteria<A extends EntityPathBase<?>> {
 			return List.copyOf(orderSpecifiers);
 		}
 
-		// 2️⃣ Client-side string sorting (multi-column)
+		// 2️⃣ String-based sorting (root + to-one)
 		if (root != null
 				&& !CollectionUtils.isEmpty(sortKeys)
 				&& !CollectionUtils.isEmpty(sortDirs)
 				&& sortKeys.size() == sortDirs.size()) {
 
-			PathBuilder<?> pb =
-					new PathBuilder<>(root.getType(), root.getMetadata());
-
-			List<OrderSpecifier<?>> clientOrders = new ArrayList<>();
+			List<OrderSpecifier<?>> orders = new ArrayList<>();
 
 			for (int i = 0; i < sortKeys.size(); i++) {
+
 				String key = sortKeys.get(i);
 				Sort.Direction dir = sortDirs.get(i);
 
 				ComparableExpressionBase<?> expr =
-						pb.getComparable(key, Comparable.class); // may throw → accepted
+						resolveComparablePath(root, key); // may throw
 
 				Order order = dir.isAscending() ? Order.ASC : Order.DESC;
-				clientOrders.add(new OrderSpecifier<>(order, expr));
+				orders.add(new OrderSpecifier<>(order, expr));
 			}
 
-			if (!clientOrders.isEmpty()) {
-				return clientOrders;
+			if (!orders.isEmpty()) {
+				return orders;
 			}
 		}
 
@@ -186,6 +214,32 @@ public abstract class AbstractCriteria<A extends EntityPathBase<?>> {
 		);
 	}
 
+	/**
+	 * Resolves a string sort key into a ComparableExpression.
+	 * <p>
+	 * Supported:
+	 * - root fields           → "name"
+	 * - to-one navigation     → "department.name"
+	 * <p>
+	 * Unsupported (will fail later in repository):
+	 * - to-many navigation    → "actions.name"
+	 */
+	protected ComparableExpressionBase<?> resolveComparablePath(
+			EntityPathBase<?> root,
+			String key) {
+
+		String[] parts = key.split("\\.");
+
+		PathBuilder<?> pb =
+				new PathBuilder<>(root.getType(), root.getMetadata());
+
+		for (int i = 0; i < parts.length - 1; i++) {
+			pb = pb.get(parts[i], Object.class);
+		}
+
+		return pb.getComparable(parts[parts.length - 1], Comparable.class);
+	}
+
 	// ----------------------------------------------------------------------
 	// SPRING DATA SORT (FOR Pageable)
 	// ----------------------------------------------------------------------
@@ -201,6 +255,7 @@ public abstract class AbstractCriteria<A extends EntityPathBase<?>> {
 		List<Sort.Order> sortOrders = new ArrayList<>();
 
 		for (OrderSpecifier<?> o : orders) {
+
 			Sort.Direction direction =
 					o.getOrder() == Order.ASC
 							? Sort.Direction.ASC
@@ -230,34 +285,6 @@ public abstract class AbstractCriteria<A extends EntityPathBase<?>> {
 		}
 
 		return null;
-	}
-
-	// ----------------------------------------------------------------------
-// SORTING – STRING BASED (CLIENT OR JAVA)
-// ----------------------------------------------------------------------
-
-	public void addSortKey(String key, Sort.Direction direction) {
-
-		if (key == null || direction == null) {
-			return;
-		}
-
-		if (sortKeys == null) {
-			sortKeys = new ArrayList<>();
-			sortDirs = new ArrayList<>();
-		}
-
-		sortKeys.add(key);
-		sortDirs.add(direction);
-	}
-
-	public void clearStringSorts() {
-		if (sortKeys != null) {
-			sortKeys.clear();
-		}
-		if (sortDirs != null) {
-			sortDirs.clear();
-		}
 	}
 
 	// ----------------------------------------------------------------------
@@ -313,3 +340,4 @@ public abstract class AbstractCriteria<A extends EntityPathBase<?>> {
 
 	public abstract Class<?> getObjectClass();
 }
+

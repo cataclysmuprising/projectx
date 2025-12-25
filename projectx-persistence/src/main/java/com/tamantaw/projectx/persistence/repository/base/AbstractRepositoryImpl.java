@@ -1,12 +1,7 @@
 package com.tamantaw.projectx.persistence.repository.base;
 
-import com.querydsl.core.types.EntityPath;
-import com.querydsl.core.types.OrderSpecifier;
-import com.querydsl.core.types.Predicate;
-import com.querydsl.core.types.dsl.CaseBuilder;
-import com.querydsl.core.types.dsl.EntityPathBase;
-import com.querydsl.core.types.dsl.NumberExpression;
-import com.querydsl.core.types.dsl.PathBuilder;
+import com.querydsl.core.types.*;
+import com.querydsl.core.types.dsl.*;
 import com.querydsl.jpa.JPQLQuery;
 import com.querydsl.jpa.impl.AbstractJPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -321,7 +316,8 @@ public abstract class AbstractRepositoryImpl<
 			JPQLQuery<ENTITY> query =
 					createQuery(filter, hints).select(path);
 
-			query = querydsl.applyPagination(pageable, query);
+			query = query.offset(pageable.getOffset())
+					.limit(pageable.getPageSize());
 
 			List<ENTITY> content = query.fetch();
 			long total = count(criteria);
@@ -335,7 +331,11 @@ public abstract class AbstractRepositoryImpl<
 		JPQLQuery<Long> idQuery =
 				createQuery(filter).select(audit.id);
 
-		idQuery = querydsl.applyPagination(pageable, idQuery);
+		applySort(idQuery, criteria);
+
+		idQuery = idQuery
+				.offset(pageable.getOffset())
+				.limit(pageable.getPageSize());
 
 		List<Long> ids = idQuery.fetch();
 
@@ -563,9 +563,61 @@ public abstract class AbstractRepositoryImpl<
 		update.set(audit.updatedBy, updatedBy);
 	}
 
+	// ----------------------------------------------------------------------
+	// SORT SAFETY ENFORCEMENT (NEW – FAIL FAST)
+	// ----------------------------------------------------------------------
+
 	/**
-	 * Applies dynamic ORDER BY based on criteria.
+	 * Validates that ORDER BY clauses do NOT traverse collection-valued paths.
+	 *
+	 * <p>
+	 * Sorting on to-many associations is mathematically incompatible with
+	 * OFFSET/LIMIT pagination and is therefore forbidden at framework level.
+	 * </p>
+	 *
+	 * <p>
+	 * Allowed:
+	 * <ul>
+	 *   <li>Root entity fields</li>
+	 *   <li>To-one association fields</li>
+	 * </ul>
+	 * <p>
+	 * Forbidden:
+	 * <ul>
+	 *   <li>Collection-valued paths (List/Set/Map)</li>
+	 * </ul>
+	 * </p>
 	 */
+	protected void validateSortSafety(List<OrderSpecifier<?>> orderSpecifiers) {
+
+		for (OrderSpecifier<?> o : orderSpecifiers) {
+
+			if (containsCollectionPath(o.getTarget())) {
+				throw new IllegalStateException(
+						"Unsafe ORDER BY detected: sorting on collection-valued " +
+								"association is not pagination-safe.\n" +
+								"OrderSpecifier=" + o
+				);
+			}
+		}
+	}
+
+	private boolean containsCollectionPath(Expression<?> expr) {
+
+		if (expr instanceof CollectionPathBase<?, ?, ?>) {
+			return true;
+		}
+
+		if (expr instanceof Path<?> p) {
+			PathMetadata md = p.getMetadata();
+			if (md != null && md.getParent() != null) {
+				return containsCollectionPath(md.getParent());
+			}
+		}
+
+		return false;
+	}
+
 	protected void applySort(JPQLQuery<?> query, CRITERIA criteria) {
 
 		List<OrderSpecifier<?>> orderSpecifiers =
@@ -574,6 +626,9 @@ public abstract class AbstractRepositoryImpl<
 		if (orderSpecifiers == null || orderSpecifiers.isEmpty()) {
 			return;
 		}
+
+		// 🔒 FAIL FAST — prevent pagination-unsafe sorting
+		validateSortSafety(orderSpecifiers);
 
 		query.orderBy(orderSpecifiers.toArray(new OrderSpecifier<?>[0]));
 	}

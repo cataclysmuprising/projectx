@@ -4,12 +4,15 @@ import com.tamantaw.projectx.CommonTestBase;
 import com.tamantaw.projectx.persistence.criteria.AdministratorLoginHistoryCriteria;
 import com.tamantaw.projectx.persistence.dto.AdministratorDTO;
 import com.tamantaw.projectx.persistence.dto.AdministratorLoginHistoryDTO;
+import com.tamantaw.projectx.persistence.dto.base.PaginatedResult;
 import com.tamantaw.projectx.persistence.entity.Administrator;
+import com.tamantaw.projectx.persistence.entity.QAdministratorLoginHistory;
 import com.tamantaw.projectx.persistence.exception.ConsistencyViolationException;
 import com.tamantaw.projectx.persistence.exception.PersistenceException;
 import com.tamantaw.projectx.persistence.service.AdministratorLoginHistoryService;
 import com.tamantaw.projectx.persistence.service.AdministratorService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
 import org.testng.annotations.Test;
 
 import java.time.LocalDateTime;
@@ -67,11 +70,71 @@ public class AdministratorLoginHistoryServiceIT extends CommonTestBase {
 
 		AdministratorLoginHistoryCriteria criteria = new AdministratorLoginHistoryCriteria();
 		criteria.setAdministratorId(1L);
+		//criteria.addSort(QAdministratorLoginHistory.administratorLoginHistory.administrator.name, Sort.Direction.ASC);
+
+		// this is String based sorting
+		criteria.addSortKey("administrator.name", Sort.Direction.ASC);
 
 		List<AdministratorLoginHistoryDTO> histories = loginHistoryService.findAll(criteria, "AdministratorLoginHistory(administrator)");
 
 		assertFalse(histories.isEmpty());
 		assertTrue(histories.stream().allMatch(h -> h.getAdministrator().getId().equals(1L)));
+	}
+
+	@Test
+	public void findByPaging_byAdministratorId_sortedByAdministratorName() throws Exception {
+
+		// ------------------------------------------------------------------
+		// Arrange
+		// ------------------------------------------------------------------
+		loginHistoryService.create(
+				buildDto(1L, "192.168.1.10", "macOS", "Safari"),
+				TEST_CREATE_USER_ID
+		);
+		loginHistoryService.create(
+				buildDto(1L, "192.168.1.11", "macOS", "Safari"),
+				TEST_CREATE_USER_ID
+		);
+
+		AdministratorLoginHistoryCriteria criteria =
+				new AdministratorLoginHistoryCriteria();
+
+		criteria.setAdministratorId(1L);
+		criteria.setLimit(10);
+		criteria.setOffset(0);
+
+		// ✅ SAFE: to-one sorting
+		criteria.addSort(
+				QAdministratorLoginHistory
+						.administratorLoginHistory
+						.administrator
+						.name,
+				Sort.Direction.ASC
+		);
+
+		// ------------------------------------------------------------------
+		// Act
+		// ------------------------------------------------------------------
+		PaginatedResult<AdministratorLoginHistoryDTO> page =
+				loginHistoryService.findByPaging(
+						criteria,
+						"AdministratorLoginHistory(administrator)"
+				);
+
+		// ------------------------------------------------------------------
+		// Assert
+		// ------------------------------------------------------------------
+		assertNotNull(page);
+		assertFalse(page.getData().isEmpty());
+
+		// All records must belong to administratorId = 1
+		assertTrue(
+				page.getData().stream()
+						.allMatch(h ->
+								h.getAdministrator() != null
+										&& h.getAdministrator().getId().equals(1L)
+						)
+		);
 	}
 
 	@Test

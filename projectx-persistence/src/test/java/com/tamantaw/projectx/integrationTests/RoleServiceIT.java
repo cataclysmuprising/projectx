@@ -430,6 +430,7 @@ public class RoleServiceIT extends CommonTestBase {
 		roleCriteria.setAction(actionCriteria);
 		roleCriteria.setLimit(10);
 		roleCriteria.setOffset(0);
+		roleCriteria.addSort(QRole.role.name, Sort.Direction.ASC);
 
 		PaginatedResult<RoleDTO> page =
 				roleService.findByPaging(roleCriteria, "Role(roleActions(action))");
@@ -440,6 +441,49 @@ public class RoleServiceIT extends CommonTestBase {
 				page.getData().stream()
 						.anyMatch(r -> "SUPER-USER".equals(r.getName()))
 		);
+	}
+
+	@Test
+	public void findByPaging_rejectsToManySorting() {
+
+		ActionCriteria actionCriteria = new ActionCriteria();
+		actionCriteria.setPage("Administrator");
+
+		RoleCriteria roleCriteria = new RoleCriteria();
+		roleCriteria.setAppName("projectx");
+		roleCriteria.setAction(actionCriteria);
+		roleCriteria.setLimit(10);
+		roleCriteria.setOffset(0);
+
+		roleCriteria.addSort(
+				QRole.role.roleActions.any().actionId,
+				Sort.Direction.ASC
+		);
+
+		try {
+			roleService.findByPaging(
+					roleCriteria,
+					"Role(roleActions(action))"
+			);
+			fail("Expected PersistenceException due to unsafe to-many sorting");
+		}
+		catch (PersistenceException e) {
+
+			Throwable root = e.getCause();
+			while (root != null && root.getCause() != null) {
+				root = root.getCause();
+			}
+
+			assertTrue(
+					root instanceof IllegalStateException,
+					"Root cause should be IllegalStateException"
+			);
+
+			assertTrue(
+					root.getMessage().contains("collection-valued association"),
+					"Unexpected message: " + root.getMessage()
+			);
+		}
 	}
 
 	@Test
