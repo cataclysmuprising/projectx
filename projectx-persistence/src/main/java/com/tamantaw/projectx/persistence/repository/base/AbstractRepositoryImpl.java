@@ -114,6 +114,7 @@ public abstract class AbstractRepositoryImpl<
 
 	protected final EntityManager entityManager;
 	protected final SimpleExpression<ID> idExpr;
+	protected final OrderSpecifier<?> idAscOrder;
 	protected final QCLAZZ path;
 	protected final QAbstractEntity audit;
 	protected final Querydsl querydsl;
@@ -164,6 +165,12 @@ public abstract class AbstractRepositoryImpl<
 				path,
 				idAttr.getName()
 		);
+
+		@SuppressWarnings("unchecked")
+		Expression<? extends Comparable<?>> comparableIdExpr =
+				(Expression<? extends Comparable<?>>) idExpr;
+
+		idAscOrder = new OrderSpecifier<>(Order.ASC, comparableIdExpr);
 	}
 
 	// ----------------------------------------------------------------------
@@ -774,7 +781,7 @@ public abstract class AbstractRepositoryImpl<
 
 		// No sort provided → deterministic default
 		if (specs == null || specs.isEmpty()) {
-			query.orderBy(new OrderSpecifier<>(Order.ASC, idExpr));
+			query.orderBy(idAscOrder);
 			return;
 		}
 
@@ -789,7 +796,7 @@ public abstract class AbstractRepositoryImpl<
 			List<OrderSpecifier<?>> withTieBreaker =
 					new ArrayList<>(specs.size() + 1);
 			withTieBreaker.addAll(specs);
-			withTieBreaker.add(new OrderSpecifier<>(Order.ASC, idExpr));
+			withTieBreaker.add(idAscOrder);
 
 			query.orderBy(withTieBreaker.toArray(new OrderSpecifier<?>[0]));
 		}
