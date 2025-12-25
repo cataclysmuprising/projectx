@@ -49,7 +49,7 @@ public class BaseValidator implements Validator {
 	 * Regex patterns (precompiled)
 	 * ============================================================ */
 	@Autowired
-	private LocalizedMessageResolver messageSource;
+	protected LocalizedMessageResolver messageSource;
 
 	protected void reject(FieldValidator fv, String messageKey, Object... args) {
 		fv.getErrors().rejectValue(

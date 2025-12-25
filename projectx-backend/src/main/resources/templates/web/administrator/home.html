@@ -4,7 +4,7 @@
 <div th:fragment="styles" th:remove="tag">
 	<link rel="stylesheet" th:href="@{'/web/static/css/common/bootstrap-select.min.css?v='+${buildNumber}}">
 	<link rel="stylesheet" th:href="@{'/web/static/css/common/datatables.min.css?v='+${buildNumber}}">
-	<link rel="stylesheet" th:href="@{'/web/static/css/app/user/home'+ ${isProduction == true ? '.min.css' : '.css'}+'?v='+${buildNumber}}">
+	<link rel="stylesheet" th:href="@{'/web/static/css/app/administrator/home'+ ${isProduction == true ? '.min.css' : '.css'}+'?v='+${buildNumber}}">
 </div>
 <!-- /Page Styles -->
 
@@ -13,7 +13,7 @@
 	<script th:src="@{'/web/static/js/common/bootstrap-select.min.js?v='+${buildNumber}}"></script>
 	<script th:src="@{'/web/static/js/common/datatables.min.js?v='+${buildNumber}}"></script>
 	<script th:src="@{'/web/static/js/common/datatables-util'+ ${isProduction == true ? '.min.js' : '.js'}+'?v='+${buildNumber}}"></script>
-	<script th:src="@{'/web/static/js/app/user/home'+ ${isProduction == true ? '.min.js' : '.js'}+'?v='+${buildNumber}}"></script>
+	<script th:src="@{'/web/static/js/app/administrator/home'+ ${isProduction == true ? '.min.js' : '.js'}+'?v='+${buildNumber}}"></script>
 </div>
 <!-- /Page Scripts -->
 
@@ -24,7 +24,7 @@
 		<div class="container-fluid">
 			<div class="row mb-2">
 				<div class="col-sm-6">
-					<h1>Staffs</h1>
+					<h1>Administrator</h1>
 				</div>
 				<div class="col-sm-6">
 					<ol class="breadcrumb float-sm-right">
@@ -33,7 +33,7 @@
 							<a th:href="@{/}">Home</a>
 						</li>
 						<li class="breadcrumb-item active">
-							<i class="icon-users2 mr-1"></i> Staffs
+							<i class="icon-users2 mr-1"></i> Administrator
 						</li>
 					</ol>
 				</div>
@@ -46,34 +46,18 @@
 	<section class="content">
 		<div class="card">
 			<div class="card-header">
-				<form id="userForm">
+				<form id="administratorForm">
 					<div class="row">
 						<div class="col-md-3 col-sm-12 mb-1">
 							<input class="form-control rounded-0 form-control-sm" id="keyword" placeholder="keyword ..." type="text">
 						</div>
 						<div class="col-md-3 col-sm-12 mb-1">
-							<select class="form-control input-sm selectpicker show-tick" id="lstStatus" title="Staff Status (All)">
-								<option selected="selected" value="">Staff Status (All)</option>
+							<select class="form-control input-sm selectpicker show-tick" id="lstStatus" title="Administrator Status (All)">
+								<option selected="selected" value="">Administrator Status (All)</option>
 								<option value="ACTIVE">Active</option>
-								<option value="LOCKED">Locked</option>
-								<option value="BLACKLISTED">Blacklisted</option>
+								<option value="SUSPENDED">Suspended</option>
 							</select>
 						</div>
-
-						<div class="col-md-3 col-sm-12 mb-1" th:if="${#authorization.expression('hasAuthority(''SUPER-USER'')')}">
-							<div class="form-group">
-								<select class="dropdown-select form-control input-sm bank-selectpicker show-tick" data-live-search="true" data-size="5" id="lst-bank" title="Select Bank">
-								</select>
-							</div>
-						</div>
-
-						<div class="col-md-3 col-sm-12 mb-1" th:if="${#authorization.expression('hasAuthority(''SUPER-USER'')')}">
-							<div class="form-group">
-								<select class="dropdown-select form-control  input-sm branch-selectpicker show-tick" data-live-search="true" data-size="5" id="lst-branch" title="Select Branch">
-								</select>
-							</div>
-						</div>
-
 					</div>
 
 					<div class="row">
@@ -84,7 +68,7 @@
 							<button class="btn btn-flat btn-warning" id="btnReset" type="button">
 								<i class="fas fa-recycle"></i> Reset
 							</button>
-							<a class="btn btn-secondary btn-flat" role="button" th:href="@{/sec/staffs/add}" th:if="${userAdd == true}">
+							<a class="btn btn-secondary btn-flat" role="button" th:href="@{/web/sec/administrator/add}" th:if="${administratorAdd == true}">
 								<i class="fas fa-plus"></i> Add New
 							</a>
 						</div>
@@ -93,14 +77,12 @@
 				</form>
 			</div>
 			<div class="card-body">
-				<table class="table table-bordered" id="tblUser">
+				<table class="table table-bordered" id="tblAdministrator">
 					<thead>
 					<tr>
-						<th class="text-left" data-sort-key="officerName">Name</th>
-						<th class="text-left" data-sort-key="contactPhone">Phone</th>
-						<th class="text-center" data-sort-key="officerRank">Rank</th>
+						<th class="text-left" data-sort-key="name">Name</th>
 						<th class="text-center" data-sort-key="status">Status</th>
-						<th class="functionColumn" th:if="${userDetail or userEdit or userRemove}">Function</th>
+						<th class="functionColumn" th:if="${administratorDetail or administratorEdit or administratorRemove}">Function</th>
 					</tr>
 					</thead>
 					<tbody>

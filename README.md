@@ -53,6 +53,7 @@ It is designed to handle:
 - Large datasets
 - Collection fetch graphs
 - Stable pagination without data corruption
+- ORDER BY safety guard that blocks collection-valued sorting and keeps pagination deterministic
 
 ---
 

@@ -31,12 +31,12 @@ public class ActionApiController extends BaseRESTController {
 	@GetMapping("/pages")
 	public ResponseEntity<?> pageSearch(ActionCriteria criteria) throws PersistenceException {
 		criteria.setAppName(BackendApplication.APP_NAME);
-		List<ActionDTO> actions = actionService.findAll(criteria);
+		//List<ActionDTO> actions = actionService.findAll(criteria);
 		List<String> records = actionService.selectPages(BackendApplication.APP_NAME);
-		for (ActionDTO action : actions) {
-			String pageName = action.getPage();
-			records.add(pageName);
-		}
+//		for (ActionDTO action : actions) {
+//			String pageName = action.getPage();
+//			records.add(pageName);
+//		}
 		return new ResponseEntity<>(records, HttpStatus.OK);
 	}
 }
