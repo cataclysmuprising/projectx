@@ -119,6 +119,8 @@ Configuration:
       # Statistics and slow queries
       - name: org.hibernate.stat
         level: DEBUG
+      - name: org.hibernate.SQL
+        level: DEBUG
       - name: org.hibernate.SQL_SLOW
         level: INFO
       # 2nd Level Cache

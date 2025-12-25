@@ -39,12 +39,6 @@ Configuration:
           Pattern: "%style{%-5p}{bold,yellow} %style{%c{10}}{bold,cyan}%highlight{:%L %m%n}{FATAL=red blink, ERROR=red, WARN=yellow bold, INFO=yellow bold, DEBUG=yellow, TRACE=yellow}"
           disableAnsi: false
 
-      - name: console_sql_logger
-        target: SYSTEM_OUT
-        PatternLayout:
-          Pattern: "%style{%-5p}{bold,yellow} %style{%c{10}}{bold,cyan}%highlight{:%L %m%n}{FATAL=red blink, ERROR=red, WARN=yellow bold, INFO=green bold, DEBUG=green, TRACE=green}"
-          disableAnsi: false
-
       - name: console_error_logger
         target: SYSTEM_OUT
         PatternLayout:
@@ -130,6 +124,8 @@ Configuration:
         level: TRACE
       # Statistics and slow queries
       - name: org.hibernate.stat
+        level: DEBUG
+      - name: org.hibernate.SQL
         level: DEBUG
       - name: org.hibernate.SQL_SLOW
         level: INFO

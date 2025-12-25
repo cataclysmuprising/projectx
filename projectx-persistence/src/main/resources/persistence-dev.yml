@@ -25,7 +25,7 @@ spring:
         # -------------------------------
         # SQL visibility (DEV ONLY)
         # -------------------------------
-        show_sql: true               # Print executed SQL
+        show_sql: false               # Print executed SQL
         format_sql: true             # Human-readable SQL
         use_sql_comments: false       # Adds comments like /* criteria query */
         highlight_sql: true #ANSI colors for sql queries(IDE-dependent)

@@ -438,7 +438,7 @@ function getContextPath() {
 }
 
 function getApiResourcePath() {
-    return getContextPath() + "/api/";
+    return getContextPath() + "/api/web/";
 }
 
 function getStaticResourcePath() {

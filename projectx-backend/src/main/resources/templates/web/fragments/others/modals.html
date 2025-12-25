@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<!-- Common Delete Confirm modal -->
+<div class="modal fade" id="modal-confirm-delete" th:fragment="modal-confirm-delete">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h4 class="modal-title">Confirmation</h4>
+				<button aria-hidden="true" class="close" data-dismiss="modal" type="button">&times;</button>
+			</div>
+			<div class="modal-body">
+				<p class="text-center">Are you sure you want to remove this record ?</p>
+				<p class="text-orange text-center text-xs">We have to make sure about this because this process can't retain the informations.</p>
+			</div>
+			<div class="modal-footer text-center">
+				<button class="btn btn-flat btn-info" id="btn-confirm-delete" type="button">Yes, I'm sure.</button>
+				<button class="btn btn-flat btn-danger" data-dismiss="modal" style="width: 50px;" type="button">No</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+</html>
