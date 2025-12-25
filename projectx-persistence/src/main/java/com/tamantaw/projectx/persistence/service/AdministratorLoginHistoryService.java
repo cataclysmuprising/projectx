@@ -23,6 +23,7 @@ import static com.tamantaw.projectx.persistence.utils.LoggerConstants.DATA_INTEG
 @Service
 public class AdministratorLoginHistoryService
 		extends BaseService<
+		Long,
 		AdministratorLoginHistory,
 		QAdministratorLoginHistory,
 		AdministratorLoginHistoryCriteria,

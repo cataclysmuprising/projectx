@@ -23,6 +23,7 @@ import static com.tamantaw.projectx.persistence.utils.LoggerConstants.LOG_SUFFIX
 @Service
 public class ActionService
 		extends BaseService<
+		Long,
 		Action,
 		QAction,
 		ActionCriteria,

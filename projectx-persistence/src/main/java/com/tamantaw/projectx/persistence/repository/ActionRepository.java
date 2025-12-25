@@ -15,17 +15,18 @@ import static com.tamantaw.projectx.persistence.config.PrimaryPersistenceContext
 @Repository
 public class ActionRepository
 		extends AbstractRepositoryImpl<
+		Long,
 		Action,
 		QAction,
-		ActionCriteria,
-		Long> {
+		ActionCriteria
+		> {
 
 	private static final QAction qAction = QAction.action;
 
 	public ActionRepository(
 			@Qualifier(EM_FACTORY) EntityManager entityManager) {
 
-		super(Action.class, entityManager);
+		super(Action.class, Long.class, entityManager);
 	}
 
 	public List<String> selectPages(String appName) {

@@ -16,17 +16,18 @@ import static com.tamantaw.projectx.persistence.config.PrimaryPersistenceContext
 @Repository
 public class RoleActionRepository
 		extends AbstractRepositoryImpl<
+		Long,
 		RoleAction,
 		QRoleAction,
-		RoleActionCriteria,
-		Long> {
+		RoleActionCriteria
+		> {
 
 	private final QRoleAction qEntity = QRoleAction.roleAction;
 
 	public RoleActionRepository(
 			@Qualifier(EM_FACTORY) EntityManager entityManager) {
 
-		super(RoleAction.class, entityManager);
+		super(RoleAction.class, Long.class, entityManager);
 	}
 
 	public List<Long> findActionIdsByRoleId(Long roleId) throws BusinessException {

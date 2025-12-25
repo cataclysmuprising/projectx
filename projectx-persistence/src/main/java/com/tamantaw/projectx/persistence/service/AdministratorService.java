@@ -30,6 +30,7 @@ import static com.tamantaw.projectx.persistence.utils.LoggerConstants.DATA_INTEG
 @Service
 public class AdministratorService
 		extends BaseService<
+		Long,
 		Administrator,
 		QAdministrator,
 		AdministratorCriteria,

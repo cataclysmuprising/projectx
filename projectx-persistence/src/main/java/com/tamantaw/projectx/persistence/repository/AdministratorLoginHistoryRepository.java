@@ -13,12 +13,13 @@ import static com.tamantaw.projectx.persistence.config.PrimaryPersistenceContext
 @Repository
 public class AdministratorLoginHistoryRepository
 		extends AbstractRepositoryImpl<
+		Long,
 		AdministratorLoginHistory,
 		QAdministratorLoginHistory,
-		AdministratorLoginHistoryCriteria,
-		Long> {
+		AdministratorLoginHistoryCriteria
+		> {
 
 	public AdministratorLoginHistoryRepository(@Qualifier(EM_FACTORY) EntityManager entityManager) {
-		super(AdministratorLoginHistory.class, entityManager);
+		super(AdministratorLoginHistory.class, Long.class, entityManager);
 	}
 }

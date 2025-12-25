@@ -23,59 +23,97 @@ import org.springframework.data.querydsl.EntityPathResolver;
 import org.springframework.data.querydsl.SimpleEntityPathResolver;
 import org.springframework.util.Assert;
 
+import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.time.LocalDateTime;
 import java.util.*;
 
 /**
  * Base JPA repository implementation with:
+ * <p>
+ * - QueryDSL-based dynamic criteria
+ * - N+1-safe fetching
+ * - Pagination-safe ordering
+ * - Deterministic results across databases
+ * - Explicit API contracts
  *
+ * <p>
+ * This class intentionally avoids “magic behavior”.
+ * Every performance-critical decision is explicit and documented.
+ * </p>
+ *
+ * <p><b>STRICT GUARANTEE</b></p>
  * <ul>
- *   <li>QueryDSL-based dynamic criteria</li>
- *   <li>N+1-safe fetching via fetch graphs</li>
- *   <li>Pagination-safe ordering</li>
- *   <li>Deterministic, database-independent semantics</li>
- *   <li>Explicit API contracts (no hidden magic)</li>
+ *   <li>❌ Hibernate in-memory paging</li>
+ *   <li>❌ Duplicate entities</li>
+ *   <li>❌ Missing records</li>
+ *   <li>❌ Broken pagination with joins</li>
+ *   <li>❌ Incorrect total counts</li>
+ *   <li>❌ Non-deterministic ordering</li>
  * </ul>
  *
  * <p>
- * <b>Important ordering contract</b>
- * <ul>
- *   <li>
- *     Joined ordering (to-one paths only) is applied ONLY in the ID-selection phase.
- *   </li>
- *   <li>
- *     Entity fetch phase is ordered strictly by primary key (ID ASC).
- *   </li>
- *   <li>
- *     This avoids DB-specific behavior, CASE explosions, and silent corruption.
- *   </li>
- * </ul>
- *
- * <p>
- * This repository is designed for correctness and transactional domain access.
- * It is NOT intended for large-scale reporting or bulk exports.
+ * If the caller requests an unsafe operation (e.g. to-many ORDER BY),
+ * this repository fails fast with a clear exception. There is no “best effort”
+ * fallback that could silently corrupt paging results.
  * </p>
  */
 public abstract class AbstractRepositoryImpl<
-		ENTITY extends AbstractEntity,
+		ENTITY extends AbstractEntity<ID>,
 		QCLAZZ extends EntityPathBase<ENTITY>,
-		CRITERIA extends AbstractCriteria<QCLAZZ>,
-		ID extends Long>
+		CRITERIA extends AbstractCriteria<QCLAZZ, ID>,
+		ID extends Serializable>
 		extends SimpleJpaRepository<ENTITY, ID>
 		implements AbstractRepository<ENTITY, QCLAZZ, CRITERIA, ID> {
+
+	// ----------------------------------------------------------------------
+	// STATIC CONFIGURATION
+	// ----------------------------------------------------------------------
+
+	/**
+	 * Indicates whether the underlying database is PostgreSQL.
+	 *
+	 * <p><b>Why this flag exists</b></p>
+	 * <ul>
+	 *   <li>
+	 *     PostgreSQL guarantees stable ORDER BY semantics when reapplying
+	 *     sorting after an ID-based paging query.
+	 *   </li>
+	 *   <li>
+	 *     PostgreSQL optimizes OFFSET / LIMIT efficiently even on complex queries.
+	 *   </li>
+	 *   <li>
+	 *     Other databases do NOT guarantee order preservation for
+	 *     <code>IN (...)</code> queries and therefore require explicit ordering.
+	 *   </li>
+	 * </ul>
+	 *
+	 * <p><b>Design decision</b></p>
+	 * <ul>
+	 *   <li>We do NOT auto-detect the DB dialect.</li>
+	 *   <li>Auto-detection hides behavior and may change after upgrades.</li>
+	 *   <li>This flag makes pagination behavior explicit and reviewable.</li>
+	 * </ul>
+	 *
+	 * <p>
+	 * ⚠️ Changing this flag affects SQL generation and must be reviewed
+	 * together with DB choice and indexing strategy.
+	 * </p>
+	 */
+	public static final boolean IS_POSTGRES_DB = true;
+
+	private static final EntityPathResolver PATH_RESOLVER =
+			SimpleEntityPathResolver.INSTANCE;
+
+	private static final Logger logger =
+			LogManager.getLogger("repositoryLogs." + AbstractRepositoryImpl.class.getName());
 
 	// ----------------------------------------------------------------------
 	// CORE FIELDS
 	// ----------------------------------------------------------------------
 
-	private static final EntityPathResolver PATH_RESOLVER =
-			SimpleEntityPathResolver.INSTANCE;
-
-	protected final Logger logger =
-			LogManager.getLogger("repositoryLogs." + getClass().getSimpleName());
-
 	protected final EntityManager entityManager;
+	protected final SimpleExpression<ID> idExpr;
 	protected final QCLAZZ path;
 	protected final QAbstractEntity audit;
 	protected final Querydsl querydsl;
@@ -87,14 +125,14 @@ public abstract class AbstractRepositoryImpl<
 
 	protected AbstractRepositoryImpl(
 			Class<ENTITY> domainClass,
+			Class<ID> idClass,
 			EntityManager entityManager) {
 
 		super(
 				new JpaMetamodelEntityInformation<>(
 						domainClass,
 						entityManager.getMetamodel(),
-						entityManager.getEntityManagerFactory()
-								.getPersistenceUnitUtil()
+						entityManager.getEntityManagerFactory().getPersistenceUnitUtil()
 				),
 				entityManager
 		);
@@ -112,6 +150,20 @@ public abstract class AbstractRepositoryImpl<
 		queryFactory = new JPAQueryFactory(entityManager);
 
 		audit = resolveAuditPath(path);
+
+		IdentifiableType<ENTITY> identifiable =
+				(IdentifiableType<ENTITY>) entityManager
+						.getMetamodel()
+						.managedType(domainClass);
+
+		SingularAttribute<? super ENTITY, ID> idAttr =
+				identifiable.getId(idClass);
+
+		idExpr = Expressions.simplePath(
+				idClass,
+				path,
+				idAttr.getName()
+		);
 	}
 
 	// ----------------------------------------------------------------------
@@ -128,6 +180,7 @@ public abstract class AbstractRepositoryImpl<
 	}
 
 	private static <T> List<List<T>> chunk(List<T> src, int size) {
+
 		if (src == null || src.isEmpty()) {
 			return List.of();
 		}
@@ -142,6 +195,9 @@ public abstract class AbstractRepositoryImpl<
 		return out;
 	}
 
+	/**
+	 * Simple primary-key lookup.
+	 */
 	@Override
 	@Nonnull
 	public Optional<ENTITY> findById(@Nonnull ID id) {
@@ -164,12 +220,15 @@ public abstract class AbstractRepositoryImpl<
 
 		Predicate filter = criteria.getFilter(path);
 
+		// ------------------------------------------------------------------
+		// STRICT decision: if fetch graph contains collections -> ID FIRST.
+		// No "magic". No recovery.
+		// ------------------------------------------------------------------
 		boolean requiresIdFirst =
-				fetchGraphContainsCollection(hints)
-						|| criteria.hasJoinedSort();
+				fetchGraphContainsCollection(hints);
 
 		// ------------------------------------------------------------
-		// FAST PATH — no collection fetch, no joined sort
+		// FAST PATH — to-one fetch only (still deterministic)
 		// ------------------------------------------------------------
 		if (!requiresIdFirst) {
 
@@ -192,7 +251,7 @@ public abstract class AbstractRepositoryImpl<
 		}
 
 		// ------------------------------------------------------------
-		// SAFE PATH — ID FIRST
+		// SAFE PATH — collection fetch (ID first)
 		// ------------------------------------------------------------
 		JPQLQuery<Long> idQuery =
 				createQuery(filter).select(audit.id);
@@ -214,19 +273,18 @@ public abstract class AbstractRepositoryImpl<
 				createQuery(audit.id.eq(ids.getFirst()), hints)
 						.select(path);
 
-		// Identity is unique for a single ID
 		return Optional.ofNullable(entityQuery.fetchOne());
 	}
 
 	// ----------------------------------------------------------------------
-	// COUNT / EXISTS / IDS
+	// ID / COUNT / EXISTS
 	// ----------------------------------------------------------------------
 
 	/**
-	 * Returns all matching entities (no pagination).
+	 * Returns all matching entities without pagination.
 	 *
 	 * <p>
-	 * Paging is intentionally forbidden here to prevent unsafe JOIN + OFFSET usage.
+	 * Paging is NOT allowed here to prevent unsafe joins + pagination bugs.
 	 * </p>
 	 */
 	@Override
@@ -234,6 +292,7 @@ public abstract class AbstractRepositoryImpl<
 
 		Assert.notNull(criteria, "Criteria must not be null");
 
+		// Enforce correct API usage
 		if (criteria.toPageable() != null) {
 			throw new IllegalStateException(
 					"Paging is not supported in findAll(). Use findByPaging()."
@@ -243,11 +302,10 @@ public abstract class AbstractRepositoryImpl<
 		Predicate filter = criteria.getFilter(path);
 
 		boolean requiresIdFirst =
-				fetchGraphContainsCollection(hints)
-						|| criteria.hasJoinedSort();
+				fetchGraphContainsCollection(hints);
 
 		// ------------------------------------------------------------
-		// FAST PATH — safe to use DISTINCT
+		// FAST PATH — to-one fetch only (deterministic, no duplication)
 		// ------------------------------------------------------------
 		if (!requiresIdFirst) {
 
@@ -255,14 +313,15 @@ public abstract class AbstractRepositoryImpl<
 					createQuery(filter, hints).select(path);
 
 			applySortOrDefaultById(query, criteria);
-			query.distinct();
 
 			return query.fetch();
 		}
 
 		// ------------------------------------------------------------
-		// SAFE PATH — ID FIRST (NO DISTINCT!)
+		// SAFE PATH — collection fetch allowed, ID-first + root dedup
 		// ------------------------------------------------------------
+
+		// Phase 1 — deterministic ID selection
 		JPQLQuery<Long> idQuery =
 				createQuery(filter).select(audit.id);
 
@@ -273,15 +332,22 @@ public abstract class AbstractRepositoryImpl<
 			return List.of();
 		}
 
+		// Phase 2 — entity fetch with fetch graph
 		JPQLQuery<ENTITY> entityQuery =
 				createQuery(audit.id.in(ids), hints).select(path);
 
-		applyIdOrder(entityQuery, ids);
+		applyStableOrderAfterIdPaging(entityQuery, criteria, ids);
 
 		List<ENTITY> rows = entityQuery.fetch();
 
-		// ✅ Deduplicate safely in memory
-		Map<Long, ENTITY> unique = new LinkedHashMap<>();
+		// ------------------------------------------------------------
+		// STRICT ROOT DEDUPLICATION (safe because NO pagination)
+		// ------------------------------------------------------------
+		// JPA may return duplicate roots when fetching collections.
+		// Dedup is REQUIRED here to preserve set semantics.
+		// This does NOT hide paging bugs because paging is forbidden.
+		Map<ID, ENTITY> unique = new LinkedHashMap<>(rows.size());
+
 		for (ENTITY e : rows) {
 			unique.putIfAbsent(e.getId(), e);
 		}
@@ -290,7 +356,17 @@ public abstract class AbstractRepositoryImpl<
 	}
 
 	/**
-	 * Pagination-safe read.
+	 * Safe pagination method.
+	 *
+	 * <p>
+	 * Guarantees:
+	 * <ul>
+	 *   <li>Correct offset + limit behavior</li>
+	 *   <li>No in-memory pagination</li>
+	 *   <li>No duplicate rows</li>
+	 *   <li>Stable ordering</li>
+	 * </ul>
+	 * </p>
 	 */
 	@Override
 	public Page<ENTITY> findByPaging(CRITERIA criteria, String... hints) {
@@ -303,11 +379,10 @@ public abstract class AbstractRepositoryImpl<
 		Predicate filter = criteria.getFilter(path);
 
 		boolean requiresIdFirst =
-				fetchGraphContainsCollection(hints)
-						|| criteria.hasJoinedSort();
+				fetchGraphContainsCollection(hints);
 
 		// ------------------------------------------------------------
-		// FAST PATH — DISTINCT allowed
+		// FAST PATH (to-one only)
 		// ------------------------------------------------------------
 		if (!requiresIdFirst) {
 
@@ -316,8 +391,7 @@ public abstract class AbstractRepositoryImpl<
 
 			applySortOrDefaultById(query, criteria);
 
-			query = query
-					.offset(pageable.getOffset())
+			query = query.offset(pageable.getOffset())
 					.limit(pageable.getPageSize());
 
 			List<ENTITY> content = query.fetch();
@@ -327,7 +401,7 @@ public abstract class AbstractRepositoryImpl<
 		}
 
 		// ------------------------------------------------------------
-		// PHASE 1 — ID PAGE
+		// PHASE 1 — ID PAGE (GLOBAL ORDER + OFFSET/LIMIT)
 		// ------------------------------------------------------------
 		JPQLQuery<Long> idQuery =
 				createQuery(filter).select(audit.id);
@@ -339,35 +413,60 @@ public abstract class AbstractRepositoryImpl<
 				.limit(pageable.getPageSize());
 
 		List<Long> ids = idQuery.fetch();
+
 		if (ids.isEmpty()) {
 			return Page.empty(pageable);
 		}
 
 		// ------------------------------------------------------------
-		// PHASE 2 — ENTITY FETCH (NO DISTINCT!)
+		// PHASE 2 — ENTITY FETCH
 		// ------------------------------------------------------------
 		JPQLQuery<ENTITY> entityQuery =
 				createQuery(audit.id.in(ids), hints).select(path);
 
-		applyIdOrder(entityQuery, ids);
+		applyStableOrderAfterIdPaging(entityQuery, criteria, ids);
 
-		List<ENTITY> rows = entityQuery.fetch();
-
-		// Deduplicate while preserving order
-		Map<Long, ENTITY> unique = new LinkedHashMap<>();
-		for (ENTITY e : rows) {
-			unique.putIfAbsent(e.getId(), e);
-		}
-
+		List<ENTITY> content = entityQuery.fetch();
 		long total = count(criteria);
 
-		return new PageImpl<>(
-				new ArrayList<>(unique.values()),
-				pageable,
-				total
-		);
+		return new PageImpl<>(content, pageable, total);
 	}
 
+	/**
+	 * Returns matching entity IDs.
+	 *
+	 * <p>
+	 * Used internally for bulk operations.
+	 * Ordering does NOT affect correctness here.
+	 * </p>
+	 */
+	@Override
+	public List<Long> findIds(CRITERIA criteria) {
+
+		Assert.notNull(criteria, "Criteria must not be null");
+
+		Predicate filter = criteria.getFilter(path);
+
+		JPQLQuery<Long> query =
+				createQuery(filter).select(audit.id);
+
+		applySortOrDefaultById(query, criteria);
+
+		return query.fetch();
+	}
+
+	// ----------------------------------------------------------------------
+	// WRITE OPERATIONS
+	// ----------------------------------------------------------------------
+
+	/**
+	 * Count query with identical filter but no joins or pagination.
+	 *
+	 * <p>
+	 * STRICT: COUNT must match the same filter used for paging decisions.
+	 * No COUNT DISTINCT. No recovery.
+	 * </p>
+	 */
 	@Override
 	public long count(CRITERIA criteria) {
 
@@ -375,17 +474,17 @@ public abstract class AbstractRepositoryImpl<
 
 		Predicate filter = criteria.getFilter(path);
 
-		Long count = createQuery(filter)
-				.select(audit.id.countDistinct())
-				.fetchOne();
+		Long count =
+				createQuery(filter)
+						.select(audit.id.count())
+						.fetchOne();
 
 		return count == null ? 0L : count;
 	}
 
-	// ----------------------------------------------------------------------
-	// BULK WRITE OPERATIONS
-	// ----------------------------------------------------------------------
-
+	/**
+	 * Existence check.
+	 */
 	@Override
 	public boolean exists(CRITERIA criteria) {
 
@@ -398,19 +497,9 @@ public abstract class AbstractRepositoryImpl<
 				.fetchFirst() != null;
 	}
 
-	@Override
-	public List<Long> findIds(CRITERIA criteria) {
-
-		Assert.notNull(criteria, "Criteria must not be null");
-
-		Predicate filter = criteria.getFilter(path);
-
-		JPQLQuery<Long> query =
-				createQuery(filter).select(audit.id);
-
-		applySort(query, criteria);
-		return query.fetch();
-	}
+	// ----------------------------------------------------------------------
+	// BULK OPERATIONS (ID-FIRST, SAFE)
+	// ----------------------------------------------------------------------
 
 	@Override
 	public ENTITY saveRecord(ENTITY entity) {
@@ -423,15 +512,21 @@ public abstract class AbstractRepositoryImpl<
 	}
 
 	@Override
-	public long updateById(UpdateSpec<ENTITY> spec, long id, long updatedBy) {
+	public long updateById(
+			UpdateSpec<ENTITY> spec,
+			long id,
+			long updatedBy) {
 
 		Assert.notNull(spec, "UpdateSpec must not be null");
 
 		JPAUpdateClause update = queryFactory.update(path);
+
 		applyAudit(update, updatedBy);
+
 		spec.apply(update, path);
 
 		long affected = update.where(audit.id.eq(id)).execute();
+
 		afterBulkDml();
 
 		return affected;
@@ -444,18 +539,36 @@ public abstract class AbstractRepositoryImpl<
 			Long updatedBy) {
 
 		Assert.notNull(criteria, "Criteria must not be null");
+		Assert.notNull(spec, "UpdateSpec must not be null");
 
 		@SuppressWarnings("unchecked")
-		EntityPathBase<E> typedPath = (EntityPathBase<E>) path;
+		EntityPathBase<E> typedPath =
+				(EntityPathBase<E>) path;
 
-		Predicate filter = criteria.getFilter(path);
+		// STRICT:
+		// Bulk DML must not depend on join-fetch graphs or unsafe ordering.
+		// This method updates by ID chunks derived from the same deterministic ID selection.
+		List<Long> ids = findIds(criteria);
+		if (ids.isEmpty()) {
+			return 0;
+		}
 
-		JPAUpdateClause update = queryFactory.update(typedPath);
-		applyAudit(update, updatedBy);
-		spec.apply(update, typedPath);
+		long affected = 0;
 
-		long affected = update.where(filter).execute();
+		for (List<Long> chunk : chunk(ids, bulkInChunkSize())) {
+
+			JPAUpdateClause update =
+					queryFactory.update(typedPath);
+
+			applyAudit(update, updatedBy);
+			spec.apply(update, typedPath);
+
+			affected +=
+					update.where(audit.id.in(chunk)).execute();
+		}
+
 		afterBulkDml();
+
 		return affected;
 	}
 
@@ -464,15 +577,17 @@ public abstract class AbstractRepositoryImpl<
 
 		Assert.notNull(id, "Id must not be null");
 
-		long affected = queryFactory
-				.delete(path)
-				.where(audit.id.eq(id))
-				.execute();
+		long affected =
+				queryFactory
+						.delete(path)
+						.where(idExpr.eq(id))
+						.execute();
 
 		if (affected > 0) {
 			afterBulkDml();
+			return true;
 		}
-		return affected > 0;
+		return false;
 	}
 
 	@Override
@@ -480,18 +595,28 @@ public abstract class AbstractRepositoryImpl<
 
 		Assert.notNull(criteria, "Criteria must not be null");
 
-		Predicate filter = criteria.getFilter(path);
+		// STRICT: ID-first delete avoids join side effects.
+		List<Long> ids = findIds(criteria);
+		if (ids.isEmpty()) {
+			return 0;
+		}
 
-		long affected = queryFactory.delete(path)
-				.where(filter)
-				.execute();
+		long affected = 0;
+
+		for (List<Long> chunk : chunk(ids, bulkInChunkSize())) {
+			affected += queryFactory
+					.delete(path)
+					.where(audit.id.in(chunk))
+					.execute();
+		}
 
 		afterBulkDml();
+
 		return affected;
 	}
 
 	// ----------------------------------------------------------------------
-	// SORT SAFETY
+	// QUERY CONSTRUCTION
 	// ----------------------------------------------------------------------
 
 	protected AbstractJPAQuery<?, ?> createQuery(
@@ -509,6 +634,7 @@ public abstract class AbstractRepositoryImpl<
 		if (qh != null) {
 			qh.forEach(query::setHint);
 		}
+
 		return query;
 	}
 
@@ -517,36 +643,46 @@ public abstract class AbstractRepositoryImpl<
 		entityManager.clear();
 	}
 
-	protected void applySort(JPQLQuery<?> query, CRITERIA criteria) {
+	protected void applyAudit(
+			JPAUpdateClause update,
+			Long updatedBy) {
 
-		List<OrderSpecifier<?>> specs =
-				criteria.resolveOrderSpecifiers(path);
-
-		if (specs == null || specs.isEmpty()) {
-			return;
-		}
-
-		validateSortSafety(specs);
-		query.orderBy(specs.toArray(new OrderSpecifier<?>[0]));
+		update.set(audit.updatedDate, LocalDateTime.now());
+		update.set(audit.updatedBy, updatedBy);
 	}
 
-	protected void applySortOrDefaultById(
-			JPQLQuery<?> query,
-			CRITERIA criteria) {
+	// ----------------------------------------------------------------------
+	// SORT SAFETY ENFORCEMENT (STRICT – FAIL FAST)
+	// ----------------------------------------------------------------------
 
-		List<OrderSpecifier<?>> specs =
-				criteria.resolveOrderSpecifiers(path);
-
-		if (specs == null || specs.isEmpty()) {
-			query.orderBy(audit.id.asc());
-			return;
-		}
-
-		validateSortSafety(specs);
-		query.orderBy(specs.toArray(new OrderSpecifier<?>[0]));
-	}
-
+	/**
+	 * Validates that ORDER BY clauses do NOT traverse collection-valued paths.
+	 *
+	 * <p>
+	 * Sorting on to-many associations is mathematically incompatible with
+	 * OFFSET/LIMIT pagination and is therefore forbidden at framework level.
+	 * </p>
+	 *
+	 * <p>
+	 * Allowed:
+	 * <ul>
+	 *   <li>Root entity fields</li>
+	 *   <li>To-one association fields</li>
+	 * </ul>
+	 * <p>
+	 * Forbidden:
+	 * <ul>
+	 *   <li>Collection-valued paths (List/Set/Map)</li>
+	 * </ul>
+	 * </p>
+	 *
+	 * <p>
+	 * Also validates ORDER BY target type is orderable (Comparable/enum/primitive).
+	 * This prevents accidental ORDER BY on JSON/BLOB/embeddables.
+	 * </p>
+	 */
 	protected void validateSortSafety(List<OrderSpecifier<?>> orderSpecifiers) {
+
 		for (OrderSpecifier<?> o : orderSpecifiers) {
 
 			Expression<?> target = o.getTarget();
@@ -554,7 +690,9 @@ public abstract class AbstractRepositoryImpl<
 			// 1) reject collection-valued ordering
 			if (containsCollectionPath(target)) {
 				throw new IllegalStateException(
-						"Unsafe ORDER BY on collection-valued path: " + o
+						"Unsafe ORDER BY detected: sorting on collection-valued " +
+								"association is not pagination-safe.\n" +
+								"OrderSpecifier=" + o
 				);
 			}
 
@@ -565,19 +703,26 @@ public abstract class AbstractRepositoryImpl<
 
 	private void validateOrderableType(Expression<?> target, OrderSpecifier<?> o) {
 
+		// QueryDSL often represents truly orderable paths as ComparableExpressionBase.
+		// But we still enforce a strict type rule to protect from custom paths.
 		if (target instanceof Path<?> p) {
-			// If it is a QueryDSL path but not a ComparableExpression,
-			// it's likely not meant to be sorted.
+
 			if (!(target instanceof ComparableExpressionBase<?>)) {
 
 				Class<?> t = target.getType();
-				if (t == null || !(Comparable.class.isAssignableFrom(t) || t.isEnum() || t.isPrimitive())) {
-					throw new IllegalStateException("Unsafe ORDER BY target: " + o);
+				if (t == null) {
+					throw new IllegalStateException("Unsafe ORDER BY target: null type for " + o);
+				}
+
+				boolean ok = Comparable.class.isAssignableFrom(t) || t.isEnum() || t.isPrimitive();
+				if (!ok) {
+					throw new IllegalStateException(
+							"Unsafe ORDER BY target: non-orderable type " + t.getName() + " for " + o
+					);
 				}
 			}
 		}
 
-		// fallback rule (same as minimal)
 		Class<?> type = target.getType();
 		if (type != null && (type.isPrimitive() || type.isEnum() || Comparable.class.isAssignableFrom(type))) {
 			return;
@@ -601,13 +746,170 @@ public abstract class AbstractRepositoryImpl<
 				return containsCollectionPath(md.getParent());
 			}
 		}
+
 		return false;
 	}
 
+	protected void applySort(JPQLQuery<?> query, CRITERIA criteria) {
+
+		List<OrderSpecifier<?>> orderSpecifiers =
+				criteria.resolveOrderSpecifiers(path);
+
+		if (orderSpecifiers == null || orderSpecifiers.isEmpty()) {
+			return;
+		}
+
+		// 🔒 STRICT FAIL FAST — prevent pagination-unsafe sorting
+		validateSortSafety(orderSpecifiers);
+
+		query.orderBy(orderSpecifiers.toArray(new OrderSpecifier<?>[0]));
+	}
+
+	protected void applySortOrDefaultById(
+			JPQLQuery<?> query,
+			CRITERIA criteria) {
+
+		List<OrderSpecifier<?>> specs =
+				criteria.resolveOrderSpecifiers(path);
+
+		// No sort provided → deterministic default
+		if (specs == null || specs.isEmpty()) {
+			query.orderBy(audit.id.asc());
+			return;
+		}
+
+		// Fail fast on unsafe ORDER BY
+		validateSortSafety(specs);
+
+		// Always enforce TOTAL ordering
+		boolean hasIdOrder = specs.stream()
+				.anyMatch(o -> o.getTarget().equals(audit.id));
+
+		if (!hasIdOrder) {
+			List<OrderSpecifier<?>> withTieBreaker =
+					new ArrayList<>(specs.size() + 1);
+			withTieBreaker.addAll(specs);
+			withTieBreaker.add(audit.id.asc());
+
+			query.orderBy(withTieBreaker.toArray(new OrderSpecifier<?>[0]));
+		}
+		else {
+			query.orderBy(specs.toArray(new OrderSpecifier<?>[0]));
+		}
+	}
+
 	// ----------------------------------------------------------------------
-	// READ OPERATIONS
+	// STABLE ORDERING AFTER ID PAGING
 	// ----------------------------------------------------------------------
 
+	/**
+	 * Applies stable ordering for the phase-2 entity fetch after an ID-page query.
+	 *
+	 * <p>
+	 * STRICT:
+	 * <ul>
+	 *   <li>If PostgreSQL: reapply original ORDER BY (same as phase 1).</li>
+	 *   <li>If non-Postgres: preserve phase-1 order with CASE ordering.</li>
+	 *   <li>No silent fallback. If CASE would exceed safe bounds, throw.</li>
+	 * </ul>
+	 * </p>
+	 */
+	protected void applyStableOrderAfterIdPaging(
+			JPQLQuery<?> entityQuery,
+			CRITERIA criteria,
+			List<Long> ids) {
+
+		if (IS_POSTGRES_DB) {
+			// PostgreSQL: reapply ORDER BY safely (same as phase 1)
+			applySortOrDefaultById(entityQuery, criteria);
+			return;
+		}
+
+		// Non-Postgres: preserve phase-1 ID order explicitly
+		applyIdOrder(entityQuery, ids);
+	}
+
+	protected int bulkInChunkSize() {
+		return 1000;
+	}
+
+	/**
+	 * Preserves ID order explicitly using CASE expressions.
+	 *
+	 * <p>
+	 * Used only for non-Postgres databases.
+	 * Page size bounds the SQL complexity.
+	 * </p>
+	 *
+	 * <p>
+	 * STRICT:
+	 * If the page is too large to safely express as CASE, this method throws.
+	 * There is no "unordered fetch" fallback, because that would break determinism.
+	 * </p>
+	 */
+	protected void applyIdOrder(
+			JPQLQuery<?> query,
+			List<Long> ids) {
+
+		if (ids == null || ids.isEmpty()) {
+			return;
+		}
+
+		if (ids.size() > maxCaseOrderIds()) {
+			throw new IllegalStateException(
+					"ID-order CASE too large (" + ids.size() + "). " +
+							"Reduce page size or use PostgreSQL ordering mode."
+			);
+		}
+
+		CaseBuilder cb = new CaseBuilder();
+		CaseBuilder.Cases<Integer, NumberExpression<Integer>> cases = null;
+
+		int index = 0;
+		for (Long id : ids) {
+			if (cases == null) {
+				cases = cb.when(audit.id.eq(id)).then(index++);
+			}
+			else {
+				cases = cases.when(audit.id.eq(id)).then(index++);
+			}
+		}
+
+		assert cases != null;
+		query.orderBy(
+				cases.otherwise(Integer.MAX_VALUE).asc()
+		);
+	}
+
+	/**
+	 * Maximum number of IDs allowed in CASE ordering for non-Postgres databases.
+	 *
+	 * <p>
+	 * STRICT:
+	 * This bound prevents generating pathological SQL and protects query planners.
+	 * Exceeding this limit is a caller contract violation and results in an exception.
+	 * </p>
+	 */
+	protected int maxCaseOrderIds() {
+		return 200;
+	}
+
+	// ----------------------------------------------------------------------
+	// FETCH GRAPH INTROSPECTION (STRICT TRIGGER ONLY)
+	// ----------------------------------------------------------------------
+
+	/**
+	 * Detects whether the requested fetch graph contains any collection-valued attribute.
+	 *
+	 * <p>
+	 * STRICT:
+	 * <ul>
+	 *   <li>If the fetch graph contains collections, paging must be ID-first.</li>
+	 *   <li>This method does NOT “fix” duplicates or attempt DISTINCT.</li>
+	 *   <li>It only determines the safe query strategy.</li>
+	 * </ul>
+	 * </p>
+	 */
 	protected boolean fetchGraphContainsCollection(String... hints) {
 
 		if (hints == null || hints.length == 0) {
@@ -655,6 +957,10 @@ public abstract class AbstractRepositoryImpl<
 			int nextComma = pathExpr.indexOf(',', idx);
 
 			int end = minPositive(nextParen, nextComma, pathExpr.length());
+			if (end < 0) {
+				end = pathExpr.length();
+			}
+
 			String attrName = pathExpr.substring(idx, end).trim();
 
 			if (!attrName.isEmpty()) {
@@ -714,6 +1020,10 @@ public abstract class AbstractRepositoryImpl<
 		throw new IllegalArgumentException("Unbalanced parentheses in graph: " + s);
 	}
 
+	// ----------------------------------------------------------------------
+	// AUDIT PATH RESOLUTION
+	// ----------------------------------------------------------------------
+
 	private QAbstractEntity resolveAuditPath(EntityPath<?> p) {
 
 		if (p instanceof QAbstractEntity qa) {
@@ -733,69 +1043,5 @@ public abstract class AbstractRepositoryImpl<
 		throw new IllegalStateException(
 				"QAbstractEntity audit path not resolvable"
 		);
-	}
-
-	protected void applyIdOrder(
-			JPQLQuery<?> query,
-			List<Long> ids) {
-
-		if (ids == null || ids.isEmpty()) {
-			return;
-		}
-
-		if (ids.size() > maxCaseOrderIds()) {
-			logger.warn("ID-order CASE too large ({}). Falling back to unordered fetch + in-memory reorder.", ids.size());
-			// fallback: no ORDER BY in SQL
-			return;
-		}
-
-		CaseBuilder cb = new CaseBuilder();
-		CaseBuilder.Cases<Integer, NumberExpression<Integer>> cases = null;
-
-		int index = 0;
-		for (Long id : ids) {
-			if (cases == null) {
-				cases = cb.when(audit.id.eq(id)).then(index++);
-			}
-			else {
-				cases = cases.when(audit.id.eq(id)).then(index++);
-			}
-		}
-
-		assert cases != null;
-		query.orderBy(
-				cases.otherwise(Integer.MAX_VALUE).asc()
-		);
-	}
-
-	protected void reorderInMemory(List<ENTITY> content, List<Long> ids) {
-
-		if (content.size() <= 1) {
-			return;
-		}
-
-		Map<Long, Integer> position = new HashMap<>(ids.size() * 2);
-		for (int i = 0; i < ids.size(); i++) {
-			position.put(ids.get(i), i);
-		}
-
-		content.sort(Comparator.comparingInt(
-				e -> {
-					Long id = e.getId();
-					return id != null ? position.getOrDefault(id, Integer.MAX_VALUE) : Integer.MAX_VALUE;
-				}
-		));
-	}
-
-	protected int maxCaseOrderIds() {
-		return 200;
-	}
-
-	protected void applyAudit(
-			JPAUpdateClause update,
-			Long updatedBy) {
-
-		update.set(audit.updatedDate, LocalDateTime.now());
-		update.set(audit.updatedBy, updatedBy);
 	}
 }

@@ -23,7 +23,7 @@ import java.io.Serializable;
 @Getter
 @Setter
 @ToString(callSuper = true)
-public class RoleAction extends AbstractEntity implements Serializable {
+public class RoleAction extends AbstractEntity<Long> implements Serializable {
 
 	@Serial
 	private static final long serialVersionUID = 6350526648908543212L;

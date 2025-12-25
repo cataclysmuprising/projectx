@@ -12,6 +12,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.util.CollectionUtils;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -19,7 +20,7 @@ import java.util.List;
 import java.util.Set;
 
 @Data
-public abstract class AbstractCriteria<A extends EntityPathBase<?>> {
+public abstract class AbstractCriteria<A extends EntityPathBase<?>, ID extends Serializable> {
 
 	// ----------------------------------------------------------------------
 	// DEFAULTS
@@ -33,26 +34,15 @@ public abstract class AbstractCriteria<A extends EntityPathBase<?>> {
 	// ----------------------------------------------------------------------
 
 	protected final List<OrderSpecifier<?>> orderSpecifiers = new ArrayList<>();
-
-	protected Long id;
-	protected Long fromId;
 	protected Set<Long> includeIds;
 	protected Set<Long> excludeIds;
-
 	protected Long createdBy;
 	protected Long updatedBy;
-
 	protected LocalDateTime createdDateFrom;
 	protected LocalDateTime createdDateTo;
 	protected LocalDateTime updatedDateFrom;
 	protected LocalDateTime updatedDateTo;
-
 	protected String keyword;
-
-	// ----------------------------------------------------------------------
-	// SORTING (CLIENT / JAVA – STRING BASED)
-	// ----------------------------------------------------------------------
-
 	/**
 	 * Client / Java provided sort keys.
 	 * Examples:
@@ -62,16 +52,19 @@ public abstract class AbstractCriteria<A extends EntityPathBase<?>> {
 	 * "createdBy.username"    (to-one)
 	 */
 	protected List<String> sortKeys;
-
 	protected List<Sort.Direction> sortDirs;
+
+	// ----------------------------------------------------------------------
+	// SORTING (CLIENT / JAVA – STRING BASED)
+	// ----------------------------------------------------------------------
+	protected Integer pageNumber;
+	protected Integer offset;
 
 	// ----------------------------------------------------------------------
 	// PAGING INPUTS
 	// ----------------------------------------------------------------------
-
-	protected Integer pageNumber;
-	protected Integer offset;
 	protected Integer limit;
+	private ID id;
 
 	// ----------------------------------------------------------------------
 	// COMMON FILTER LOGIC
@@ -83,9 +76,6 @@ public abstract class AbstractCriteria<A extends EntityPathBase<?>> {
 
 		if (id != null) {
 			predicate.and(audit.id.eq(id));
-		}
-		if (fromId != null) {
-			predicate.and(audit.id.gt(fromId));
 		}
 		if (createdBy != null) {
 			predicate.and(audit.createdBy.eq(createdBy));

@@ -25,6 +25,7 @@ import static com.tamantaw.projectx.persistence.utils.LoggerConstants.DATA_INTEG
 @Service
 public class RoleActionService
 		extends BaseService<
+		Long,
 		RoleAction,
 		QRoleAction,
 		RoleActionCriteria,

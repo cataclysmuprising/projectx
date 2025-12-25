@@ -13,7 +13,7 @@ import org.apache.commons.lang3.StringUtils;
 @Getter
 @Setter
 @ToString(callSuper = true)
-public class RoleCriteria extends AbstractCriteria<QRole> {
+public class RoleCriteria extends AbstractCriteria<QRole, Long> {
 
 	private String appName;
 	private String name;

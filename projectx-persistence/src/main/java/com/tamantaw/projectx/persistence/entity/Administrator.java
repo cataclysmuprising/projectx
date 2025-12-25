@@ -19,7 +19,7 @@ import java.util.List;
 @Getter
 @Setter
 @ToString(callSuper = true)
-public class Administrator extends AbstractEntity implements Serializable {
+public class Administrator extends AbstractEntity<Long> implements Serializable {
 
 	@Serial
 	private static final long serialVersionUID = 1L;
@@ -55,6 +55,12 @@ public class Administrator extends AbstractEntity implements Serializable {
 	// ------------------------------------------------------
 	// Enum
 	// ------------------------------------------------------
+	@OneToMany(mappedBy = "administrator", cascade = CascadeType.ALL, orphanRemoval = true)
+	@ToString.Exclude
+	private List<AdministratorRole> administratorRoles = new ArrayList<>();
+	@OneToMany(mappedBy = "administrator", cascade = CascadeType.ALL, orphanRemoval = true)
+	@ToString.Exclude
+	private List<AdministratorLoginHistory> loginHistories = new ArrayList<>();
 
 	/**
 	 * Administrator account status.
@@ -63,12 +69,4 @@ public class Administrator extends AbstractEntity implements Serializable {
 	public enum Status {
 		ACTIVE, SUSPENDED
 	}
-
-	@OneToMany(mappedBy = "administrator", cascade = CascadeType.ALL, orphanRemoval = true)
-	@ToString.Exclude
-	private List<AdministratorRole> administratorRoles = new ArrayList<>();
-
-	@OneToMany(mappedBy = "administrator", cascade = CascadeType.ALL, orphanRemoval = true)
-	@ToString.Exclude
-	private List<AdministratorLoginHistory> loginHistories = new ArrayList<>();
 }

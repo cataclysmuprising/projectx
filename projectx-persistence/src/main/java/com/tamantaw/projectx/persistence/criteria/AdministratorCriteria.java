@@ -16,7 +16,7 @@ import org.apache.commons.lang3.StringUtils;
 @Getter
 @Setter
 @ToString(callSuper = true)
-public class AdministratorCriteria extends AbstractCriteria<QAdministrator> {
+public class AdministratorCriteria extends AbstractCriteria<QAdministrator, Long> {
 
 	private String name;
 	private String loginId;

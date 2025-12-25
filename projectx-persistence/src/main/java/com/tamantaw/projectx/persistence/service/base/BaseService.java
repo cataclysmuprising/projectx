@@ -23,6 +23,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 
+import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
@@ -33,30 +34,34 @@ import static com.tamantaw.projectx.persistence.utils.LoggerConstants.DATA_INTEG
 
 @Transactional(transactionManager = PrimaryPersistenceContext.TX_MANAGER, rollbackFor = Exception.class)
 public abstract class BaseService<
-		ENTITY extends AbstractEntity,
+		ID extends Serializable,
+		ENTITY extends AbstractEntity<ID>,
 		QCLAZZ extends EntityPathBase<ENTITY>,
-		CRITERIA extends AbstractCriteria<QCLAZZ>,
+		CRITERIA extends AbstractCriteria<QCLAZZ, ID>,
 		DTO extends AbstractDTO,
-		MAPPER extends AbstractMapper<DTO, ENTITY>> {
+		MAPPER extends AbstractMapper<DTO, ENTITY>
+		> {
 
 	private static final Logger log =
 			LogManager.getLogger("serviceLogs." + BaseService.class.getSimpleName());
+
 	protected final MAPPER mapper;
-	private final AbstractRepository<ENTITY, QCLAZZ, CRITERIA, Long> repository;
+	protected final AbstractRepository<ENTITY, QCLAZZ, CRITERIA, ID> repository;
+
 	@Autowired
 	protected MappingContext mappingContext;
 
 	protected BaseService(
-			AbstractRepository<ENTITY, QCLAZZ, CRITERIA, Long> repository,
+			AbstractRepository<ENTITY, QCLAZZ, CRITERIA, ID> repository,
 			MAPPER mapper
 	) {
 		this.repository = repository;
 		this.mapper = mapper;
 	}
 
-	// ----------------------------------------------------------------------
-	// Context helpers (KEEP)
-	// ----------------------------------------------------------------------
+// ----------------------------------------------------------------------
+// Context helpers (KEEP)
+// ----------------------------------------------------------------------
 
 	protected String serviceName() {
 		return getClass().getSimpleName();
@@ -83,9 +88,9 @@ public abstract class BaseService<
 		);
 	}
 
-	// ----------------------------------------------------------------------
-	// READ (ENTITY → DTO)
-	// ----------------------------------------------------------------------
+// ----------------------------------------------------------------------
+// READ (ENTITY → DTO)
+// ----------------------------------------------------------------------
 
 	@Transactional(readOnly = true)
 	public Optional<DTO> findById(long id) throws PersistenceException {
@@ -242,9 +247,9 @@ public abstract class BaseService<
 		}
 	}
 
-	// ----------------------------------------------------------------------
-	// CREATE
-	// ----------------------------------------------------------------------
+// ----------------------------------------------------------------------
+// CREATE
+// ----------------------------------------------------------------------
 
 	public DTO create(DTO dto, long createdBy) throws PersistenceException, ConsistencyViolationException {
 
@@ -327,9 +332,9 @@ public abstract class BaseService<
 		}
 	}
 
-	// ----------------------------------------------------------------------
-	// UPDATE / DELETE
-	// ----------------------------------------------------------------------
+// ----------------------------------------------------------------------
+// UPDATE / DELETE
+// ----------------------------------------------------------------------
 
 	public DTO update(DTO dto, long updatedBy) throws PersistenceException, ConsistencyViolationException {
 

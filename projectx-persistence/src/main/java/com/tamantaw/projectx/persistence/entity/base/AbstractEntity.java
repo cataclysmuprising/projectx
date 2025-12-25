@@ -14,14 +14,14 @@ import java.time.LocalDateTime;
 @MappedSuperclass
 @Data
 @EntityListeners(AuditingEntityListener.class)
-public abstract class AbstractEntity implements Serializable {
+public abstract class AbstractEntity<ID extends Serializable> implements Serializable {
 
 	@Serial
 	private static final long serialVersionUID = 6606582588992858115L;
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long id;
+	private ID id;
 
 	/**
 	 * ID of admin/user who created this record

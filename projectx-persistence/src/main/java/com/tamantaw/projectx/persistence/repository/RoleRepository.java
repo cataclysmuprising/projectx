@@ -13,16 +13,17 @@ import static com.tamantaw.projectx.persistence.config.PrimaryPersistenceContext
 @Repository
 public class RoleRepository
 		extends AbstractRepositoryImpl<
+		Long,
 		Role,
 		QRole,
-		RoleCriteria,
-		Long> {
+		RoleCriteria
+		> {
 
 	private final QRole qEntity = QRole.role;
 
 	public RoleRepository(
 			@Qualifier(EM_FACTORY) EntityManager entityManager) {
 
-		super(Role.class, entityManager);
+		super(Role.class, Long.class, entityManager);
 	}
 }

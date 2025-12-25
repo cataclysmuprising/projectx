@@ -10,10 +10,11 @@ import java.util.List;
 import java.util.Optional;
 
 public interface AbstractRepository<
-		ENTITY extends AbstractEntity,
+		ID extends Serializable,
+		ENTITY extends AbstractEntity<ID>,
 		QCLAZZ extends EntityPathBase<ENTITY>,
-		CRITERIA extends AbstractCriteria<QCLAZZ>,
-		ID extends Serializable> {
+		CRITERIA extends AbstractCriteria<QCLAZZ, ID>
+		> {
 
 	// ------------------------------
 	// ENTITY READS (internal/domain)

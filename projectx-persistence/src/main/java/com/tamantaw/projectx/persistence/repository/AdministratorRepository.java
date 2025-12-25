@@ -13,13 +13,14 @@ import static com.tamantaw.projectx.persistence.config.PrimaryPersistenceContext
 @Repository
 public class AdministratorRepository
 		extends AbstractRepositoryImpl<
+		Long,
 		Administrator,
 		QAdministrator,
-		AdministratorCriteria,
-		Long> {
+		AdministratorCriteria
+		> {
 
 	public AdministratorRepository(@Qualifier(EM_FACTORY) EntityManager entityManager) {
-		super(Administrator.class, entityManager);
+		super(Administrator.class, Long.class, entityManager);
 	}
 }
 

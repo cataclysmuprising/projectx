@@ -24,6 +24,7 @@ import static com.tamantaw.projectx.persistence.utils.LoggerConstants.DATA_INTEG
 @Service
 public class AdministratorRoleService
 		extends BaseService<
+		Long,
 		AdministratorRole,
 		QAdministratorRole,
 		AdministratorRoleCriteria,
