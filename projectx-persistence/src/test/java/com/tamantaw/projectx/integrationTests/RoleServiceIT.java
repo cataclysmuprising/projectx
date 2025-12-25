@@ -480,7 +480,7 @@ public class RoleServiceIT extends CommonTestBase {
 			);
 
 			assertTrue(
-					root.getMessage().contains("collection-valued association"),
+					root.getMessage().contains("Unsafe ORDER BY"),
 					"Unexpected message: " + root.getMessage()
 			);
 		}

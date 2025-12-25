@@ -1,10 +1,7 @@
 package com.tamantaw.projectx.persistence.criteria.base;
 
 import com.querydsl.core.BooleanBuilder;
-import com.querydsl.core.types.Order;
-import com.querydsl.core.types.OrderSpecifier;
-import com.querydsl.core.types.Path;
-import com.querydsl.core.types.Predicate;
+import com.querydsl.core.types.*;
 import com.querydsl.core.types.dsl.ComparableExpressionBase;
 import com.querydsl.core.types.dsl.EntityPathBase;
 import com.querydsl.core.types.dsl.PathBuilder;
@@ -305,7 +302,7 @@ public abstract class AbstractCriteria<A extends EntityPathBase<?>> {
 		}
 
 		int pageIndex = resolvedOffset / resolvedLimit;
-		return PageRequest.of(pageIndex, resolvedLimit, resolveSort());
+		return PageRequest.of(pageIndex, resolvedLimit);
 	}
 
 	protected Integer resolveLimit() {
@@ -328,6 +325,32 @@ public abstract class AbstractCriteria<A extends EntityPathBase<?>> {
 		}
 
 		return null;
+	}
+
+	public boolean hasJoinedSort() {
+
+		// 1️⃣ String-based joined sort
+		if (sortKeys != null && sortKeys.stream().anyMatch(k -> k.contains("."))) {
+			return true;
+		}
+
+		// 2️⃣ Java / QueryDSL joined sort
+		if (!CollectionUtils.isEmpty(orderSpecifiers)) {
+			return orderSpecifiers.stream()
+					.map(OrderSpecifier::getTarget)
+					.anyMatch(this::isNonRootPath);
+		}
+
+		return false;
+	}
+
+	private boolean isNonRootPath(Expression<?> expr) {
+
+		if (expr instanceof Path<?> p) {
+			PathMetadata md = p.getMetadata();
+			return md != null && md.getParent() != null;
+		}
+		return false;
 	}
 
 	// ----------------------------------------------------------------------
