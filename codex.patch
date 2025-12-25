@@ -1,133 +1,1012 @@
-diff --git a/README.md b/README.md
-index 0489ae71c05edb80c48f65ffbcdad0a9243564f7..82e66f7f2c97eecb4ed0d99a18ac24f38bc56d90 100644
---- a/README.md
-+++ b/README.md
-@@ -31,50 +31,51 @@ ProjectX is now a full-stack template that pairs a deterministic persistence lay
- - Built with **Maven**; backend packaged as a **WAR** for deployment to **Apache Tomcat 11** (also runnable via `spring-boot:run` in dev).
- - **Minification flow:** run the `projectx-compressor` module to install Node/npm, execute `esbuild`, and emit optimized assets consumed by the backend’s `_production` profile.
- - Tested on **Spring Boot 4 / Spring Framework 7** stack with Java 23.
- - **Windows packaging:** run `generate_war_os_window.bat` to build a Tomcat-ready WAR with the production asset pipeline.
+diff --git a/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/criteria/base/AbstractCriteria.java b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/criteria/base/AbstractCriteria.java
+index 4307feedf1f391b6cae0249fe4dc614dc4db303b..5f971154006d85693d6bdb93cb98a4fdfa11c692 100644
+--- a/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/criteria/base/AbstractCriteria.java
++++ b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/criteria/base/AbstractCriteria.java
+@@ -12,52 +12,52 @@ import org.springframework.data.domain.Pageable;
+ import org.springframework.data.domain.Sort;
+ import org.springframework.util.CollectionUtils;
 
- ---
+ import java.io.Serializable;
+ import java.time.LocalDateTime;
+ import java.util.ArrayList;
+ import java.util.Collections;
+ import java.util.List;
+ import java.util.Set;
 
- ## 🗃️ Database migrations
+ @Data
+ public abstract class AbstractCriteria<A extends EntityPathBase<?>, ID extends Serializable> {
 
- - Default database name: **`projectx`**.
- - To run migration scripts manually, point your client to the `projectx` database and execute the SQL files in order from `projectx-persistence/src/main/resources/migration`. This keeps the schema aligned when applying changes outside automated pipelines.
+ 	// ----------------------------------------------------------------------
+ 	// DEFAULTS
+ 	// ----------------------------------------------------------------------
 
- ---
+ 	protected static final int DEFAULT_PAGE_SIZE = 20;
+ 	protected static final int DEFAULT_MAX_ROWS = 100;
 
- ## 🗄️ Persistence Layer Architecture (JPA + Hibernate + QueryDSL)
+ 	// ----------------------------------------------------------------------
+ 	// COMMON FILTER FIELDS
+ 	// ----------------------------------------------------------------------
 
- This project implements a **deterministic, pagination-safe, and fetch-graph-safe persistence architecture** on top of **Spring Data JPA + Hibernate + QueryDSL**.
+ 	protected final List<OrderSpecifier<?>> orderSpecifiers = new ArrayList<>();
+-	protected Set<Long> includeIds;
+-	protected Set<Long> excludeIds;
++	protected Set<ID> includeIds;
++	protected Set<ID> excludeIds;
+ 	protected Long createdBy;
+ 	protected Long updatedBy;
+ 	protected LocalDateTime createdDateFrom;
+ 	protected LocalDateTime createdDateTo;
+ 	protected LocalDateTime updatedDateFrom;
+ 	protected LocalDateTime updatedDateTo;
+ 	protected String keyword;
+ 	/**
+ 	 * Client / Java provided sort keys.
+ 	 * Examples:
+ 	 * "id"
+ 	 * "name"
+ 	 * "department.name"        (to-one)
+ 	 * "createdBy.username"    (to-one)
+ 	 */
+ 	protected List<String> sortKeys;
+ 	protected List<Sort.Direction> sortDirs;
 
- It is designed to handle:
+ 	// ----------------------------------------------------------------------
+ 	// SORTING (CLIENT / JAVA – STRING BASED)
+ 	// ----------------------------------------------------------------------
+ 	protected Integer pageNumber;
+ 	protected Integer offset;
 
- - Complex nested filters
- - Multi-column sorting
- - Large datasets
- - Collection fetch graphs
- - Stable pagination without data corruption
-+- ORDER BY safety guard that blocks collection-valued sorting and keeps pagination deterministic
+ 	// ----------------------------------------------------------------------
+@@ -331,26 +331,25 @@ public abstract class AbstractCriteria<A extends EntityPathBase<?>, ID extends S
+ 					.anyMatch(this::isNonRootPath);
+ 		}
 
- ---
+ 		return false;
+ 	}
 
- ### 📌 Core Principles
+ 	private boolean isNonRootPath(Expression<?> expr) {
 
- #### 1. Deterministic Pagination (No Data Corruption)
+ 		if (expr instanceof Path<?> p) {
+ 			PathMetadata md = p.getMetadata();
+ 			return md != null && md.getParent() != null;
+ 		}
+ 		return false;
+ 	}
 
- Pagination **must always return the correct global ordering** for a given:
+ 	// ----------------------------------------------------------------------
+ 	// QUERYDSL CONTRACT
+ 	// ----------------------------------------------------------------------
 
- ```
- WHERE + ORDER BY + OFFSET + LIMIT
- ```
+ 	public abstract Predicate getFilter(A root);
 
- This repository **does not rely on JOIN-based pagination**, which is known to cause:
+ 	public abstract Predicate getFilter();
 
- - Duplicate rows
- - Missing records
- - Incorrect page boundaries
- - Hibernate in-memory paging warnings
-
- ---
-
- #### 2. EXISTS-Based Nested Filtering (No JOIN Filters)
-
- All nested criteria are implemented using **`EXISTS` subqueries**, never JOINs.
-@@ -141,70 +142,57 @@ FROM table
- WHERE filter
- ORDER BY sort
- OFFSET / LIMIT
- ```
-
- Defines **exact page membership**.
-
- #### Phase 2 — Entity Fetch
-
- ```
- SELECT entity
- FROM table
- LEFT JOIN collections
- WHERE id IN (:ids)
- ORDER BY <strategy>
- ```
-
- Ensures:
-
- - No Hibernate paging warnings
- - No incorrect result sets
- - No duplicated entities
-
- ---
-
--## 🐘 PostgreSQL Optimization
-+## 🐘 DB-aware pagination ordering
-
--```java
--public static final boolean IS_POSTGRES_DB = true;
--```
+ 	public abstract Class<?> getObjectClass();
+ }
 -
--### Why this flag exists
+diff --git a/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/base/AbstractRepository.java b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/base/AbstractRepository.java
+index ed2efc18c6c1cc7476437f64aa62a49a738e01d6..1831e78cb16fff1a40db06319789d1f0405f0f84 100644
+--- a/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/base/AbstractRepository.java
++++ b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/base/AbstractRepository.java
+@@ -8,54 +8,52 @@ import org.springframework.data.domain.Page;
+ import java.io.Serializable;
+ import java.util.List;
+ import java.util.Optional;
+
+ public interface AbstractRepository<
+ 		ID extends Serializable,
+ 		ENTITY extends AbstractEntity<ID>,
+ 		QCLAZZ extends EntityPathBase<ENTITY>,
+ 		CRITERIA extends AbstractCriteria<QCLAZZ, ID>
+ 		> {
+
+ 	// ------------------------------
+ 	// ENTITY READS (internal/domain)
+ 	// ------------------------------
+ 	Optional<ENTITY> findById(ID id);
+
+ 	Optional<ENTITY> findOne(CRITERIA criteria, String... hints);
+
+ 	List<ENTITY> findAll(CRITERIA criteria, String... hints);
+
+ 	Page<ENTITY> findByPaging(CRITERIA criteria, String... hints);
+
+ 	// ------------------------------
+ 	// ID-BASED READS (safe)
+ 	// ------------------------------
+-	List<Long> findIds(CRITERIA criteria);
++	List<ID> findIds(CRITERIA criteria);
+
+ 	long count(CRITERIA criteria);
+
+ 	boolean exists(CRITERIA criteria);
+
+ 	// ------------------------------
+ 	// WRITE
+ 	// ------------------------------
+ 	ENTITY saveRecord(ENTITY entity);
+
+ 	List<ENTITY> saveAllRecords(Iterable<ENTITY> entities);
+
+-	long updateById(UpdateSpec<ENTITY> spec, long id, long updatedBy);
++	long updateById(UpdateSpec<ENTITY> spec, ID id, long updatedBy);
+
+ 	<E extends ENTITY> long updateByCriteria(UpdateSpec<E> spec, CRITERIA criteria, Long updatedBy);
+
+ 	/**
+ 	 * Deletes a single entity by ID.
+ 	 *
+ 	 * @return true if deleted, false if not found
+ 	 */
+ 	boolean deleteWithId(ID id);
+
+ 	long deleteByCriteria(CRITERIA criteria);
+ }
+
 -
--- PostgreSQL guarantees **deterministic ORDER BY behavior**
--- Allows safe reapplication of `ORDER BY` in Phase 2
--- Avoids SQL hacks like `CASE` or `array_position`
 -
--### Behavior
--
--| Database   | Phase-2 Ordering                      |
--|------------|---------------------------------------|
--| PostgreSQL | Re-apply `ORDER BY`                   |
--| Other DBs  | Preserve ID order via CASE expression |
--
--> ⚠️ This flag is **explicit by design** — no auto-detection magic.
-+- No more `IS_POSTGRES_DB` flag to toggle by hand.
-+- Phase 2 (entity fetch) now auto-selects the safe ordering strategy:
-+  - PostgreSQL: re-apply the original `ORDER BY`.
-+  - Other databases: preserve ID order explicitly via `CASE` over the page IDs.
-+- Keeps pagination deterministic without hidden auto-detection while avoiding config switches.
+diff --git a/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/base/AbstractRepositoryImpl.java b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/base/AbstractRepositoryImpl.java
+index 07a5035c03cefc8eb9004f6948a7f8cbbb05e3e2..714c193bac0aabfa5d9a0bbd4a4e5e12f9963033 100644
+--- a/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/base/AbstractRepositoryImpl.java
++++ b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/base/AbstractRepositoryImpl.java
+@@ -37,56 +37,56 @@ import java.util.*;
+  * - Deterministic results across databases
+  * - Explicit API contracts
+  *
+  * <p>
+  * This class intentionally avoids “magic behavior”.
+  * Every performance-critical decision is explicit and documented.
+  * </p>
+  *
+  * <p><b>STRICT GUARANTEE</b></p>
+  * <ul>
+  *   <li>❌ Hibernate in-memory paging</li>
+  *   <li>❌ Duplicate entities</li>
+  *   <li>❌ Missing records</li>
+  *   <li>❌ Broken pagination with joins</li>
+  *   <li>❌ Incorrect total counts</li>
+  *   <li>❌ Non-deterministic ordering</li>
+  * </ul>
+  *
+  * <p>
+  * If the caller requests an unsafe operation (e.g. to-many ORDER BY),
+  * this repository fails fast with a clear exception. There is no “best effort”
+  * fallback that could silently corrupt paging results.
+  * </p>
+  */
+ public abstract class AbstractRepositoryImpl<
++		ID extends Serializable,
+ 		ENTITY extends AbstractEntity<ID>,
+ 		QCLAZZ extends EntityPathBase<ENTITY>,
+-		CRITERIA extends AbstractCriteria<QCLAZZ, ID>,
+-		ID extends Serializable>
++		CRITERIA extends AbstractCriteria<QCLAZZ, ID>>
+ 		extends SimpleJpaRepository<ENTITY, ID>
+-		implements AbstractRepository<ENTITY, QCLAZZ, CRITERIA, ID> {
++		implements AbstractRepository<ID, ENTITY, QCLAZZ, CRITERIA> {
 
- ---
+ 	// ----------------------------------------------------------------------
+ 	// STATIC CONFIGURATION
+ 	// ----------------------------------------------------------------------
 
- ## 🚫 API Contract Rules
+ 	/**
+ 	 * Indicates whether the underlying database is PostgreSQL.
+ 	 *
+ 	 * <p><b>Why this flag exists</b></p>
+ 	 * <ul>
+ 	 *   <li>
+ 	 *     PostgreSQL guarantees stable ORDER BY semantics when reapplying
+ 	 *     sorting after an ID-based paging query.
+ 	 *   </li>
+ 	 *   <li>
+ 	 *     PostgreSQL optimizes OFFSET / LIMIT efficiently even on complex queries.
+ 	 *   </li>
+ 	 *   <li>
+ 	 *     Other databases do NOT guarantee order preservation for
+ 	 *     <code>IN (...)</code> queries and therefore require explicit ordering.
+ 	 *   </li>
+ 	 * </ul>
+ 	 *
+ 	 * <p><b>Design decision</b></p>
+ 	 * <ul>
+@@ -231,68 +231,68 @@ public abstract class AbstractRepositoryImpl<
+ 		// FAST PATH — to-one fetch only (still deterministic)
+ 		// ------------------------------------------------------------
+ 		if (!requiresIdFirst) {
 
- ### `findAll()`
+ 			JPQLQuery<ENTITY> query =
+ 					createQuery(filter, hints).select(path);
 
- - ❌ Paging NOT allowed
- - ✅ Sorting allowed
- - Used only for full result sets
+ 			applySortOrDefaultById(query, criteria);
 
- ```java
- findAll(criteria);              // OK
+ 			List<ENTITY> rows = query.limit(2).fetch();
 
- findAll(criteria with paging);  // ❌ throws exception
- ```
+ 			if (rows.isEmpty()) {
+ 				return Optional.empty();
+ 			}
+ 			if (rows.size() > 1) {
+ 				throw new IllegalStateException(
+ 						"findOne() returned more than one result"
+ 				);
+ 			}
+ 			return Optional.of(rows.getFirst());
+ 		}
 
- ---
+ 		// ------------------------------------------------------------
+ 		// SAFE PATH — collection fetch (ID first)
+ 		// ------------------------------------------------------------
+-		JPQLQuery<Long> idQuery =
+-				createQuery(filter).select(audit.id);
++		JPQLQuery<ID> idQuery =
++				createQuery(filter).select(idExpr);
 
- ### `findByPaging()`
+ 		applySortOrDefaultById(idQuery, criteria);
 
- - ✅ The **only** paging entry point
- - Supports:
-     - Offset + limit
-     - Page number
+-		List<Long> ids = idQuery.limit(2).fetch();
++		List<ID> ids = idQuery.limit(2).fetch();
+
+ 		if (ids.isEmpty()) {
+ 			return Optional.empty();
+ 		}
+ 		if (ids.size() > 1) {
+ 			throw new IllegalStateException(
+ 					"findOne() returned more than one result"
+ 			);
+ 		}
+
+ 		JPQLQuery<ENTITY> entityQuery =
+-				createQuery(audit.id.eq(ids.getFirst()), hints)
++				createQuery(idExpr.eq(ids.getFirst()), hints)
+ 						.select(path);
+
+ 		return Optional.ofNullable(entityQuery.fetchOne());
+ 	}
+
+ 	// ----------------------------------------------------------------------
+ 	// ID / COUNT / EXISTS
+ 	// ----------------------------------------------------------------------
+
+ 	/**
+ 	 * Returns all matching entities without pagination.
+ 	 *
+ 	 * <p>
+ 	 * Paging is NOT allowed here to prevent unsafe joins + pagination bugs.
+ 	 * </p>
+ 	 */
+ 	@Override
+ 	public List<ENTITY> findAll(CRITERIA criteria, String... hints) {
+
+ 		Assert.notNull(criteria, "Criteria must not be null");
+
+ 		// Enforce correct API usage
+ 		if (criteria.toPageable() != null) {
+ 			throw new IllegalStateException(
+ 					"Paging is not supported in findAll(). Use findByPaging()."
+@@ -300,63 +300,63 @@ public abstract class AbstractRepositoryImpl<
+ 		}
+
+ 		Predicate filter = criteria.getFilter(path);
+
+ 		boolean requiresIdFirst =
+ 				fetchGraphContainsCollection(hints);
+
+ 		// ------------------------------------------------------------
+ 		// FAST PATH — to-one fetch only (deterministic, no duplication)
+ 		// ------------------------------------------------------------
+ 		if (!requiresIdFirst) {
+
+ 			JPQLQuery<ENTITY> query =
+ 					createQuery(filter, hints).select(path);
+
+ 			applySortOrDefaultById(query, criteria);
+
+ 			return query.fetch();
+ 		}
+
+ 		// ------------------------------------------------------------
+ 		// SAFE PATH — collection fetch allowed, ID-first + root dedup
+ 		// ------------------------------------------------------------
+
+ 		// Phase 1 — deterministic ID selection
+-		JPQLQuery<Long> idQuery =
+-				createQuery(filter).select(audit.id);
++		JPQLQuery<ID> idQuery =
++				createQuery(filter).select(idExpr);
+
+ 		applySortOrDefaultById(idQuery, criteria);
+
+-		List<Long> ids = idQuery.fetch();
++		List<ID> ids = idQuery.fetch();
+ 		if (ids.isEmpty()) {
+ 			return List.of();
+ 		}
+
+ 		// Phase 2 — entity fetch with fetch graph
+ 		JPQLQuery<ENTITY> entityQuery =
+-				createQuery(audit.id.in(ids), hints).select(path);
++				createQuery(idExpr.in(ids), hints).select(path);
+
+ 		applyStableOrderAfterIdPaging(entityQuery, criteria, ids);
+
+ 		List<ENTITY> rows = entityQuery.fetch();
+
+ 		// ------------------------------------------------------------
+ 		// STRICT ROOT DEDUPLICATION (safe because NO pagination)
+ 		// ------------------------------------------------------------
+ 		// JPA may return duplicate roots when fetching collections.
+ 		// Dedup is REQUIRED here to preserve set semantics.
+ 		// This does NOT hide paging bugs because paging is forbidden.
+ 		Map<ID, ENTITY> unique = new LinkedHashMap<>(rows.size());
+
+ 		for (ENTITY e : rows) {
+ 			unique.putIfAbsent(e.getId(), e);
+ 		}
+
+ 		return new ArrayList<>(unique.values());
+ 	}
+
+ 	/**
+ 	 * Safe pagination method.
+ 	 *
+ 	 * <p>
+ 	 * Guarantees:
+@@ -381,254 +381,254 @@ public abstract class AbstractRepositoryImpl<
+ 		boolean requiresIdFirst =
+ 				fetchGraphContainsCollection(hints);
+
+ 		// ------------------------------------------------------------
+ 		// FAST PATH (to-one only)
+ 		// ------------------------------------------------------------
+ 		if (!requiresIdFirst) {
+
+ 			JPQLQuery<ENTITY> query =
+ 					createQuery(filter, hints).select(path);
+
+ 			applySortOrDefaultById(query, criteria);
+
+ 			query = query.offset(pageable.getOffset())
+ 					.limit(pageable.getPageSize());
+
+ 			List<ENTITY> content = query.fetch();
+ 			long total = count(criteria);
+
+ 			return new PageImpl<>(content, pageable, total);
+ 		}
+
+ 		// ------------------------------------------------------------
+ 		// PHASE 1 — ID PAGE (GLOBAL ORDER + OFFSET/LIMIT)
+ 		// ------------------------------------------------------------
+-		JPQLQuery<Long> idQuery =
+-				createQuery(filter).select(audit.id);
++		JPQLQuery<ID> idQuery =
++				createQuery(filter).select(idExpr);
+
+ 		applySortOrDefaultById(idQuery, criteria);
+
+ 		idQuery = idQuery
+ 				.offset(pageable.getOffset())
+ 				.limit(pageable.getPageSize());
+
+-		List<Long> ids = idQuery.fetch();
++		List<ID> ids = idQuery.fetch();
+
+ 		if (ids.isEmpty()) {
+ 			return Page.empty(pageable);
+ 		}
+
+ 		// ------------------------------------------------------------
+ 		// PHASE 2 — ENTITY FETCH
+ 		// ------------------------------------------------------------
+ 		JPQLQuery<ENTITY> entityQuery =
+-				createQuery(audit.id.in(ids), hints).select(path);
++				createQuery(idExpr.in(ids), hints).select(path);
+
+ 		applyStableOrderAfterIdPaging(entityQuery, criteria, ids);
+
+ 		List<ENTITY> content = entityQuery.fetch();
+ 		long total = count(criteria);
+
+ 		return new PageImpl<>(content, pageable, total);
+ 	}
+
+ 	/**
+ 	 * Returns matching entity IDs.
+ 	 *
+ 	 * <p>
+ 	 * Used internally for bulk operations.
+ 	 * Ordering does NOT affect correctness here.
+ 	 * </p>
+ 	 */
+ 	@Override
+-	public List<Long> findIds(CRITERIA criteria) {
++	public List<ID> findIds(CRITERIA criteria) {
+
+ 		Assert.notNull(criteria, "Criteria must not be null");
+
+ 		Predicate filter = criteria.getFilter(path);
+
+-		JPQLQuery<Long> query =
+-				createQuery(filter).select(audit.id);
++		JPQLQuery<ID> query =
++				createQuery(filter).select(idExpr);
+
+ 		applySortOrDefaultById(query, criteria);
+
+ 		return query.fetch();
+ 	}
+
+ 	// ----------------------------------------------------------------------
+ 	// WRITE OPERATIONS
+ 	// ----------------------------------------------------------------------
+
+ 	/**
+ 	 * Count query with identical filter but no joins or pagination.
+ 	 *
+ 	 * <p>
+ 	 * STRICT: COUNT must match the same filter used for paging decisions.
+ 	 * No COUNT DISTINCT. No recovery.
+ 	 * </p>
+ 	 */
+ 	@Override
+ 	public long count(CRITERIA criteria) {
+
+ 		Assert.notNull(criteria, "Criteria must not be null");
+
+ 		Predicate filter = criteria.getFilter(path);
+
+ 		Long count =
+ 				createQuery(filter)
+-						.select(audit.id.count())
++						.select(idExpr.count())
+ 						.fetchOne();
+
+ 		return count == null ? 0L : count;
+ 	}
+
+ 	/**
+ 	 * Existence check.
+ 	 */
+ 	@Override
+ 	public boolean exists(CRITERIA criteria) {
+
+ 		Assert.notNull(criteria, "Criteria must not be null");
+
+ 		Predicate filter = criteria.getFilter(path);
+
+ 		return createQuery(filter)
+-				.select(audit.id)
++				.select(idExpr)
+ 				.fetchFirst() != null;
+ 	}
+
+ 	// ----------------------------------------------------------------------
+ 	// BULK OPERATIONS (ID-FIRST, SAFE)
+ 	// ----------------------------------------------------------------------
+
+ 	@Override
+ 	public ENTITY saveRecord(ENTITY entity) {
+ 		return super.saveAndFlush(entity);
+ 	}
+
+ 	@Override
+ 	public List<ENTITY> saveAllRecords(Iterable<ENTITY> entities) {
+ 		return super.saveAllAndFlush(entities);
+ 	}
+
+ 	@Override
+ 	public long updateById(
+ 			UpdateSpec<ENTITY> spec,
+-			long id,
++			ID id,
+ 			long updatedBy) {
+
+ 		Assert.notNull(spec, "UpdateSpec must not be null");
+
+ 		JPAUpdateClause update = queryFactory.update(path);
+
+ 		applyAudit(update, updatedBy);
+
+ 		spec.apply(update, path);
+
+-		long affected = update.where(audit.id.eq(id)).execute();
++		long affected = update.where(idExpr.eq(id)).execute();
+
+ 		afterBulkDml();
+
+ 		return affected;
+ 	}
+
+ 	@Override
+ 	public <E extends ENTITY> long updateByCriteria(
+ 			UpdateSpec<E> spec,
+ 			CRITERIA criteria,
+ 			Long updatedBy) {
+
+ 		Assert.notNull(criteria, "Criteria must not be null");
+ 		Assert.notNull(spec, "UpdateSpec must not be null");
+
+ 		@SuppressWarnings("unchecked")
+ 		EntityPathBase<E> typedPath =
+ 				(EntityPathBase<E>) path;
+
+ 		// STRICT:
+ 		// Bulk DML must not depend on join-fetch graphs or unsafe ordering.
+ 		// This method updates by ID chunks derived from the same deterministic ID selection.
+-		List<Long> ids = findIds(criteria);
++		List<ID> ids = findIds(criteria);
+ 		if (ids.isEmpty()) {
+ 			return 0;
+ 		}
+
+ 		long affected = 0;
+
+-		for (List<Long> chunk : chunk(ids, bulkInChunkSize())) {
++		for (List<ID> chunk : chunk(ids, bulkInChunkSize())) {
+
+ 			JPAUpdateClause update =
+ 					queryFactory.update(typedPath);
+
+ 			applyAudit(update, updatedBy);
+ 			spec.apply(update, typedPath);
+
+ 			affected +=
+-					update.where(audit.id.in(chunk)).execute();
++					update.where(idExpr.in(chunk)).execute();
+ 		}
+
+ 		afterBulkDml();
+
+ 		return affected;
+ 	}
+
+ 	@Override
+ 	public boolean deleteWithId(@Nonnull ID id) {
+
+ 		Assert.notNull(id, "Id must not be null");
+
+ 		long affected =
+ 				queryFactory
+ 						.delete(path)
+ 						.where(idExpr.eq(id))
+ 						.execute();
+
+ 		if (affected > 0) {
+ 			afterBulkDml();
+ 			return true;
+ 		}
+ 		return false;
+ 	}
+
+ 	@Override
+ 	public long deleteByCriteria(CRITERIA criteria) {
+
+ 		Assert.notNull(criteria, "Criteria must not be null");
+
+ 		// STRICT: ID-first delete avoids join side effects.
+-		List<Long> ids = findIds(criteria);
++		List<ID> ids = findIds(criteria);
+ 		if (ids.isEmpty()) {
+ 			return 0;
+ 		}
+
+ 		long affected = 0;
+
+-		for (List<Long> chunk : chunk(ids, bulkInChunkSize())) {
++		for (List<ID> chunk : chunk(ids, bulkInChunkSize())) {
+ 			affected += queryFactory
+ 					.delete(path)
+-					.where(audit.id.in(chunk))
++					.where(idExpr.in(chunk))
+ 					.execute();
+ 		}
+
+ 		afterBulkDml();
+
+ 		return affected;
+ 	}
+
+ 	// ----------------------------------------------------------------------
+ 	// QUERY CONSTRUCTION
+ 	// ----------------------------------------------------------------------
+
+ 	protected AbstractJPAQuery<?, ?> createQuery(
+ 			Predicate predicate,
+ 			String... hints) {
+
+ 		AbstractJPAQuery<?, ?> query =
+ 				querydsl.createQuery(path);
+
+ 		if (predicate != null) {
+ 			query.where(predicate);
+ 		}
+
+ 		QueryHints qh = getRelatedDataHints(hints);
+ 		if (qh != null) {
+@@ -752,148 +752,148 @@ public abstract class AbstractRepositoryImpl<
+
+ 	protected void applySort(JPQLQuery<?> query, CRITERIA criteria) {
+
+ 		List<OrderSpecifier<?>> orderSpecifiers =
+ 				criteria.resolveOrderSpecifiers(path);
+
+ 		if (orderSpecifiers == null || orderSpecifiers.isEmpty()) {
+ 			return;
+ 		}
+
+ 		// 🔒 STRICT FAIL FAST — prevent pagination-unsafe sorting
+ 		validateSortSafety(orderSpecifiers);
+
+ 		query.orderBy(orderSpecifiers.toArray(new OrderSpecifier<?>[0]));
+ 	}
+
+ 	protected void applySortOrDefaultById(
+ 			JPQLQuery<?> query,
+ 			CRITERIA criteria) {
+
+ 		List<OrderSpecifier<?>> specs =
+ 				criteria.resolveOrderSpecifiers(path);
+
+ 		// No sort provided → deterministic default
+ 		if (specs == null || specs.isEmpty()) {
+-			query.orderBy(audit.id.asc());
++			query.orderBy(new OrderSpecifier<>(Order.ASC, idExpr));
+ 			return;
+ 		}
+
+ 		// Fail fast on unsafe ORDER BY
+ 		validateSortSafety(specs);
+
+ 		// Always enforce TOTAL ordering
+ 		boolean hasIdOrder = specs.stream()
+-				.anyMatch(o -> o.getTarget().equals(audit.id));
++				.anyMatch(o -> o.getTarget().equals(idExpr));
+
+ 		if (!hasIdOrder) {
+ 			List<OrderSpecifier<?>> withTieBreaker =
+ 					new ArrayList<>(specs.size() + 1);
+ 			withTieBreaker.addAll(specs);
+-			withTieBreaker.add(audit.id.asc());
++			withTieBreaker.add(new OrderSpecifier<>(Order.ASC, idExpr));
+
+ 			query.orderBy(withTieBreaker.toArray(new OrderSpecifier<?>[0]));
+ 		}
+ 		else {
+ 			query.orderBy(specs.toArray(new OrderSpecifier<?>[0]));
+ 		}
+ 	}
+
+ 	// ----------------------------------------------------------------------
+ 	// STABLE ORDERING AFTER ID PAGING
+ 	// ----------------------------------------------------------------------
+
+ 	/**
+ 	 * Applies stable ordering for the phase-2 entity fetch after an ID-page query.
+ 	 *
+ 	 * <p>
+ 	 * STRICT:
+ 	 * <ul>
+ 	 *   <li>If PostgreSQL: reapply original ORDER BY (same as phase 1).</li>
+ 	 *   <li>If non-Postgres: preserve phase-1 order with CASE ordering.</li>
+ 	 *   <li>No silent fallback. If CASE would exceed safe bounds, throw.</li>
+ 	 * </ul>
+ 	 * </p>
+ 	 */
+ 	protected void applyStableOrderAfterIdPaging(
+ 			JPQLQuery<?> entityQuery,
+ 			CRITERIA criteria,
+-			List<Long> ids) {
++			List<ID> ids) {
+
+ 		if (IS_POSTGRES_DB) {
+ 			// PostgreSQL: reapply ORDER BY safely (same as phase 1)
+ 			applySortOrDefaultById(entityQuery, criteria);
+ 			return;
+ 		}
+
+ 		// Non-Postgres: preserve phase-1 ID order explicitly
+ 		applyIdOrder(entityQuery, ids);
+ 	}
+
+ 	protected int bulkInChunkSize() {
+ 		return 1000;
+ 	}
+
+ 	/**
+ 	 * Preserves ID order explicitly using CASE expressions.
+ 	 *
+ 	 * <p>
+ 	 * Used only for non-Postgres databases.
+ 	 * Page size bounds the SQL complexity.
+ 	 * </p>
+ 	 *
+ 	 * <p>
+ 	 * STRICT:
+ 	 * If the page is too large to safely express as CASE, this method throws.
+ 	 * There is no "unordered fetch" fallback, because that would break determinism.
+ 	 * </p>
+ 	 */
+ 	protected void applyIdOrder(
+ 			JPQLQuery<?> query,
+-			List<Long> ids) {
++			List<ID> ids) {
+
+ 		if (ids == null || ids.isEmpty()) {
+ 			return;
+ 		}
+
+ 		if (ids.size() > maxCaseOrderIds()) {
+ 			throw new IllegalStateException(
+ 					"ID-order CASE too large (" + ids.size() + "). " +
+ 							"Reduce page size or use PostgreSQL ordering mode."
+ 			);
+ 		}
+
+ 		CaseBuilder cb = new CaseBuilder();
+ 		CaseBuilder.Cases<Integer, NumberExpression<Integer>> cases = null;
+
+ 		int index = 0;
+-		for (Long id : ids) {
++		for (ID id : ids) {
+ 			if (cases == null) {
+-				cases = cb.when(audit.id.eq(id)).then(index++);
++				cases = cb.when(idExpr.eq(id)).then(index++);
+ 			}
+ 			else {
+-				cases = cases.when(audit.id.eq(id)).then(index++);
++				cases = cases.when(idExpr.eq(id)).then(index++);
+ 			}
+ 		}
+
+ 		assert cases != null;
+ 		query.orderBy(
+ 				cases.otherwise(Integer.MAX_VALUE).asc()
+ 		);
+ 	}
+
+ 	/**
+ 	 * Maximum number of IDs allowed in CASE ordering for non-Postgres databases.
+ 	 *
+ 	 * <p>
+ 	 * STRICT:
+ 	 * This bound prevents generating pathological SQL and protects query planners.
+ 	 * Exceeding this limit is a caller contract violation and results in an exception.
+ 	 * </p>
+ 	 */
+ 	protected int maxCaseOrderIds() {
+ 		return 200;
+ 	}
+
+ 	// ----------------------------------------------------------------------
+ 	// FETCH GRAPH INTROSPECTION (STRICT TRIGGER ONLY)
+ 	// ----------------------------------------------------------------------
+diff --git a/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/service/base/BaseService.java b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/service/base/BaseService.java
+index 533daeaea71a79fb1ae7aaaf360e89481e78ab62..851389dcb037286bbada418e4dd626f725c2fab3 100644
+--- a/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/service/base/BaseService.java
++++ b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/service/base/BaseService.java
+@@ -24,101 +24,101 @@ import org.springframework.transaction.annotation.Transactional;
+ import org.springframework.util.Assert;
+
+ import java.io.Serializable;
+ import java.lang.reflect.Field;
+ import java.lang.reflect.Modifier;
+ import java.util.ArrayList;
+ import java.util.List;
+ import java.util.Optional;
+
+ import static com.tamantaw.projectx.persistence.utils.LoggerConstants.DATA_INTEGRITY_VIOLATION_MSG;
+
+ @Transactional(transactionManager = PrimaryPersistenceContext.TX_MANAGER, rollbackFor = Exception.class)
+ public abstract class BaseService<
+ 		ID extends Serializable,
+ 		ENTITY extends AbstractEntity<ID>,
+ 		QCLAZZ extends EntityPathBase<ENTITY>,
+ 		CRITERIA extends AbstractCriteria<QCLAZZ, ID>,
+ 		DTO extends AbstractDTO,
+ 		MAPPER extends AbstractMapper<DTO, ENTITY>
+ 		> {
+
+ 	private static final Logger log =
+ 			LogManager.getLogger("serviceLogs." + BaseService.class.getSimpleName());
+
+ 	protected final MAPPER mapper;
+-	protected final AbstractRepository<ENTITY, QCLAZZ, CRITERIA, ID> repository;
++	protected final AbstractRepository<ID, ENTITY, QCLAZZ, CRITERIA> repository;
+
+ 	@Autowired
+ 	protected MappingContext mappingContext;
+
+ 	protected BaseService(
+-			AbstractRepository<ENTITY, QCLAZZ, CRITERIA, ID> repository,
++			AbstractRepository<ID, ENTITY, QCLAZZ, CRITERIA> repository,
+ 			MAPPER mapper
+ 	) {
+ 		this.repository = repository;
+ 		this.mapper = mapper;
+ 	}
+
+ // ----------------------------------------------------------------------
+ // Context helpers (KEEP)
+ // ----------------------------------------------------------------------
+
+ 	protected String serviceName() {
+ 		return getClass().getSimpleName();
+ 	}
+
+ 	protected String domainName(CRITERIA criteria) {
+ 		return (criteria != null && criteria.getObjectClass() != null)
+ 				? criteria.getObjectClass().getSimpleName()
+ 				: "UnknownDomain";
+ 	}
+
+ 	protected String criteriaName(CRITERIA criteria) {
+ 		return (criteria != null)
+ 				? criteria.getClass().getSimpleName()
+ 				: "NoCriteria";
+ 	}
+
+ 	protected String ctx(CRITERIA criteria) {
+ 		return String.format(
+ 				"[service=%s][domain=%s][criteria=%s]",
+ 				serviceName(),
+ 				domainName(criteria),
+ 				criteriaName(criteria)
+ 		);
+ 	}
+
+ // ----------------------------------------------------------------------
+ // READ (ENTITY → DTO)
+ // ----------------------------------------------------------------------
+
+ 	@Transactional(readOnly = true)
+-	public Optional<DTO> findById(long id) throws PersistenceException {
++	public Optional<DTO> findById(ID id) throws PersistenceException {
+
+ 		String c = String.format(
+-				"[service=%s][domain=%s][id=%d]",
++				"[service=%s][domain=%s][id=%s]",
+ 				serviceName(),
+ 				"ById",
+ 				id
+ 		);
+
+ 		log.info("{} FIND_BY_ID start", c);
+
+ 		try {
+ 			Optional<ENTITY> entity = repository.findById(id);
+ 			Optional<DTO> dto = entity.map(e -> mapper.toDto(e, mappingContext));
+
+ 			log.info("{} FIND_BY_ID result found={}", c, dto.isPresent());
+ 			return dto;
+ 		}
+ 		catch (Exception e) {
+ 			log.error("{} FIND_BY_ID failed", c, e);
+ 			throw new PersistenceException("FindById failed id=" + id, e);
+ 		}
+ 	}
+
+ 	@Transactional(readOnly = true)
+ 	public Optional<DTO> findOne(CRITERIA criteria, String... hints) throws PersistenceException {
+
+ 		Assert.notNull(criteria, "Criteria must not be null");
+
+@@ -319,54 +319,55 @@ public abstract class BaseService<
+ 			log.info("{} CREATE_ALL success savedSize={}", c, saved.size());
+ 			return saved;
+ 		}
+ 		catch (DataIntegrityViolationException e) {
+ 			log.error("{} CREATE_ALL integrity violation size={}", c, dtos.size(), e);
+ 			throw new ConsistencyViolationException(DATA_INTEGRITY_VIOLATION_MSG, e);
+ 		}
+ 		catch (Exception e) {
+ 			log.error("{} CREATE_ALL failed size={}", c, dtos.size(), e);
+ 			throw new PersistenceException(
+ 					"CreateAll failed dto=" + (dtos.isEmpty() ? "EmptyList" : dtos.getFirst().getClass().getSimpleName()),
+ 					e
+ 			);
+ 		}
+ 	}
+
+ // ----------------------------------------------------------------------
+ // UPDATE / DELETE
+ // ----------------------------------------------------------------------
+
+ 	public DTO update(DTO dto, long updatedBy) throws PersistenceException, ConsistencyViolationException {
+
+ 		Assert.notNull(dto, "DTO must not be null");
+ 		Assert.notNull(dto.getId(), "DTO id must not be null");
+
+-		long id = dto.getId();
++		@SuppressWarnings("unchecked")
++		ID id = (ID) dto.getId();
+
+ 		String c = String.format(
+-				"[service=%s][dto=%s][id=%d]",
++				"[service=%s][dto=%s][id=%s]",
+ 				serviceName(),
+ 				dto.getClass().getSimpleName(),
+ 				id
+ 		);
+
+ 		log.info("{} UPDATE_BY_ID start updatedBy={}", c, updatedBy);
+
+ 		try {
+ 			UpdateSpec<ENTITY> spec = buildUpdateSpecFromDto(dto);
+
+ 			long affected = repository.updateById(spec, id, updatedBy);
+
+ 			if (affected == 0) {
+ 				throw new EntityNotFoundException(
+ 						"Entity not found for id=" + id
+ 				);
+ 			}
+
+ 			return findById(id).orElseThrow(
+ 					() -> new IllegalStateException(
+ 							"Entity disappeared after update id=" + id
+ 					)
+ 			);
+ 		}
+ 		catch (DataIntegrityViolationException e) {
+@@ -386,59 +387,59 @@ public abstract class BaseService<
+ 	public long update(UpdateSpec<ENTITY> spec, CRITERIA criteria, long updatedBy)
+ 			throws PersistenceException, ConsistencyViolationException {
+
+ 		Assert.notNull(spec, "UpdateSpec must not be null");
+ 		Assert.notNull(criteria, "Criteria must not be null");
+
+ 		String c = ctx(criteria);
+ 		log.info("{} UPDATE start updatedBy={} , criteria={}",
+ 				c, updatedBy, criteria);
+
+ 		try {
+ 			long affected = repository.updateByCriteria(spec, criteria, updatedBy);
+
+ 			log.info("{} UPDATE success affectedRows={}", c, affected);
+ 			return affected;
+ 		}
+ 		catch (DataIntegrityViolationException e) {
+ 			log.error("{} UPDATE integrity violation criteria={}", c, criteria, e);
+ 			throw new ConsistencyViolationException(
+ 					DATA_INTEGRITY_VIOLATION_MSG, e
+ 			);
+ 		}
+ 		catch (Exception e) {
+ 			log.error("{} UPDATE failed criteria={}", c, criteria, e);
+ 			throw new PersistenceException(
+-					"Update failed criteria=" + criteriaName(criteria), e
++			"Update failed criteria=" + criteriaName(criteria), e
+ 			);
+ 		}
+ 	}
+
+-	public boolean deleteById(long id) throws PersistenceException {
++	public boolean deleteById(ID id) throws PersistenceException {
+
+ 		String c = String.format(
+-				"[service=%s][domain=%s][id=%d]",
++				"[service=%s][domain=%s][id=%s]",
+ 				serviceName(),
+ 				"DeleteById",
+ 				id
+ 		);
+
+ 		try {
+ 			return repository.deleteWithId(id);
+ 		}
+ 		catch (Exception e) {
+ 			log.error("{} FIND_BY_ID failed", c, e);
+ 			throw new PersistenceException("DeleteById failed id=" + id, e);
+ 		}
+ 	}
+
+ 	public long delete(CRITERIA criteria)
+ 			throws PersistenceException, ConsistencyViolationException {
+
+ 		Assert.notNull(criteria, "Criteria must not be null");
+
+ 		String c = ctx(criteria);
+ 		log.info("{} DELETE start criteria={}", c, criteria);
+
+ 		try {
+ 			long deleted = repository.deleteByCriteria(criteria);
+

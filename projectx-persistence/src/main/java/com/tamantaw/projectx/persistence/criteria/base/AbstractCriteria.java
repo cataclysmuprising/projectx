@@ -34,8 +34,8 @@ public abstract class AbstractCriteria<A extends EntityPathBase<?>, ID extends S
 	// ----------------------------------------------------------------------
 
 	protected final List<OrderSpecifier<?>> orderSpecifiers = new ArrayList<>();
-	protected Set<Long> includeIds;
-	protected Set<Long> excludeIds;
+	protected Set<ID> includeIds;
+	protected Set<ID> excludeIds;
 	protected Long createdBy;
 	protected Long updatedBy;
 	protected LocalDateTime createdDateFrom;
@@ -353,4 +353,3 @@ public abstract class AbstractCriteria<A extends EntityPathBase<?>, ID extends S
 
 	public abstract Class<?> getObjectClass();
 }
-

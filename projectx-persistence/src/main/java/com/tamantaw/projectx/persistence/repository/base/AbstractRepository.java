@@ -30,7 +30,7 @@ public interface AbstractRepository<
 	// ------------------------------
 	// ID-BASED READS (safe)
 	// ------------------------------
-	List<Long> findIds(CRITERIA criteria);
+	List<ID> findIds(CRITERIA criteria);
 
 	long count(CRITERIA criteria);
 
@@ -43,7 +43,7 @@ public interface AbstractRepository<
 
 	List<ENTITY> saveAllRecords(Iterable<ENTITY> entities);
 
-	long updateById(UpdateSpec<ENTITY> spec, long id, long updatedBy);
+	long updateById(UpdateSpec<ENTITY> spec, ID id, long updatedBy);
 
 	<E extends ENTITY> long updateByCriteria(UpdateSpec<E> spec, CRITERIA criteria, Long updatedBy);
 
@@ -56,6 +56,4 @@ public interface AbstractRepository<
 
 	long deleteByCriteria(CRITERIA criteria);
 }
-
-
 

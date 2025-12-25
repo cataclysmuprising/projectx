@@ -46,13 +46,13 @@ public abstract class BaseService<
 			LogManager.getLogger("serviceLogs." + BaseService.class.getSimpleName());
 
 	protected final MAPPER mapper;
-	protected final AbstractRepository<ENTITY, QCLAZZ, CRITERIA, ID> repository;
+	protected final AbstractRepository<ID, ENTITY, QCLAZZ, CRITERIA> repository;
 
 	@Autowired
 	protected MappingContext mappingContext;
 
 	protected BaseService(
-			AbstractRepository<ENTITY, QCLAZZ, CRITERIA, ID> repository,
+			AbstractRepository<ID, ENTITY, QCLAZZ, CRITERIA> repository,
 			MAPPER mapper
 	) {
 		this.repository = repository;
@@ -93,10 +93,10 @@ public abstract class BaseService<
 // ----------------------------------------------------------------------
 
 	@Transactional(readOnly = true)
-	public Optional<DTO> findById(long id) throws PersistenceException {
+	public Optional<DTO> findById(ID id) throws PersistenceException {
 
 		String c = String.format(
-				"[service=%s][domain=%s][id=%d]",
+				"[service=%s][domain=%s][id=%s]",
 				serviceName(),
 				"ById",
 				id
@@ -341,10 +341,11 @@ public abstract class BaseService<
 		Assert.notNull(dto, "DTO must not be null");
 		Assert.notNull(dto.getId(), "DTO id must not be null");
 
-		long id = dto.getId();
+		@SuppressWarnings("unchecked")
+		ID id = (ID) dto.getId();
 
 		String c = String.format(
-				"[service=%s][dto=%s][id=%d]",
+				"[service=%s][dto=%s][id=%s]",
 				serviceName(),
 				dto.getClass().getSimpleName(),
 				id
@@ -413,10 +414,10 @@ public abstract class BaseService<
 		}
 	}
 
-	public boolean deleteById(long id) throws PersistenceException {
+	public boolean deleteById(ID id) throws PersistenceException {
 
 		String c = String.format(
-				"[service=%s][domain=%s][id=%d]",
+				"[service=%s][domain=%s][id=%s]",
 				serviceName(),
 				"DeleteById",
 				id

@@ -59,12 +59,12 @@ import java.util.*;
  * </p>
  */
 public abstract class AbstractRepositoryImpl<
+		ID extends Serializable,
 		ENTITY extends AbstractEntity<ID>,
 		QCLAZZ extends EntityPathBase<ENTITY>,
-		CRITERIA extends AbstractCriteria<QCLAZZ, ID>,
-		ID extends Serializable>
+		CRITERIA extends AbstractCriteria<QCLAZZ, ID>>
 		extends SimpleJpaRepository<ENTITY, ID>
-		implements AbstractRepository<ENTITY, QCLAZZ, CRITERIA, ID> {
+		implements AbstractRepository<ID, ENTITY, QCLAZZ, CRITERIA> {
 
 	// ----------------------------------------------------------------------
 	// STATIC CONFIGURATION
@@ -253,12 +253,12 @@ public abstract class AbstractRepositoryImpl<
 		// ------------------------------------------------------------
 		// SAFE PATH — collection fetch (ID first)
 		// ------------------------------------------------------------
-		JPQLQuery<Long> idQuery =
-				createQuery(filter).select(audit.id);
+		JPQLQuery<ID> idQuery =
+				createQuery(filter).select(idExpr);
 
 		applySortOrDefaultById(idQuery, criteria);
 
-		List<Long> ids = idQuery.limit(2).fetch();
+		List<ID> ids = idQuery.limit(2).fetch();
 
 		if (ids.isEmpty()) {
 			return Optional.empty();
@@ -270,7 +270,7 @@ public abstract class AbstractRepositoryImpl<
 		}
 
 		JPQLQuery<ENTITY> entityQuery =
-				createQuery(audit.id.eq(ids.getFirst()), hints)
+				createQuery(idExpr.eq(ids.getFirst()), hints)
 						.select(path);
 
 		return Optional.ofNullable(entityQuery.fetchOne());
@@ -322,19 +322,19 @@ public abstract class AbstractRepositoryImpl<
 		// ------------------------------------------------------------
 
 		// Phase 1 — deterministic ID selection
-		JPQLQuery<Long> idQuery =
-				createQuery(filter).select(audit.id);
+		JPQLQuery<ID> idQuery =
+				createQuery(filter).select(idExpr);
 
 		applySortOrDefaultById(idQuery, criteria);
 
-		List<Long> ids = idQuery.fetch();
+		List<ID> ids = idQuery.fetch();
 		if (ids.isEmpty()) {
 			return List.of();
 		}
 
 		// Phase 2 — entity fetch with fetch graph
 		JPQLQuery<ENTITY> entityQuery =
-				createQuery(audit.id.in(ids), hints).select(path);
+				createQuery(idExpr.in(ids), hints).select(path);
 
 		applyStableOrderAfterIdPaging(entityQuery, criteria, ids);
 
@@ -403,8 +403,8 @@ public abstract class AbstractRepositoryImpl<
 		// ------------------------------------------------------------
 		// PHASE 1 — ID PAGE (GLOBAL ORDER + OFFSET/LIMIT)
 		// ------------------------------------------------------------
-		JPQLQuery<Long> idQuery =
-				createQuery(filter).select(audit.id);
+		JPQLQuery<ID> idQuery =
+				createQuery(filter).select(idExpr);
 
 		applySortOrDefaultById(idQuery, criteria);
 
@@ -412,7 +412,7 @@ public abstract class AbstractRepositoryImpl<
 				.offset(pageable.getOffset())
 				.limit(pageable.getPageSize());
 
-		List<Long> ids = idQuery.fetch();
+		List<ID> ids = idQuery.fetch();
 
 		if (ids.isEmpty()) {
 			return Page.empty(pageable);
@@ -422,7 +422,7 @@ public abstract class AbstractRepositoryImpl<
 		// PHASE 2 — ENTITY FETCH
 		// ------------------------------------------------------------
 		JPQLQuery<ENTITY> entityQuery =
-				createQuery(audit.id.in(ids), hints).select(path);
+				createQuery(idExpr.in(ids), hints).select(path);
 
 		applyStableOrderAfterIdPaging(entityQuery, criteria, ids);
 
@@ -441,14 +441,14 @@ public abstract class AbstractRepositoryImpl<
 	 * </p>
 	 */
 	@Override
-	public List<Long> findIds(CRITERIA criteria) {
+	public List<ID> findIds(CRITERIA criteria) {
 
 		Assert.notNull(criteria, "Criteria must not be null");
 
 		Predicate filter = criteria.getFilter(path);
 
-		JPQLQuery<Long> query =
-				createQuery(filter).select(audit.id);
+		JPQLQuery<ID> query =
+				createQuery(filter).select(idExpr);
 
 		applySortOrDefaultById(query, criteria);
 
@@ -476,7 +476,7 @@ public abstract class AbstractRepositoryImpl<
 
 		Long count =
 				createQuery(filter)
-						.select(audit.id.count())
+						.select(idExpr.count())
 						.fetchOne();
 
 		return count == null ? 0L : count;
@@ -493,7 +493,7 @@ public abstract class AbstractRepositoryImpl<
 		Predicate filter = criteria.getFilter(path);
 
 		return createQuery(filter)
-				.select(audit.id)
+				.select(idExpr)
 				.fetchFirst() != null;
 	}
 
@@ -514,7 +514,7 @@ public abstract class AbstractRepositoryImpl<
 	@Override
 	public long updateById(
 			UpdateSpec<ENTITY> spec,
-			long id,
+			ID id,
 			long updatedBy) {
 
 		Assert.notNull(spec, "UpdateSpec must not be null");
@@ -525,7 +525,7 @@ public abstract class AbstractRepositoryImpl<
 
 		spec.apply(update, path);
 
-		long affected = update.where(audit.id.eq(id)).execute();
+		long affected = update.where(idExpr.eq(id)).execute();
 
 		afterBulkDml();
 
@@ -548,14 +548,14 @@ public abstract class AbstractRepositoryImpl<
 		// STRICT:
 		// Bulk DML must not depend on join-fetch graphs or unsafe ordering.
 		// This method updates by ID chunks derived from the same deterministic ID selection.
-		List<Long> ids = findIds(criteria);
+		List<ID> ids = findIds(criteria);
 		if (ids.isEmpty()) {
 			return 0;
 		}
 
 		long affected = 0;
 
-		for (List<Long> chunk : chunk(ids, bulkInChunkSize())) {
+		for (List<ID> chunk : chunk(ids, bulkInChunkSize())) {
 
 			JPAUpdateClause update =
 					queryFactory.update(typedPath);
@@ -564,7 +564,7 @@ public abstract class AbstractRepositoryImpl<
 			spec.apply(update, typedPath);
 
 			affected +=
-					update.where(audit.id.in(chunk)).execute();
+					update.where(idExpr.in(chunk)).execute();
 		}
 
 		afterBulkDml();
@@ -596,17 +596,17 @@ public abstract class AbstractRepositoryImpl<
 		Assert.notNull(criteria, "Criteria must not be null");
 
 		// STRICT: ID-first delete avoids join side effects.
-		List<Long> ids = findIds(criteria);
+		List<ID> ids = findIds(criteria);
 		if (ids.isEmpty()) {
 			return 0;
 		}
 
 		long affected = 0;
 
-		for (List<Long> chunk : chunk(ids, bulkInChunkSize())) {
+		for (List<ID> chunk : chunk(ids, bulkInChunkSize())) {
 			affected += queryFactory
 					.delete(path)
-					.where(audit.id.in(chunk))
+					.where(idExpr.in(chunk))
 					.execute();
 		}
 
@@ -774,7 +774,7 @@ public abstract class AbstractRepositoryImpl<
 
 		// No sort provided → deterministic default
 		if (specs == null || specs.isEmpty()) {
-			query.orderBy(audit.id.asc());
+			query.orderBy(new OrderSpecifier<>(Order.ASC, idExpr));
 			return;
 		}
 
@@ -783,13 +783,13 @@ public abstract class AbstractRepositoryImpl<
 
 		// Always enforce TOTAL ordering
 		boolean hasIdOrder = specs.stream()
-				.anyMatch(o -> o.getTarget().equals(audit.id));
+				.anyMatch(o -> o.getTarget().equals(idExpr));
 
 		if (!hasIdOrder) {
 			List<OrderSpecifier<?>> withTieBreaker =
 					new ArrayList<>(specs.size() + 1);
 			withTieBreaker.addAll(specs);
-			withTieBreaker.add(audit.id.asc());
+			withTieBreaker.add(new OrderSpecifier<>(Order.ASC, idExpr));
 
 			query.orderBy(withTieBreaker.toArray(new OrderSpecifier<?>[0]));
 		}
@@ -817,7 +817,7 @@ public abstract class AbstractRepositoryImpl<
 	protected void applyStableOrderAfterIdPaging(
 			JPQLQuery<?> entityQuery,
 			CRITERIA criteria,
-			List<Long> ids) {
+			List<ID> ids) {
 
 		if (IS_POSTGRES_DB) {
 			// PostgreSQL: reapply ORDER BY safely (same as phase 1)
@@ -849,7 +849,7 @@ public abstract class AbstractRepositoryImpl<
 	 */
 	protected void applyIdOrder(
 			JPQLQuery<?> query,
-			List<Long> ids) {
+			List<ID> ids) {
 
 		if (ids == null || ids.isEmpty()) {
 			return;
@@ -866,12 +866,12 @@ public abstract class AbstractRepositoryImpl<
 		CaseBuilder.Cases<Integer, NumberExpression<Integer>> cases = null;
 
 		int index = 0;
-		for (Long id : ids) {
+		for (ID id : ids) {
 			if (cases == null) {
-				cases = cb.when(audit.id.eq(id)).then(index++);
+				cases = cb.when(idExpr.eq(id)).then(index++);
 			}
 			else {
-				cases = cases.when(audit.id.eq(id)).then(index++);
+				cases = cases.when(idExpr.eq(id)).then(index++);
 			}
 		}
 
