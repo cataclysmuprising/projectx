@@ -164,26 +164,13 @@ Ensures:
 
 ---
 
-## 🐘 PostgreSQL Optimization
+## 🐘 DB-aware pagination ordering
 
-```java
-public static final boolean IS_POSTGRES_DB = true;
-```
-
-### Why this flag exists
-
-- PostgreSQL guarantees **deterministic ORDER BY behavior**
-- Allows safe reapplication of `ORDER BY` in Phase 2
-- Avoids SQL hacks like `CASE` or `array_position`
-
-### Behavior
-
-| Database   | Phase-2 Ordering                      |
-|------------|---------------------------------------|
-| PostgreSQL | Re-apply `ORDER BY`                   |
-| Other DBs  | Preserve ID order via CASE expression |
-
-> ⚠️ This flag is **explicit by design** — no auto-detection magic.
+- No more `IS_POSTGRES_DB` flag to toggle by hand.
+- Phase 2 (entity fetch) now auto-selects the safe ordering strategy:
+    - PostgreSQL: re-apply the original `ORDER BY`.
+    - Other databases: preserve ID order explicitly via `CASE` over the page IDs.
+- Keeps pagination deterministic without hidden auto-detection while avoiding config switches.
 
 ---
 

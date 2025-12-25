@@ -1,5 +1,5 @@
 diff --git a/README.md b/README.md
-index 0489ae71c05edb80c48f65ffbcdad0a9243564f7..68b21c607a66911500b7b227b1eb044d5af21133 100644
+index 0489ae71c05edb80c48f65ffbcdad0a9243564f7..82e66f7f2c97eecb4ed0d99a18ac24f38bc56d90 100644
 --- a/README.md
 +++ b/README.md
 @@ -31,50 +31,51 @@ ProjectX is now a full-stack template that pairs a deterministic persistence lay
@@ -54,3 +54,80 @@ index 0489ae71c05edb80c48f65ffbcdad0a9243564f7..68b21c607a66911500b7b227b1eb044d
  #### 2. EXISTS-Based Nested Filtering (No JOIN Filters)
 
  All nested criteria are implemented using **`EXISTS` subqueries**, never JOINs.
+@@ -141,70 +142,57 @@ FROM table
+ WHERE filter
+ ORDER BY sort
+ OFFSET / LIMIT
+ ```
+
+ Defines **exact page membership**.
+
+ #### Phase 2 — Entity Fetch
+
+ ```
+ SELECT entity
+ FROM table
+ LEFT JOIN collections
+ WHERE id IN (:ids)
+ ORDER BY <strategy>
+ ```
+
+ Ensures:
+
+ - No Hibernate paging warnings
+ - No incorrect result sets
+ - No duplicated entities
+
+ ---
+
+-## 🐘 PostgreSQL Optimization
++## 🐘 DB-aware pagination ordering
+
+-```java
+-public static final boolean IS_POSTGRES_DB = true;
+-```
+-
+-### Why this flag exists
+-
+-- PostgreSQL guarantees **deterministic ORDER BY behavior**
+-- Allows safe reapplication of `ORDER BY` in Phase 2
+-- Avoids SQL hacks like `CASE` or `array_position`
+-
+-### Behavior
+-
+-| Database   | Phase-2 Ordering                      |
+-|------------|---------------------------------------|
+-| PostgreSQL | Re-apply `ORDER BY`                   |
+-| Other DBs  | Preserve ID order via CASE expression |
+-
+-> ⚠️ This flag is **explicit by design** — no auto-detection magic.
++- No more `IS_POSTGRES_DB` flag to toggle by hand.
++- Phase 2 (entity fetch) now auto-selects the safe ordering strategy:
++  - PostgreSQL: re-apply the original `ORDER BY`.
++  - Other databases: preserve ID order explicitly via `CASE` over the page IDs.
++- Keeps pagination deterministic without hidden auto-detection while avoiding config switches.
+
+ ---
+
+ ## 🚫 API Contract Rules
+
+ ### `findAll()`
+
+ - ❌ Paging NOT allowed
+ - ✅ Sorting allowed
+ - Used only for full result sets
+
+ ```java
+ findAll(criteria);              // OK
+
+ findAll(criteria with paging);  // ❌ throws exception
+ ```
+
+ ---
+
+ ### `findByPaging()`
+
+ - ✅ The **only** paging entry point
+ - Supports:
+     - Offset + limit
+     - Page number
