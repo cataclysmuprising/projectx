@@ -104,7 +104,7 @@ public class RoleService
 		}
 	}
 
-	public Role create(RoleDTO dto, List<Long> actionIds, long createdBy)
+	public Role create(RoleDTO dto, Set<Long> actionIds, long createdBy)
 			throws PersistenceException, ConsistencyViolationException {
 
 		Assert.notNull(dto, "DTO must not be null");
@@ -125,10 +125,9 @@ public class RoleService
 			entity.setCreatedBy(createdBy);
 			entity.setUpdatedBy(createdBy);
 
-			Set<Long> uniqueActionIds = new LinkedHashSet<>(actionIds);
-			List<RoleAction> roleActions = new ArrayList<>(uniqueActionIds.size());
+			List<RoleAction> roleActions = new ArrayList<>(actionIds.size());
 
-			for (Long actionId : uniqueActionIds) {
+			for (Long actionId : actionIds) {
 				RoleAction roleAction = new RoleAction();
 				roleAction.setRole(entity);
 				roleAction.setAction(entityManager.getReference(Action.class, actionId));

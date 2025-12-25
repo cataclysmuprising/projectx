@@ -21,7 +21,6 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -56,7 +55,7 @@ public class AdministratorService
 
 	public Administrator create(
 			AdministratorDTO dto,
-			List<Long> roleIds,
+			Set<Long> roleIds,
 			long createdBy
 	) throws PersistenceException, ConsistencyViolationException {
 
@@ -85,14 +84,9 @@ public class AdministratorService
 			List<AdministratorRole> roles = entity.getAdministratorRoles();
 
 			// --------------------------------------------------
-			// 2. Deduplicate role IDs
+			// 2. ADD roles (do NOT replace collection)
 			// --------------------------------------------------
-			Set<Long> uniqueRoleIds = new LinkedHashSet<>(roleIds);
-
-			// --------------------------------------------------
-			// 3. ADD roles (do NOT replace collection)
-			// --------------------------------------------------
-			for (Long roleId : uniqueRoleIds) {
+			for (Long roleId : roleIds) {
 				AdministratorRole ar = new AdministratorRole();
 				ar.setAdministrator(entity);
 				ar.setRole(entityManager.getReference(Role.class, roleId));
@@ -125,7 +119,7 @@ public class AdministratorService
 
 	public void updateAdministratorAndRoles(
 			AdministratorDTO dto,
-			List<Long> roleIds,
+			Set<Long> roleIds,
 			long updatedBy
 	) throws PersistenceException, ConsistencyViolationException {
 
@@ -176,13 +170,11 @@ public class AdministratorService
 			// 🔥 Force init to avoid orphanRemoval issues
 			existingRoles.size();
 
-			Set<Long> uniqueRoleIds = new LinkedHashSet<>(roleIds);
-
 			// --------------------------------------------------
 			// 3. Remove obsolete roles (orphanRemoval = true)
 			// --------------------------------------------------
 			existingRoles.removeIf(
-					ar -> !uniqueRoleIds.contains(ar.getRole().getId())
+					ar -> !roleIds.contains(ar.getRole().getId())
 			);
 
 			// --------------------------------------------------
@@ -193,7 +185,7 @@ public class AdministratorService
 							.map(ar -> ar.getRole().getId())
 							.collect(Collectors.toSet());
 
-			for (Long roleId : uniqueRoleIds) {
+			for (Long roleId : roleIds) {
 				if (existingRoleIds.contains(roleId)) {
 					continue;
 				}

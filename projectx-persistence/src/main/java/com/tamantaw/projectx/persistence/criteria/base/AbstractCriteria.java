@@ -3,10 +3,10 @@ package com.tamantaw.projectx.persistence.criteria.base;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
-import com.querydsl.core.types.Predicate;
 import com.querydsl.core.types.Path;
-import com.querydsl.core.types.dsl.EntityPathBase;
+import com.querydsl.core.types.Predicate;
 import com.querydsl.core.types.dsl.ComparableExpressionBase;
+import com.querydsl.core.types.dsl.EntityPathBase;
 import com.querydsl.core.types.dsl.PathBuilder;
 import com.tamantaw.projectx.persistence.entity.base.QAbstractEntity;
 import lombok.Data;
@@ -16,7 +16,10 @@ import org.springframework.data.domain.Sort;
 import org.springframework.util.CollectionUtils;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
 
 @Data
 public abstract class AbstractCriteria<A extends EntityPathBase<?>> {
@@ -31,54 +34,44 @@ public abstract class AbstractCriteria<A extends EntityPathBase<?>> {
 	// ----------------------------------------------------------------------
 	// COMMON FILTER FIELDS
 	// ----------------------------------------------------------------------
-
+	protected final List<OrderSpecifier<?>> orderSpecifiers = new ArrayList<>();
 	protected Long id;
 	protected Long fromId;
-
 	protected Set<Long> includeIds;
 	protected Set<Long> excludeIds;
-
 	protected Long createdBy;
 	protected Long updatedBy;
-
 	protected LocalDateTime createdDateFrom;
 	protected LocalDateTime createdDateTo;
 	protected LocalDateTime updatedDateFrom;
 	protected LocalDateTime updatedDateTo;
 
-	// COMMON KEYWORD
+	// ----------------------------------------------------------------------
+	// SORTING (JAVA SIDE – TYPE SAFE)
+	// ----------------------------------------------------------------------
 	protected String keyword;
 
 	// ----------------------------------------------------------------------
-	// SORTING (MULTI-COLUMN)
+	// SORTING (CLIENT SIDE – STRING BASED)
 	// ----------------------------------------------------------------------
+	/**
+	 * Client-provided sort keys (column names).
+	 * Order matters.
+	 */
+	protected List<String> sortKeys;
 
 	/**
-	 * Ordered sort fields.
-	 * Example:
-	 * id -> DESC
-	 * name -> ASC
+	 * Client-provided sort directions.
+	 * Must align with sortKeys by index.
 	 */
-	protected final List<OrderSpecifier<?>> orderSpecifiers = new ArrayList<>();
+	protected List<Sort.Direction> sortDirs;
 
 	// ----------------------------------------------------------------------
 	// PAGING INPUTS
 	// ----------------------------------------------------------------------
 
-	/**
-	 * Page number (1-based, controller-friendly).
-	 * If provided, offset is calculated automatically.
-	 */
 	protected Integer pageNumber;
-
-	/**
-	 * Zero-based offset (advanced usage).
-	 */
 	protected Integer offset;
-
-	/**
-	 * Page size / limit.
-	 */
 	protected Integer limit;
 
 	// ----------------------------------------------------------------------
@@ -124,7 +117,7 @@ public abstract class AbstractCriteria<A extends EntityPathBase<?>> {
 	}
 
 	// ----------------------------------------------------------------------
-	// SORTING
+	// SORTING – JAVA SIDE
 	// ----------------------------------------------------------------------
 
 	public void addSort(
@@ -139,12 +132,45 @@ public abstract class AbstractCriteria<A extends EntityPathBase<?>> {
 		orderSpecifiers.add(new OrderSpecifier<>(order, property));
 	}
 
+	// ----------------------------------------------------------------------
+	// SORTING – RESOLUTION (JAVA + CLIENT)
+	// ----------------------------------------------------------------------
+
 	public List<OrderSpecifier<?>> resolveOrderSpecifiers(EntityPathBase<?> root) {
 
+		// 1️⃣ Explicit Java-side sorting (highest priority)
 		if (!CollectionUtils.isEmpty(orderSpecifiers)) {
 			return List.copyOf(orderSpecifiers);
 		}
 
+		// 2️⃣ Client-side string sorting (multi-column)
+		if (root != null
+				&& !CollectionUtils.isEmpty(sortKeys)
+				&& !CollectionUtils.isEmpty(sortDirs)
+				&& sortKeys.size() == sortDirs.size()) {
+
+			PathBuilder<?> pb =
+					new PathBuilder<>(root.getType(), root.getMetadata());
+
+			List<OrderSpecifier<?>> clientOrders = new ArrayList<>();
+
+			for (int i = 0; i < sortKeys.size(); i++) {
+				String key = sortKeys.get(i);
+				Sort.Direction dir = sortDirs.get(i);
+
+				ComparableExpressionBase<?> expr =
+						pb.getComparable(key, Comparable.class); // may throw → accepted
+
+				Order order = dir.isAscending() ? Order.ASC : Order.DESC;
+				clientOrders.add(new OrderSpecifier<>(order, expr));
+			}
+
+			if (!clientOrders.isEmpty()) {
+				return clientOrders;
+			}
+		}
+
+		// 3️⃣ Deterministic fallback
 		if (root == null) {
 			return Collections.emptyList();
 		}
@@ -152,20 +178,33 @@ public abstract class AbstractCriteria<A extends EntityPathBase<?>> {
 		PathBuilder<?> pb =
 				new PathBuilder<>(root.getType(), root.getMetadata());
 
-		return List.of(new OrderSpecifier<>(Order.DESC, pb.getComparable("id", Comparable.class)));
+		return List.of(
+				new OrderSpecifier<>(
+						Order.DESC,
+						pb.getComparable("id", Comparable.class)
+				)
+		);
 	}
+
+	// ----------------------------------------------------------------------
+	// SPRING DATA SORT (FOR Pageable)
+	// ----------------------------------------------------------------------
 
 	public Sort resolveSort() {
 
 		List<OrderSpecifier<?>> orders = resolveOrderSpecifiers(null);
+
 		if (CollectionUtils.isEmpty(orders)) {
 			return Sort.by(Sort.Direction.DESC, "id");
 		}
 
 		List<Sort.Order> sortOrders = new ArrayList<>();
+
 		for (OrderSpecifier<?> o : orders) {
 			Sort.Direction direction =
-					o.getOrder() == Order.ASC ? Sort.Direction.ASC : Sort.Direction.DESC;
+					o.getOrder() == Order.ASC
+							? Sort.Direction.ASC
+							: Sort.Direction.DESC;
 
 			String propertyName = resolvePropertyName(o);
 			if (propertyName == null) {
@@ -176,10 +215,12 @@ public abstract class AbstractCriteria<A extends EntityPathBase<?>> {
 
 			sortOrders.add(new Sort.Order(direction, propertyName));
 		}
+
 		return Sort.by(sortOrders);
 	}
 
 	private String resolvePropertyName(OrderSpecifier<?> orderSpecifier) {
+
 		if (orderSpecifier == null || orderSpecifier.getTarget() == null) {
 			return null;
 		}
@@ -192,34 +233,39 @@ public abstract class AbstractCriteria<A extends EntityPathBase<?>> {
 	}
 
 	// ----------------------------------------------------------------------
+// SORTING – STRING BASED (CLIENT OR JAVA)
+// ----------------------------------------------------------------------
+
+	public void addSortKey(String key, Sort.Direction direction) {
+
+		if (key == null || direction == null) {
+			return;
+		}
+
+		if (sortKeys == null) {
+			sortKeys = new ArrayList<>();
+			sortDirs = new ArrayList<>();
+		}
+
+		sortKeys.add(key);
+		sortDirs.add(direction);
+	}
+
+	public void clearStringSorts() {
+		if (sortKeys != null) {
+			sortKeys.clear();
+		}
+		if (sortDirs != null) {
+			sortDirs.clear();
+		}
+	}
+
+	// ----------------------------------------------------------------------
 	// PAGING
 	// ----------------------------------------------------------------------
 
-	/**
-	 * Computes {@link Pageable} dynamically based on controller inputs.
-	 *
-	 * <p><b>Supported controller input combinations</b>:
-	 * <ul>
-	 *   <li><b>pageNumber only</b> → offset is auto-calculated</li>
-	 *   <li><b>pageNumber + limit</b> → offset is auto-calculated</li>
-	 *   <li><b>offset + limit</b> → raw offset-based paging</li>
-	 *   <li><b>nothing provided</b> → paging is NOT applied</li>
-	 * </ul>
-	 *
-	 * <p><b>Important contract rule</b>:
-	 * <ul>
-	 *   <li>Paging is <b>opt-in</b>.</li>
-	 *   <li>{@code limit} alone must NOT trigger paging.</li>
-	 *   <li>{@code findAll()} must never silently truncate results.</li>
-	 * </ul>
-	 */
 	public Pageable toPageable() {
 
-		// ----------------------------------------------------------
-		// Paging must be explicitly requested.
-		// If neither pageNumber nor offset is provided,
-		// this query is considered NON-PAGED.
-		// ----------------------------------------------------------
 		if (pageNumber == null && offset == null) {
 			return null;
 		}
@@ -227,7 +273,6 @@ public abstract class AbstractCriteria<A extends EntityPathBase<?>> {
 		Integer resolvedLimit = resolveLimit();
 		Integer resolvedOffset = resolveOffset(resolvedLimit);
 
-		// Defensive guard: incomplete paging state
 		if (resolvedLimit == null || resolvedOffset == null) {
 			return null;
 		}
@@ -236,15 +281,6 @@ public abstract class AbstractCriteria<A extends EntityPathBase<?>> {
 		return PageRequest.of(pageIndex, resolvedLimit, resolveSort());
 	}
 
-	/**
-	 * Resolves the effective page size.
-	 *
-	 * <p>Rules:
-	 * <ul>
-	 *   <li>If limit is missing or invalid → use DEFAULT_PAGE_SIZE</li>
-	 *   <li>Never exceed DEFAULT_MAX_ROWS</li>
-	 * </ul>
-	 */
 	protected Integer resolveLimit() {
 
 		if (limit == null || limit <= 0) {
@@ -254,40 +290,16 @@ public abstract class AbstractCriteria<A extends EntityPathBase<?>> {
 		return Math.min(limit, DEFAULT_MAX_ROWS);
 	}
 
-	/**
-	 * Resolves the effective offset.
-	 *
-	 * <p>Resolution priority:
-	 * <ol>
-	 *   <li>pageNumber (1-based, controller-friendly)</li>
-	 *   <li>explicit offset (advanced usage)</li>
-	 * </ol>
-	 *
-	 * <p>Note:
-	 * <ul>
-	 *   <li>This method is only called when paging is explicitly requested.</li>
-	 *   <li>{@code limit}-only is intentionally ignored to avoid silent paging.</li>
-	 * </ul>
-	 */
 	protected Integer resolveOffset(Integer resolvedLimit) {
 
-		// ----------------------------------------------------------
-		// Page-based paging (1-based page index from controller)
-		// ----------------------------------------------------------
 		if (pageNumber != null && pageNumber > 0) {
 			return (pageNumber - 1) * resolvedLimit;
 		}
 
-		// ----------------------------------------------------------
-		// Raw offset-based paging (advanced / internal use)
-		// ----------------------------------------------------------
 		if (offset != null && offset >= 0) {
 			return offset;
 		}
 
-		// ----------------------------------------------------------
-		// No valid paging input → no paging
-		// ----------------------------------------------------------
 		return null;
 	}
 
@@ -295,18 +307,9 @@ public abstract class AbstractCriteria<A extends EntityPathBase<?>> {
 	// QUERYDSL CONTRACT
 	// ----------------------------------------------------------------------
 
-	/**
-	 * Predicate with root provided (preferred).
-	 */
 	public abstract Predicate getFilter(A root);
 
-	/**
-	 * Predicate without root (used by repository base).
-	 */
 	public abstract Predicate getFilter();
 
-	/**
-	 * Domain class (for logging / diagnostics only).
-	 */
 	public abstract Class<?> getObjectClass();
 }

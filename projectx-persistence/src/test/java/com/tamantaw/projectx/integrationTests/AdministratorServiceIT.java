@@ -12,6 +12,7 @@ import org.testng.annotations.Test;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.testng.Assert.*;
@@ -29,7 +30,7 @@ public class AdministratorServiceIT extends CommonTestBase {
 		dto.setPassword("secret");
 		dto.setStatus(Administrator.Status.ACTIVE);
 
-		List<Long> roleIds = List.of(1L, 2L, 1L);
+		Set<Long> roleIds = Set.of(1L, 2L);
 
 		Administrator saved =
 				administratorService.create(dto, roleIds, TEST_CREATE_USER_ID);
@@ -77,7 +78,7 @@ public class AdministratorServiceIT extends CommonTestBase {
 		Administrator saved =
 				administratorService.create(
 						dto,
-						List.of(1L),
+						Set.of(1L),
 						TEST_CREATE_USER_ID
 				);
 
@@ -91,7 +92,7 @@ public class AdministratorServiceIT extends CommonTestBase {
 
 		administratorService.updateAdministratorAndRoles(
 				updateDto,
-				List.of(2L, 1L),
+				Set.of(2L, 1L),
 				TEST_UPDATE_USER_ID
 		);
 

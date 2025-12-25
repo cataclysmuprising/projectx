@@ -47,7 +47,7 @@ public class RoleServiceIT extends CommonTestBase {
 
 		Role saved = roleService.create(
 				dto,
-				List.of(10021L),
+				Set.of(10021L),
 				TEST_CREATE_USER_ID
 		);
 
@@ -184,7 +184,7 @@ public class RoleServiceIT extends CommonTestBase {
 		dto.setRoleType(Role.RoleType.CUSTOM);
 
 		// include duplicate action ID to verify unique handling
-		List<Long> actionIds = List.of(10021L, 10022L, 10021L);
+		Set<Long> actionIds = Set.of(10021L, 10022L);
 
 		Role saved = roleService.create(dto, actionIds, 123L);
 
@@ -408,8 +408,12 @@ public class RoleServiceIT extends CommonTestBase {
 		RoleCriteria criteria = new RoleCriteria();
 		criteria.setAppName("projectx");
 
-		criteria.addSort(QRole.role.roleType, Sort.Direction.ASC);
-		criteria.addSort(QRole.role.name, Sort.Direction.ASC);
+		//criteria.addSort(QRole.role.roleType, Sort.Direction.DESC);
+		//criteria.addSort(QRole.role.name, Sort.Direction.ASC);
+
+		// String based sorting
+		criteria.addSortKey("roleType", Sort.Direction.DESC);
+		criteria.addSortKey("name", Sort.Direction.ASC);
 
 		List<RoleDTO> roles = roleService.findAll(criteria);
 
