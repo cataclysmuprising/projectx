@@ -1,5 +1,6 @@
 package com.tamantaw.projectx.persistence.repository.base;
 
+import com.querydsl.core.JoinExpression;
 import com.querydsl.core.types.*;
 import com.querydsl.core.types.dsl.*;
 import com.querydsl.jpa.JPQLQuery;
@@ -10,7 +11,9 @@ import com.tamantaw.projectx.persistence.criteria.base.AbstractCriteria;
 import com.tamantaw.projectx.persistence.entity.base.AbstractEntity;
 import com.tamantaw.projectx.persistence.entity.base.QAbstractEntity;
 import jakarta.annotation.Nonnull;
+import jakarta.persistence.EntityGraph;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.Subgraph;
 import jakarta.persistence.metamodel.*;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.logging.log4j.LogManager;
@@ -59,7 +62,7 @@ import java.util.*;
  * </p>
  */
 public abstract class AbstractRepositoryImpl<
-		ID extends Serializable,
+		ID extends Serializable & Comparable<ID>,
 		ENTITY extends AbstractEntity,
 		QCLAZZ extends EntityPathBase<ENTITY>,
 		CRITERIA extends AbstractCriteria<QCLAZZ>>
@@ -166,25 +169,18 @@ public abstract class AbstractRepositoryImpl<
 				idAttr.getName()
 		);
 
-		@SuppressWarnings("unchecked")
-		Expression<? extends Comparable<?>> comparableIdExpr =
-				(Expression<? extends Comparable<?>>) idExpr;
+		if (!Comparable.class.isAssignableFrom(idClass)) {
+			throw new IllegalStateException(
+					"ID type must be Comparable for deterministic paging. idClass=" + idClass.getName()
+			);
+		}
 
-		idAscOrder = new OrderSpecifier<>(Order.ASC, comparableIdExpr);
+		idAscOrder = new OrderSpecifier<>(Order.ASC, (Expression<? extends Comparable<?>>) idExpr);
 	}
 
 	// ----------------------------------------------------------------------
 	// READ OPERATIONS
 	// ----------------------------------------------------------------------
-
-	protected static QueryHints getRelatedDataHints(String... hints) {
-		if (ArrayUtils.isNotEmpty(hints)) {
-			MutableQueryHints qh = new MutableQueryHints();
-			qh.add("jakarta.persistence.fetchgraph", String.join(",", hints));
-			return qh;
-		}
-		return null;
-	}
 
 	private static <T> List<List<T>> chunk(List<T> src, int size) {
 
@@ -200,6 +196,141 @@ public abstract class AbstractRepositoryImpl<
 		}
 
 		return out;
+	}
+
+	protected QueryHints getRelatedDataHints(String... hints) {
+
+		if (ArrayUtils.isEmpty(hints)) {
+			return null;
+		}
+
+		EntityGraph<?> graph = entityManager.createEntityGraph(path.getType());
+		ManagedType<?> rootType = entityManager.getMetamodel().managedType(path.getType());
+
+		for (String hint : hints) {
+			if (hint == null || hint.isBlank()) {
+				continue;
+			}
+			String graphSpec = normalizeGraphSpec(hint, rootType.getJavaType().getSimpleName());
+			applyGraphSpec(new EntityGraphContainer(graph), rootType, graphSpec);
+		}
+
+		MutableQueryHints qh = new MutableQueryHints();
+		qh.add("jakarta.persistence.fetchgraph", graph);
+		return qh;
+	}
+
+	/**
+	 * Strictly deduplicates root entities by ID while preserving order.
+	 */
+	protected Map<ID, ENTITY> deduplicateById(List<ENTITY> rows) {
+
+		if (rows == null || rows.isEmpty()) {
+			return Map.of();
+		}
+
+		Map<ID, ENTITY> unique = new LinkedHashMap<>(rows.size());
+
+		for (ENTITY e : rows) {
+			@SuppressWarnings("unchecked")
+			ID id = (ID) e.getId();
+			unique.putIfAbsent(id, e);
+		}
+
+		return unique;
+	}
+
+	protected String normalizeGraphSpec(String graph, String rootName) {
+
+		if (graph == null) {
+			return "";
+		}
+
+		graph = graph.trim();
+		if (graph.isEmpty()) {
+			return "";
+		}
+
+		// Strip optional root prefix "Role(...)" to reuse the inner specification.
+		int start = graph.indexOf('(');
+		int end = graph.lastIndexOf(')');
+		if (start >= 0 && end > start) {
+			return graph.substring(start + 1, end);
+		}
+
+		// If the graph is just the root name, treat it as empty.
+		if (graph.equals(rootName)) {
+			return "";
+		}
+
+		return graph;
+	}
+
+	protected void applyGraphSpec(GraphContainer graph, ManagedType<?> rootType, String graphSpec) {
+
+		if (graphSpec == null || graphSpec.isBlank()) {
+			return;
+		}
+
+		int idx = 0;
+		while (idx < graphSpec.length()) {
+
+			int nextParen = graphSpec.indexOf('(', idx);
+			int nextComma = graphSpec.indexOf(',', idx);
+
+			int end = minPositive(nextParen, nextComma, graphSpec.length());
+			if (end < 0) {
+				end = graphSpec.length();
+			}
+
+			String attrName = graphSpec.substring(idx, end).trim();
+
+			if (!attrName.isEmpty()) {
+				try {
+					Attribute<?, ?> attr = rootType.getAttribute(attrName);
+
+					if (nextParen >= 0 && nextParen == end) {
+						int close = findMatchingParen(graphSpec, nextParen);
+						String nested = graphSpec.substring(nextParen + 1, close);
+
+						ManagedType<?> nestedType = resolveManagedType(attr);
+						Subgraph<?> subgraph = graph.addSubgraph(attr, nestedType);
+						applyGraphSpec(new SubgraphContainer(subgraph), nestedType, nested);
+						idx = close + 1;
+						continue;
+					}
+					graph.addAttribute(attrName);
+				}
+				catch (IllegalArgumentException e) {
+					throw new IllegalStateException(
+							"Invalid fetch graph attribute '" + attrName +
+									"' for entity " + rootType.getJavaType().getSimpleName(),
+							e
+					);
+				}
+			}
+
+			idx = end + 1;
+		}
+	}
+
+	protected ManagedType<?> resolveManagedType(Attribute<?, ?> attr) {
+
+		if (attr instanceof SingularAttribute<?, ?> sa) {
+			if (sa.getType() instanceof ManagedType<?> mt) {
+				return mt;
+			}
+		}
+
+		if (attr instanceof PluralAttribute<?, ?, ?> pa) {
+			if (pa.getElementType() instanceof ManagedType<?> mt) {
+				return mt;
+			}
+		}
+
+		throw new IllegalStateException(
+				"Attribute '" + attr.getName() + "' is not an entity path and cannot have nested graph hints"
+		);
 	}
 
 	/**
@@ -264,6 +395,7 @@ public abstract class AbstractRepositoryImpl<
 				createQuery(filter).select(idExpr);
 
 		applySortOrDefaultById(idQuery, criteria);
+		assertNoAdditionalJoins((AbstractJPAQuery<?, ?>) idQuery, "findOne.idQuery");
 
 		List<ID> ids = idQuery.limit(2).fetch();
 
@@ -282,10 +414,6 @@ public abstract class AbstractRepositoryImpl<
 
 		return Optional.ofNullable(entityQuery.fetchOne());
 	}
-
-	// ----------------------------------------------------------------------
-	// ID / COUNT / EXISTS
-	// ----------------------------------------------------------------------
 
 	/**
 	 * Returns all matching entities without pagination.
@@ -333,6 +461,7 @@ public abstract class AbstractRepositoryImpl<
 				createQuery(filter).select(idExpr);
 
 		applySortOrDefaultById(idQuery, criteria);
+		assertNoAdditionalJoins((AbstractJPAQuery<?, ?>) idQuery, "findAll.idQuery");
 
 		List<ID> ids = idQuery.fetch();
 		if (ids.isEmpty()) {
@@ -353,11 +482,7 @@ public abstract class AbstractRepositoryImpl<
 		// JPA may return duplicate roots when fetching collections.
 		// Dedup is REQUIRED here to preserve set semantics.
 		// This does NOT hide paging bugs because paging is forbidden.
-		Map<Long, ENTITY> unique = new LinkedHashMap<>(rows.size());
-
-		for (ENTITY e : rows) {
-			unique.putIfAbsent(e.getId(), e);
-		}
+		Map<ID, ENTITY> unique = deduplicateById(rows);
 
 		return new ArrayList<>(unique.values());
 	}
@@ -419,6 +544,7 @@ public abstract class AbstractRepositoryImpl<
 				.offset(pageable.getOffset())
 				.limit(pageable.getPageSize());
 
+		assertNoAdditionalJoins((AbstractJPAQuery<?, ?>) idQuery, "findByPaging.idQuery");
 		List<ID> ids = idQuery.fetch();
 
 		if (ids.isEmpty()) {
@@ -433,7 +559,18 @@ public abstract class AbstractRepositoryImpl<
 
 		applyStableOrderAfterIdPaging(entityQuery, criteria, ids);
 
-		List<ENTITY> content = entityQuery.fetch();
+		List<ENTITY> rows = entityQuery.fetch();
+		Map<ID, ENTITY> unique = deduplicateById(rows);
+		List<ENTITY> content = new ArrayList<>(unique.values());
+
+		if (content.size() != ids.size()) {
+			throw new IllegalStateException(
+					"Phase-2 fetch returned " + content.size() +
+							" unique roots for " + ids.size() + " ids. " +
+							"FetchGraph likely produced join-multiplication or filtered rows."
+			);
+		}
+
 		long total = count(criteria);
 
 		return new PageImpl<>(content, pageable, total);
@@ -458,12 +595,13 @@ public abstract class AbstractRepositoryImpl<
 				createQuery(filter).select(idExpr);
 
 		applySortOrDefaultById(query, criteria);
+		assertNoAdditionalJoins((AbstractJPAQuery<?, ?>) query, "findIds");
 
 		return query.fetch();
 	}
 
 	// ----------------------------------------------------------------------
-	// WRITE OPERATIONS
+	// ID / COUNT / EXISTS
 	// ----------------------------------------------------------------------
 
 	/**
@@ -481,9 +619,11 @@ public abstract class AbstractRepositoryImpl<
 
 		Predicate filter = criteria.getFilter(path);
 
+		AbstractJPAQuery<?, ?> query = createQuery(filter);
+		assertNoAdditionalJoins(query, "count");
+
 		Long count =
-				createQuery(filter)
-						.select(idExpr.count())
+				query.select(idExpr.count())
 						.fetchOne();
 
 		return count == null ? 0L : count;
@@ -499,19 +639,22 @@ public abstract class AbstractRepositoryImpl<
 
 		Predicate filter = criteria.getFilter(path);
 
-		return createQuery(filter)
+		AbstractJPAQuery<?, ?> query = createQuery(filter);
+		assertNoAdditionalJoins(query, "exists");
+
+		return query
 				.select(idExpr)
 				.fetchFirst() != null;
 	}
-
-	// ----------------------------------------------------------------------
-	// BULK OPERATIONS (ID-FIRST, SAFE)
-	// ----------------------------------------------------------------------
 
 	@Override
 	public ENTITY saveRecord(ENTITY entity) {
 		return super.saveAndFlush(entity);
 	}
+
+	// ----------------------------------------------------------------------
+	// WRITE OPERATIONS
+	// ----------------------------------------------------------------------
 
 	@Override
 	public List<ENTITY> saveAllRecords(Iterable<ENTITY> entities) {
@@ -538,6 +681,10 @@ public abstract class AbstractRepositoryImpl<
 
 		return affected;
 	}
+
+	// ----------------------------------------------------------------------
+	// BULK OPERATIONS (ID-FIRST, SAFE)
+	// ----------------------------------------------------------------------
 
 	@Override
 	public <E extends ENTITY> long updateByCriteria(
@@ -622,10 +769,6 @@ public abstract class AbstractRepositoryImpl<
 		return affected;
 	}
 
-	// ----------------------------------------------------------------------
-	// QUERY CONSTRUCTION
-	// ----------------------------------------------------------------------
-
 	protected AbstractJPAQuery<?, ?> createQuery(
 			Predicate predicate,
 			String... hints) {
@@ -645,10 +788,37 @@ public abstract class AbstractRepositoryImpl<
 		return query;
 	}
 
+	protected void assertNoAdditionalJoins(AbstractJPAQuery<?, ?> query, String context) {
+
+		List<JoinExpression> joins = query.getMetadata().getJoins();
+		if (joins == null || joins.isEmpty()) {
+			return;
+		}
+
+		// The first join is the root entity (FROM). Any additional join is unsafe here.
+		if (joins.size() > 1) {
+			throw new IllegalStateException(
+					"Unsafe join detected in " + context + ". " +
+							"ID/count queries must not introduce additional joins. joins=" + joins
+			);
+		}
+
+		JoinExpression root = joins.getFirst();
+		if (!Objects.equals(root.getTarget(), path)) {
+			throw new IllegalStateException(
+					"Unexpected join root in " + context + ". Expected " + path + " but found " + root.getTarget()
+			);
+		}
+	}
+
 	protected final void afterBulkDml() {
 		entityManager.flush();
 		entityManager.clear();
 	}
+
+	// ----------------------------------------------------------------------
+	// QUERY CONSTRUCTION
+	// ----------------------------------------------------------------------
 
 	protected void applyAudit(
 			JPAUpdateClause update,
@@ -657,10 +827,6 @@ public abstract class AbstractRepositoryImpl<
 		update.set(audit.updatedDate, LocalDateTime.now());
 		update.set(audit.updatedBy, updatedBy);
 	}
-
-	// ----------------------------------------------------------------------
-	// SORT SAFETY ENFORCEMENT (STRICT – FAIL FAST)
-	// ----------------------------------------------------------------------
 
 	/**
 	 * Validates that ORDER BY clauses do NOT traverse collection-valued paths.
@@ -757,6 +923,10 @@ public abstract class AbstractRepositoryImpl<
 		return false;
 	}
 
+	// ----------------------------------------------------------------------
+	// SORT SAFETY ENFORCEMENT (STRICT – FAIL FAST)
+	// ----------------------------------------------------------------------
+
 	protected void applySort(JPQLQuery<?> query, CRITERIA criteria) {
 
 		List<OrderSpecifier<?>> orderSpecifiers =
@@ -804,10 +974,6 @@ public abstract class AbstractRepositoryImpl<
 			query.orderBy(specs.toArray(new OrderSpecifier<?>[0]));
 		}
 	}
-
-	// ----------------------------------------------------------------------
-	// STABLE ORDERING AFTER ID PAGING
-	// ----------------------------------------------------------------------
 
 	/**
 	 * Applies stable ordering for the phase-2 entity fetch after an ID-page query.
@@ -888,6 +1054,10 @@ public abstract class AbstractRepositoryImpl<
 		);
 	}
 
+	// ----------------------------------------------------------------------
+	// STABLE ORDERING AFTER ID PAGING
+	// ----------------------------------------------------------------------
+
 	/**
 	 * Maximum number of IDs allowed in CASE ordering for non-Postgres databases.
 	 *
@@ -900,10 +1070,6 @@ public abstract class AbstractRepositoryImpl<
 	protected int maxCaseOrderIds() {
 		return 200;
 	}
-
-	// ----------------------------------------------------------------------
-	// FETCH GRAPH INTROSPECTION (STRICT TRIGGER ONLY)
-	// ----------------------------------------------------------------------
 
 	/**
 	 * Detects whether the requested fetch graph contains any collection-valued attribute.
@@ -1001,6 +1167,10 @@ public abstract class AbstractRepositoryImpl<
 		return false;
 	}
 
+	// ----------------------------------------------------------------------
+	// FETCH GRAPH INTROSPECTION (STRICT TRIGGER ONLY)
+	// ----------------------------------------------------------------------
+
 	private int minPositive(int... values) {
 		int min = Integer.MAX_VALUE;
 		for (int v : values) {
@@ -1027,10 +1197,6 @@ public abstract class AbstractRepositoryImpl<
 		throw new IllegalArgumentException("Unbalanced parentheses in graph: " + s);
 	}
 
-	// ----------------------------------------------------------------------
-	// AUDIT PATH RESOLUTION
-	// ----------------------------------------------------------------------
-
 	private QAbstractEntity resolveAuditPath(EntityPath<?> p) {
 
 		if (p instanceof QAbstractEntity qa) {
@@ -1050,5 +1216,51 @@ public abstract class AbstractRepositoryImpl<
 		throw new IllegalStateException(
 				"QAbstractEntity audit path not resolvable"
 		);
+	}
+
+	protected interface GraphContainer {
+		void addAttribute(String attribute);
+
+		Subgraph<?> addSubgraph(Attribute<?, ?> attr, ManagedType<?> nestedType);
+	}
+
+	protected static final class EntityGraphContainer implements GraphContainer {
+		private final EntityGraph<?> delegate;
+
+		EntityGraphContainer(EntityGraph<?> delegate) {
+			this.delegate = delegate;
+		}
+
+		@Override
+		public void addAttribute(String attribute) {
+			delegate.addAttributeNodes(attribute);
+		}
+
+		@Override
+		public Subgraph<?> addSubgraph(Attribute<?, ?> attr, ManagedType<?> nestedType) {
+			return delegate.addSubgraph(attr.getName(), nestedType.getJavaType());
+		}
+	}
+
+	// ----------------------------------------------------------------------
+	// AUDIT PATH RESOLUTION
+	// ----------------------------------------------------------------------
+
+	protected static final class SubgraphContainer implements GraphContainer {
+		private final Subgraph<?> delegate;
+
+		SubgraphContainer(Subgraph<?> delegate) {
+			this.delegate = delegate;
+		}
+
+		@Override
+		public void addAttribute(String attribute) {
+			delegate.addAttributeNodes(attribute);
+		}
+
+		@Override
+		public Subgraph<?> addSubgraph(Attribute<?, ?> attr, ManagedType<?> nestedType) {
+			return delegate.addSubgraph(attr.getName(), nestedType.getJavaType());
+		}
 	}
 }

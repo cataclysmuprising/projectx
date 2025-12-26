@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface AbstractRepository<
-		ID extends Serializable,
+		ID extends Serializable & Comparable<ID>,
 		ENTITY extends AbstractEntity,
 		QCLAZZ extends EntityPathBase<ENTITY>,
 		CRITERIA extends AbstractCriteria<QCLAZZ>
@@ -56,4 +56,3 @@ public interface AbstractRepository<
 
 	long deleteByCriteria(CRITERIA criteria);
 }
-

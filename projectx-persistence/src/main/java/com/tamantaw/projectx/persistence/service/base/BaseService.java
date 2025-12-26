@@ -34,7 +34,7 @@ import static com.tamantaw.projectx.persistence.utils.LoggerConstants.DATA_INTEG
 
 @Transactional(transactionManager = PrimaryPersistenceContext.TX_MANAGER, rollbackFor = Exception.class)
 public abstract class BaseService<
-		ID extends Serializable,
+		ID extends Serializable & Comparable<ID>,
 		ENTITY extends AbstractEntity,
 		QCLAZZ extends EntityPathBase<ENTITY>,
 		CRITERIA extends AbstractCriteria<QCLAZZ>,
