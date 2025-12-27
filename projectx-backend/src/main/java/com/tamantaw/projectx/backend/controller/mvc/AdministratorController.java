@@ -72,7 +72,7 @@ public class AdministratorController extends BaseMVCController {
 		criteria.setExcludeIds(superUserId);
 		criteria.setId(id);
 
-		AdministratorDTO administratorDto = administratorService.findOne(criteria, "Administrator(roles)")
+		AdministratorDTO administratorDto = administratorService.findOne(criteria, "Administrator(administratorRoles(role))")
 				.orElseThrow(() -> new ContentNotFoundException("No matching administrator found for give ID # <" + id + ">"));
 
 		model.addAttribute("administratorDto", administratorDto);
@@ -107,7 +107,7 @@ public class AdministratorController extends BaseMVCController {
 		criteria.setExcludeIds(superUserId);
 		criteria.setId(id);
 
-		AdministratorDTO administratorDto = administratorService.findOne(criteria, "Administrator(roles)")
+		AdministratorDTO administratorDto = administratorService.findOne(criteria, "Administrator(administratorRoles(role))")
 				.orElseThrow(() -> new ContentNotFoundException("No matching administrator found for give ID # <" + id + ">"));
 
 		model.addAttribute("administratorDto", administratorDto);

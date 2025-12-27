@@ -25,7 +25,7 @@
 						</li>
 						<li class="breadcrumb-item">
 							<i class="icon-users2 mr-1"></i>
-							<a th:href="@{/sec/staffs}">Staffs</a>
+							<a th:href="@{/web/sec/administrator}">Administrator</a>
 						</li>
 						<li class="breadcrumb-item active">Detail</li>
 					</ol>
@@ -40,36 +40,20 @@
 					<img alt="" class="profile-user-img img-fluid img-circle" th:src="@{/web/static/images/avatar/guest.jpg}" width="250px"/>
 				</div>
 
-				<h4 class="profile-username mt-3 mb-3 text-center" th:text="${userDto.officerName}"></h4>
+				<h4 class="profile-username mt-3 mb-3 text-center" th:text="${administratorDto.name}"></h4>
 
 				<ul class="list-group list-group-unbordered mb-3">
 					<li class="list-group-item">
 						<b>Login ID</b>
-						<span class="float-right text-muted" th:text="${userDto.loginId}"></span>
-					</li>
-					<li class="list-group-item">
-						<b>Branch</b>
-						<span class="float-right text-muted" th:text="${userDto.branch.name}"></span>
-					</li>
-					<li class="list-group-item">
-						<b>Rank</b>
-						<span class="float-right text-muted" th:text="${userDto.officerRank}"></span>
-					</li>
-					<li class="list-group-item">
-						<b>Phone</b>
-						<span class="float-right text-muted" th:text="${userDto.contactPhone}"></span>
+						<span class="float-right text-muted" th:text="${administratorDto.loginId}"></span>
 					</li>
 					<li class="list-group-item">
 						<b>Status</b>
-						<span class="float-right text-muted" th:text="${#strings.toLowerCase(userDto.status)}"></span>
+						<span class="float-right text-muted" th:text="${#strings.toLowerCase(administratorDto.status)}"></span>
 					</li>
 					<li class="list-group-item">
 						<b>Roles</b>
 						<span class="float-right text-muted" th:text="${roleNames}"></span>
-					</li>
-					<li class="list-group-item">
-						<b>Remark</b>
-						<span class="float-right text-muted" th:text="${userDto.remark}"></span>
 					</li>
 				</ul>
 			</div>
