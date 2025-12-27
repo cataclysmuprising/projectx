@@ -83,7 +83,10 @@
 					<div class="form-group row">
 						<label class="col-sm-6 col-md-3 col-form-label text-right required" for="roleIds">Roles : </label>
 						<div class="col-sm-6 col-md-5">
-							<select class="form-control selectpicker show-tick" data-live-search="true" data-size="5" id="roleIds" multiple="multiple" th:attr="data-selected=${administratorDto.roleIds}" th:field="*{roleIds}" title="Select ...">
+							<select class="form-control selectpicker show-tick" data-async="true" data-live-search="true" data-size="5" id="roleIds"
+									multiple="multiple"
+									th:attr="data-selected=${#strings.listJoin(administratorDto.roleIds, ',')}"
+									th:field="*{roleIds}" title="Select ...">
 							</select>
 						</div>
 						<label class="col-sm-6 col-md-1 col-form-label text-right required" for="status">Status : </label>

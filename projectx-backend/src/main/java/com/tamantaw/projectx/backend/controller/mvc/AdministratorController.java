@@ -4,7 +4,7 @@ import com.tamantaw.projectx.backend.common.annotation.MVCLoggable;
 import com.tamantaw.projectx.backend.common.annotation.ValidateEntity;
 import com.tamantaw.projectx.backend.common.response.PageMessageStyle;
 import com.tamantaw.projectx.backend.common.response.PageMode;
-import com.tamantaw.projectx.backend.validators.AdmministratorValidator;
+import com.tamantaw.projectx.backend.validators.AdministratorValidator;
 import com.tamantaw.projectx.persistence.criteria.AdministratorCriteria;
 import com.tamantaw.projectx.persistence.dto.AdministratorDTO;
 import com.tamantaw.projectx.persistence.dto.RoleDTO;
@@ -71,7 +71,7 @@ public class AdministratorController extends BaseMVCController {
 
 	@PostMapping("/add")
 	@ValidateEntity(
-			validator = AdmministratorValidator.class,
+			validator = AdministratorValidator.class,
 			errorView = "redirect:/web/sec/administrator/add",
 			pageMode = PageMode.CREATE
 	)
@@ -133,7 +133,7 @@ public class AdministratorController extends BaseMVCController {
 
 	@PostMapping("/{id}/edit")
 	@ValidateEntity(
-			validator = AdmministratorValidator.class,
+			validator = AdministratorValidator.class,
 			errorView = "redirect:/web/sec/administrator/{id}/edit",
 			pageMode = PageMode.EDIT
 	)

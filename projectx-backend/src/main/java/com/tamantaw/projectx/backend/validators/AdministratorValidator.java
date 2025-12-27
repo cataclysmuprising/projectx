@@ -15,7 +15,7 @@ import org.springframework.validation.Errors;
 
 @Component
 @Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
-public class AdmministratorValidator extends BaseValidator<AdministratorDTO> {
+public class AdministratorValidator extends BaseValidator<AdministratorDTO> {
 
 	@Autowired
 	private AdministratorService administratorService;
@@ -35,14 +35,14 @@ public class AdmministratorValidator extends BaseValidator<AdministratorDTO> {
 		validateRequired(new FieldValidator("name", "Administrator Name", dto.getName(), errors));
 		validateMax(new FieldValidator("name", "Administrator Name", dto.getName(), errors), 100);
 
-		validateRequired(new FieldValidator("password", "Password", dto.getPassword(), errors));
-		validateMin(new FieldValidator("password", "Password", dto.getPassword(), errors), 8);
-		validateMax(new FieldValidator("password", "Password", dto.getPassword(), errors), 200);
-
 		validateRequired(new FieldValidator("status", "Status", dto.getStatus(), errors));
 		validateRequired(new FieldValidator("roleIds", "Role", dto.getRoleIds(), errors));
 
 		if (pageMode == PageMode.CREATE) {
+
+			validateRequired(new FieldValidator("password", "Password", dto.getPassword(), errors));
+			validateMin(new FieldValidator("password", "Password", dto.getPassword(), errors), 8);
+			validateMax(new FieldValidator("password", "Password", dto.getPassword(), errors), 200);
 
 			FieldValidator loginId =
 					new FieldValidator("loginId", "Login ID", dto.getLoginId(), errors);
@@ -72,7 +72,7 @@ public class AdmministratorValidator extends BaseValidator<AdministratorDTO> {
 							"Validation.common.SystemError",
 							messageSource.getMessage(
 									"Validation.common.SystemError",
-									null
+									(Object) null
 							)
 					);
 				}

@@ -166,21 +166,55 @@ function initJQueryDataTable() {
 }
 
 function initSelectPickers() {
-    // set selected value for select picker
-    $(".selectpicker,.dropdown-select").on('loaded.bs.select', function (e) {
-        let _selected = $(this).attr("data-selected");
-        if (_selected && _selected.trim().length > 0) {
-            // for multiple select picker
-            if ($(this).attr("multiple")) {
-                _selected = _selected.replaceSome("]", "[", " ", "");
-                $(this).selectpicker('val', _selected.split(","));
-            }
 
-            else {
-                $(this).selectpicker('val', _selected);
-                //$(this).selectpicker('val', _selected).change();
-            }
+    $('.selectpicker').each(function () {
+        const $select = $(this);
+        if (!$select.data('bs.select')) {
+            $select.selectpicker();
         }
+    });
+
+    // 🔑 Skip async selects here
+    applySelectPickerSelections(null, {skipAsync: true});
+}
+
+function applySelectPickerSelections(scope, options = {}) {
+
+    const skipAsync = options.skipAsync === true;
+
+    // 🔑 FIX: include the root itself if it is a selectpicker
+    const $selects = scope
+        ? $(scope).is('.selectpicker')
+            ? $(scope)
+            : $(scope).find('.selectpicker')
+        : $('.selectpicker');
+
+    $selects.each(function () {
+
+        const $select = $(this);
+
+        // Skip async selects only if options are NOT ready
+        if (
+            skipAsync &&
+            $select.data('async') &&
+            $select.find('option').length === 0
+        ) {
+            return;
+        }
+
+        const selected = $select.attr('data-selected');
+        if (!selected) return;
+
+        const values = selected
+            .replace(/[\[\]\s]/g, '')
+            .split(',')
+            .filter(v => v.length > 0)
+            .map(String); // ensure string values
+
+        if (!values.length) return;
+
+        $select.selectpicker('val', values);
+        $select.selectpicker('refresh');
     });
 }
 

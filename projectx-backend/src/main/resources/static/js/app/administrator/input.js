@@ -106,24 +106,31 @@ function initValidator() {
 }
 
 function loadRoles() {
-    let criteria = {};
+
     $.ajax({
         type: "POST",
         url: getApiResourcePath() + 'sec/role/search/all',
-        data: JSON.stringify(criteria),
+        data: JSON.stringify({}),
         success: function (data) {
+
+            const $select = $("#roleIds");
             let options = [];
-            $.each(data, function (key, item) {
-                let option = "<option value='" + item.id + "'>" + item.name + "</option>";
+
+            $.each(data, function (_, item) {
+                let option = `<option value="${item.id}">${item.name}</option>`;
                 if (item.roleType === "built-in") {
-                    option = "<option data-type='built-in' value='" + item.id + "' data-subtext='(built-in)'>" + item.name + "</option>";
+                    option = `<option value="${item.id}" data-subtext="(built-in)">${item.name}</option>`;
                 }
                 options.push(option);
             });
-            $("#roleIds").html(options).selectpicker('refresh');
+
+            $select.html(options);
+            $select.selectpicker('refresh');
+
+            applySelectPickerSelections($select);
         }
     });
-
 }
+
 
 
