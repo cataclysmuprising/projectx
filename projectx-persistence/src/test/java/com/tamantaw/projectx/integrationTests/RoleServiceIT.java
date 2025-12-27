@@ -2,18 +2,19 @@ package com.tamantaw.projectx.integrationTests;
 
 import com.tamantaw.projectx.CommonTestBase;
 import com.tamantaw.projectx.persistence.criteria.ActionCriteria;
+import com.tamantaw.projectx.persistence.criteria.RoleActionCriteria;
 import com.tamantaw.projectx.persistence.criteria.RoleCriteria;
+import com.tamantaw.projectx.persistence.dto.ActionDTO;
+import com.tamantaw.projectx.persistence.dto.RoleActionDTO;
 import com.tamantaw.projectx.persistence.dto.RoleDTO;
 import com.tamantaw.projectx.persistence.dto.base.PaginatedResult;
-import com.tamantaw.projectx.persistence.entity.Action;
 import com.tamantaw.projectx.persistence.entity.QRole;
 import com.tamantaw.projectx.persistence.entity.Role;
-import com.tamantaw.projectx.persistence.entity.RoleAction;
 import com.tamantaw.projectx.persistence.exception.ConsistencyViolationException;
 import com.tamantaw.projectx.persistence.exception.PersistenceException;
 import com.tamantaw.projectx.persistence.repository.base.UpdateSpec;
+import com.tamantaw.projectx.persistence.service.RoleActionService;
 import com.tamantaw.projectx.persistence.service.RoleService;
-import jakarta.persistence.EntityManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.testng.annotations.Test;
@@ -33,7 +34,7 @@ public class RoleServiceIT extends CommonTestBase {
 	private RoleService roleService;
 
 	@Autowired
-	private EntityManager entityManager;
+	private RoleActionService roleActionService;
 
 	@Test
 	public void updateRoleAndActions_replacesActions() throws Exception {
@@ -53,9 +54,6 @@ public class RoleServiceIT extends CommonTestBase {
 
 		dto.setId(saved.getId());
 
-		entityManager.flush();
-		entityManager.clear();
-
 		// ------------------------------------------------------------
 		// Update role with new action set
 		// ------------------------------------------------------------
@@ -65,19 +63,14 @@ public class RoleServiceIT extends CommonTestBase {
 				TEST_UPDATE_USER_ID
 		);
 
-		entityManager.flush();
-		entityManager.clear();
-
 		// ------------------------------------------------------------
 		// Verify role-actions
 		// ------------------------------------------------------------
-		List<RoleAction> roleActions = entityManager
-				.createQuery(
-						"select ra from RoleAction ra join fetch ra.action where ra.role.id = :roleId",
-						RoleAction.class
-				)
-				.setParameter("roleId", saved.getId())
-				.getResultList();
+		RoleActionCriteria criteria = new RoleActionCriteria();
+		criteria.setRoleId(saved.getId());
+
+		List<RoleActionDTO> roleActions =
+				roleActionService.findAll(criteria, "RoleAction(action)");
 
 		assertEquals(roleActions.size(), 2);
 
@@ -188,16 +181,11 @@ public class RoleServiceIT extends CommonTestBase {
 
 		Role saved = roleService.create(dto, actionIds, 123L);
 
-		entityManager.flush();
-		entityManager.clear();
+		RoleActionCriteria criteria = new RoleActionCriteria();
+		criteria.setRoleId(saved.getId());
 
-		List<RoleAction> roleActions = entityManager
-				.createQuery(
-						"select ra from RoleAction ra join fetch ra.action where ra.role.id = :roleId",
-						RoleAction.class
-				)
-				.setParameter("roleId", saved.getId())
-				.getResultList();
+		List<RoleActionDTO> roleActions =
+				roleActionService.findAll(criteria, "RoleAction(action)");
 
 		assertNotNull(saved.getId());
 		assertEquals(roleActions.size(), 2); // duplicate action id should be ignored
@@ -205,8 +193,8 @@ public class RoleServiceIT extends CommonTestBase {
 		assertEquals(saved.getUpdatedBy(), 123L);
 		assertTrue(
 				roleActions.stream()
-						.map(RoleAction::getAction)
-						.map(Action::getId)
+						.map(RoleActionDTO::getAction)
+						.map(ActionDTO::getId)
 						.collect(Collectors.toSet())
 						.containsAll(List.of(10021L, 10022L))
 		);
@@ -232,13 +220,10 @@ public class RoleServiceIT extends CommonTestBase {
 
 		assertEquals(affected, 1L);
 
-		Role updated = entityManager
-				.createQuery(
-						"select r from Role r where r.name = :name",
-						Role.class
-				)
-				.setParameter("name", "ADMIN_UPDATED")
-				.getSingleResult();
+		RoleCriteria updatedCriteria = new RoleCriteria();
+		updatedCriteria.setName("ADMIN_UPDATED");
+
+		RoleDTO updated = roleService.findOne(updatedCriteria).orElseThrow();
 
 		assertEquals(updated.getUpdatedBy(), 200L);
 	}
@@ -285,10 +270,7 @@ public class RoleServiceIT extends CommonTestBase {
 
 		assertEquals(deleted, 1L);
 
-		entityManager.flush();
-		entityManager.clear();
-
-		assertNull(entityManager.find(Role.class, saved.getId()));
+		assertTrue(roleService.findById(saved.getId()).isEmpty());
 	}
 
 	@Test
@@ -304,7 +286,7 @@ public class RoleServiceIT extends CommonTestBase {
 		boolean deleted = roleService.deleteById(saved.getId());
 
 		assertTrue(deleted);
-		assertNull(entityManager.find(Role.class, saved.getId()));
+		assertTrue(roleService.findById(saved.getId()).isEmpty());
 	}
 
 	@Test

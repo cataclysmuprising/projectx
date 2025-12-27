@@ -6,7 +6,6 @@ import com.tamantaw.projectx.persistence.dto.AdministratorDTO;
 import com.tamantaw.projectx.persistence.dto.AdministratorLoginHistoryDTO;
 import com.tamantaw.projectx.persistence.dto.base.PaginatedResult;
 import com.tamantaw.projectx.persistence.entity.Administrator;
-import com.tamantaw.projectx.persistence.entity.AdministratorLoginHistory;
 import com.tamantaw.projectx.persistence.entity.QAdministratorLoginHistory;
 import com.tamantaw.projectx.persistence.exception.ConsistencyViolationException;
 import com.tamantaw.projectx.persistence.exception.PersistenceException;
@@ -50,9 +49,6 @@ public class AdministratorLoginHistoryServiceIT extends CommonTestBase {
 				buildDto(2L, "10.0.0.2", "Windows", "Chrome"),
 				TEST_CREATE_USER_ID
 		);
-
-		entityManager.flush();
-		entityManager.clear();
 
 		AdministratorLoginHistoryCriteria criteria = new AdministratorLoginHistoryCriteria();
 		criteria.setId(saved.getId());
@@ -212,11 +208,8 @@ public class AdministratorLoginHistoryServiceIT extends CommonTestBase {
 		// --------------------------------------------------
 		assertTrue(deleted);
 
-		assertNull(
-				entityManager.find(
-						AdministratorLoginHistory.class,
-						saved.getId()
-				)
+		assertTrue(
+				loginHistoryService.findById(saved.getId()).isEmpty()
 		);
 	}
 

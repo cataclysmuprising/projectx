@@ -7,7 +7,6 @@ import com.tamantaw.projectx.persistence.dto.RoleActionDTO;
 import com.tamantaw.projectx.persistence.dto.RoleDTO;
 import com.tamantaw.projectx.persistence.entity.Action;
 import com.tamantaw.projectx.persistence.entity.Role;
-import com.tamantaw.projectx.persistence.entity.RoleAction;
 import com.tamantaw.projectx.persistence.exception.ConsistencyViolationException;
 import com.tamantaw.projectx.persistence.exception.PersistenceException;
 import com.tamantaw.projectx.persistence.service.ActionService;
@@ -152,11 +151,8 @@ public class RoleActionServiceIT extends CommonTestBase {
 
 		assertEquals(deleted, 1L);
 
-		entityManager.flush();
-		entityManager.clear();
-
-		assertNull(
-				entityManager.find(RoleAction.class, saved.getId())
+		assertTrue(
+				roleActionService.findById(saved.getId()).isEmpty()
 		);
 	}
 
@@ -183,9 +179,7 @@ public class RoleActionServiceIT extends CommonTestBase {
 				roleActionService.deleteById(saved.getId());
 
 		assertTrue(deleted);
-		assertNull(
-				entityManager.find(RoleAction.class, saved.getId())
-		);
+		assertTrue(roleActionService.findById(saved.getId()).isEmpty());
 	}
 
 	// ----------------------------------------------------------------------

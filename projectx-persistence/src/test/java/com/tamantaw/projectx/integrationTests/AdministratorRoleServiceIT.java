@@ -6,7 +6,6 @@ import com.tamantaw.projectx.persistence.dto.AdministratorDTO;
 import com.tamantaw.projectx.persistence.dto.AdministratorRoleDTO;
 import com.tamantaw.projectx.persistence.dto.RoleDTO;
 import com.tamantaw.projectx.persistence.entity.Administrator;
-import com.tamantaw.projectx.persistence.entity.AdministratorRole;
 import com.tamantaw.projectx.persistence.exception.ConsistencyViolationException;
 import com.tamantaw.projectx.persistence.exception.PersistenceException;
 import com.tamantaw.projectx.persistence.service.AdministratorRoleService;
@@ -156,11 +155,8 @@ public class AdministratorRoleServiceIT extends CommonTestBase {
 
 		assertEquals(deleted, 1L);
 
-		entityManager.flush();
-		entityManager.clear();
-
-		assertNull(
-				entityManager.find(AdministratorRole.class, saved.getId())
+		assertTrue(
+				administratorRoleService.findById(saved.getId()).isEmpty()
 		);
 	}
 
@@ -184,8 +180,8 @@ public class AdministratorRoleServiceIT extends CommonTestBase {
 				administratorRoleService.deleteById(saved.getId());
 
 		assertTrue(deleted);
-		assertNull(
-				entityManager.find(AdministratorRole.class, saved.getId())
+		assertTrue(
+				administratorRoleService.findById(saved.getId()).isEmpty()
 		);
 	}
 

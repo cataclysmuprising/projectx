@@ -104,13 +104,7 @@ public class ActionServiceIT extends CommonTestBase {
 
 		assertEquals(affected, 1L);
 
-		Action updated = entityManager
-				.createQuery(
-						"select a from Action a where a.actionName = :name",
-						Action.class
-				)
-				.setParameter("name", "tempActionUpdate")
-				.getSingleResult();
+		ActionDTO updated = actionService.findOne(criteria).orElseThrow();
 
 		assertEquals(updated.getDisplayName(), "Updated Temp Action");
 		assertEquals(updated.getUpdatedBy(), TEST_UPDATE_USER_ID);
@@ -161,10 +155,7 @@ public class ActionServiceIT extends CommonTestBase {
 
 		assertEquals(deleted, 1L);
 
-		entityManager.flush();
-		entityManager.clear();
-
-		assertNull(entityManager.find(Action.class, saved.getId()));
+		assertTrue(actionService.findById(saved.getId()).isEmpty());
 	}
 
 	@Test
@@ -183,6 +174,6 @@ public class ActionServiceIT extends CommonTestBase {
 		boolean deleted = actionService.deleteById(saved.getId());
 
 		assertTrue(deleted);
-		assertNull(entityManager.find(Action.class, saved.getId()));
+		assertTrue(actionService.findById(saved.getId()).isEmpty());
 	}
 }

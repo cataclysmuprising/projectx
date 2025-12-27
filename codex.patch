@@ -1,834 +1,956 @@
-diff --git a/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/base/AbstractRepository.java b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/base/AbstractRepository.java
-index 537eb108a783394e0e8cb63a918ced8ce4b91c7a..67cc83240dfb13731153a23dfc0ecc7d6c639894 100644
---- a/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/base/AbstractRepository.java
-+++ b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/base/AbstractRepository.java
-@@ -1,59 +1,58 @@
- package com.tamantaw.projectx.persistence.repository.base;
+diff --git a/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/ActionServiceIT.java b/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/ActionServiceIT.java
+index c8eed61f4279c01d1c59aa08d7823f129825c824..b2670307aadead82a6292f57d50bf44f23c89bc9 100644
+--- a/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/ActionServiceIT.java
++++ b/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/ActionServiceIT.java
+@@ -82,107 +82,98 @@ public class ActionServiceIT extends CommonTestBase {
+ 	}
 
- import com.querydsl.core.types.dsl.EntityPathBase;
- import com.tamantaw.projectx.persistence.criteria.base.AbstractCriteria;
- import com.tamantaw.projectx.persistence.entity.base.AbstractEntity;
- import org.springframework.data.domain.Page;
+ 	@Test
+ 	public void update_updatesDisplayName() throws Exception {
+ 		ActionDTO dto = new ActionDTO();
+ 		dto.setAppName("projectx");
+ 		dto.setPage("TempPage");
+ 		dto.setActionName("tempActionUpdate");
+ 		dto.setDisplayName("Temp action");
+ 		dto.setActionType(Action.ActionType.SUB);
+ 		dto.setUrl("/web/sec/temp");
+ 		dto.setDescription("Temporary action for update test");
 
- import java.io.Serializable;
- import java.util.List;
- import java.util.Optional;
+ 		actionService.create(dto, TEST_CREATE_USER_ID);
 
- public interface AbstractRepository<
--		ID extends Serializable,
-+		ID extends Serializable & Comparable<ID>,
- 		ENTITY extends AbstractEntity,
- 		QCLAZZ extends EntityPathBase<ENTITY>,
- 		CRITERIA extends AbstractCriteria<QCLAZZ>
- 		> {
+ 		ActionCriteria criteria = new ActionCriteria();
+ 		criteria.setActionName("tempActionUpdate");
 
- 	// ------------------------------
- 	// ENTITY READS (internal/domain)
- 	// ------------------------------
- 	Optional<ENTITY> findById(ID id);
+ 		UpdateSpec<Action> spec = (update, root) ->
+ 				update.set(QAction.action.displayName, "Updated Temp Action");
 
- 	Optional<ENTITY> findOne(CRITERIA criteria, String... hints);
+ 		long affected = actionService.update(spec, criteria, TEST_UPDATE_USER_ID);
 
- 	List<ENTITY> findAll(CRITERIA criteria, String... hints);
+ 		assertEquals(affected, 1L);
 
- 	Page<ENTITY> findByPaging(CRITERIA criteria, String... hints);
+-		Action updated = entityManager
+-				.createQuery(
+-						"select a from Action a where a.actionName = :name",
+-						Action.class
+-				)
+-				.setParameter("name", "tempActionUpdate")
+-				.getSingleResult();
++		ActionDTO updated = actionService.findOne(criteria).orElseThrow();
 
- 	// ------------------------------
- 	// ID-BASED READS (safe)
- 	// ------------------------------
- 	List<ID> findIds(CRITERIA criteria);
+ 		assertEquals(updated.getDisplayName(), "Updated Temp Action");
+ 		assertEquals(updated.getUpdatedBy(), TEST_UPDATE_USER_ID);
+ 	}
 
- 	long count(CRITERIA criteria);
+ 	@Test
+ 	public void update_withDto_appliesChangesAndAudit() throws Exception {
+ 		ActionDTO dto = new ActionDTO();
+ 		dto.setAppName("projectx");
+ 		dto.setPage("DtoPage");
+ 		dto.setActionName("dtoUpdateAction");
+ 		dto.setDisplayName("DTO update action");
+ 		dto.setActionType(Action.ActionType.SUB);
+ 		dto.setUrl("/web/sec/dto-update-action");
+ 		dto.setDescription("Temporary action for DTO update test");
 
- 	boolean exists(CRITERIA criteria);
+ 		ActionDTO saved = actionService.create(dto, TEST_CREATE_USER_ID);
 
- 	// ------------------------------
- 	// WRITE
- 	// ------------------------------
- 	ENTITY saveRecord(ENTITY entity);
+ 		ActionDTO updateDto = new ActionDTO();
+ 		updateDto.setId(saved.getId());
+ 		updateDto.setDisplayName("DTO Updated Action");
+ 		updateDto.setDescription("Updated via DTO update method");
 
- 	List<ENTITY> saveAllRecords(Iterable<ENTITY> entities);
+ 		ActionDTO updated = actionService.update(updateDto, TEST_UPDATE_USER_ID);
 
- 	long updateById(UpdateSpec<ENTITY> spec, ID id, long updatedBy);
+ 		assertEquals(updated.getDisplayName(), "DTO Updated Action");
+ 		assertEquals(updated.getDescription(), "Updated via DTO update method");
+ 		assertEquals(updated.getUpdatedBy(), TEST_UPDATE_USER_ID);
+ 	}
 
- 	<E extends ENTITY> long updateByCriteria(UpdateSpec<E> spec, CRITERIA criteria, Long updatedBy);
+ 	@Test
+ 	public void delete_removesAction() throws ConsistencyViolationException, PersistenceException {
+ 		ActionDTO dto = new ActionDTO();
+ 		dto.setAppName("projectx");
+ 		dto.setPage("TempPage");
+ 		dto.setActionName("tempDeleteAction");
+ 		dto.setDisplayName("Temp delete action");
+ 		dto.setActionType(Action.ActionType.SUB);
+ 		dto.setUrl("/web/sec/delete-action");
+ 		dto.setDescription("Temporary action for delete test");
 
- 	/**
- 	 * Deletes a single entity by ID.
- 	 *
- 	 * @return true if deleted, false if not found
- 	 */
- 	boolean deleteWithId(ID id);
+ 		ActionDTO saved = actionService.create(dto, TEST_CREATE_USER_ID);
 
- 	long deleteByCriteria(CRITERIA criteria);
+ 		ActionCriteria criteria = new ActionCriteria();
+ 		criteria.setActionName("tempDeleteAction");
+
+ 		long deleted = actionService.delete(criteria);
+
+ 		assertEquals(deleted, 1L);
+
+-		entityManager.flush();
+-		entityManager.clear();
+-
+-		assertNull(entityManager.find(Action.class, saved.getId()));
++		assertTrue(actionService.findById(saved.getId()).isEmpty());
+ 	}
+
+ 	@Test
+ 	public void deleteById_removesActionByIdentifier() throws ConsistencyViolationException, PersistenceException {
+ 		ActionDTO dto = new ActionDTO();
+ 		dto.setAppName("projectx");
+ 		dto.setPage("TempPage");
+ 		dto.setActionName("tempDeleteByIdAction");
+ 		dto.setDisplayName("Temp delete-by-id action");
+ 		dto.setActionType(Action.ActionType.SUB);
+ 		dto.setUrl("/web/sec/delete-by-id-action");
+ 		dto.setDescription("Temporary action for deleteById test");
+
+ 		ActionDTO saved = actionService.create(dto, TEST_CREATE_USER_ID);
+
+ 		boolean deleted = actionService.deleteById(saved.getId());
+
+ 		assertTrue(deleted);
+-		assertNull(entityManager.find(Action.class, saved.getId()));
++		assertTrue(actionService.findById(saved.getId()).isEmpty());
+ 	}
  }
--
-diff --git a/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/base/AbstractRepositoryImpl.java b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/base/AbstractRepositoryImpl.java
-index 211977c567004172d05e3bab6e950ca66a155a95..c3134bd27fdff002a25867448445aa5a724204d5 100644
---- a/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/base/AbstractRepositoryImpl.java
-+++ b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/base/AbstractRepositoryImpl.java
-@@ -1,87 +1,90 @@
- package com.tamantaw.projectx.persistence.repository.base;
-
-+import com.querydsl.core.JoinExpression;
- import com.querydsl.core.types.*;
- import com.querydsl.core.types.dsl.*;
- import com.querydsl.jpa.JPQLQuery;
- import com.querydsl.jpa.impl.AbstractJPAQuery;
- import com.querydsl.jpa.impl.JPAQueryFactory;
- import com.querydsl.jpa.impl.JPAUpdateClause;
- import com.tamantaw.projectx.persistence.criteria.base.AbstractCriteria;
- import com.tamantaw.projectx.persistence.entity.base.AbstractEntity;
- import com.tamantaw.projectx.persistence.entity.base.QAbstractEntity;
- import jakarta.annotation.Nonnull;
-+import jakarta.persistence.EntityGraph;
- import jakarta.persistence.EntityManager;
-+import jakarta.persistence.Subgraph;
- import jakarta.persistence.metamodel.*;
- import org.apache.commons.lang3.ArrayUtils;
- import org.apache.logging.log4j.LogManager;
- import org.apache.logging.log4j.Logger;
- import org.springframework.data.domain.Page;
- import org.springframework.data.domain.PageImpl;
- import org.springframework.data.domain.Pageable;
- import org.springframework.data.jpa.repository.support.*;
- import org.springframework.data.querydsl.EntityPathResolver;
- import org.springframework.data.querydsl.SimpleEntityPathResolver;
- import org.springframework.util.Assert;
-
- import java.io.Serializable;
- import java.lang.reflect.Field;
- import java.time.LocalDateTime;
- import java.util.*;
-
- /**
-  * Base JPA repository implementation with:
-  * <p>
-  * - QueryDSL-based dynamic criteria
-  * - N+1-safe fetching
-  * - Pagination-safe ordering
-  * - Deterministic results across databases
-  * - Explicit API contracts
-  *
-  * <p>
-  * This class intentionally avoids “magic behavior”.
-  * Every performance-critical decision is explicit and documented.
-  * </p>
-  *
-  * <p><b>STRICT GUARANTEE</b></p>
-  * <ul>
-  *   <li>❌ Hibernate in-memory paging</li>
-  *   <li>❌ Duplicate entities</li>
-  *   <li>❌ Missing records</li>
-  *   <li>❌ Broken pagination with joins</li>
-  *   <li>❌ Incorrect total counts</li>
-  *   <li>❌ Non-deterministic ordering</li>
-  * </ul>
-  *
-  * <p>
-  * If the caller requests an unsafe operation (e.g. to-many ORDER BY),
-  * this repository fails fast with a clear exception. There is no “best effort”
-  * fallback that could silently corrupt paging results.
-  * </p>
-  */
- public abstract class AbstractRepositoryImpl<
--		ID extends Serializable,
-+		ID extends Serializable & Comparable<ID>,
- 		ENTITY extends AbstractEntity,
- 		QCLAZZ extends EntityPathBase<ENTITY>,
- 		CRITERIA extends AbstractCriteria<QCLAZZ>>
- 		extends SimpleJpaRepository<ENTITY, ID>
- 		implements AbstractRepository<ID, ENTITY, QCLAZZ, CRITERIA> {
-
- 	// ----------------------------------------------------------------------
- 	// STATIC CONFIGURATION
- 	// ----------------------------------------------------------------------
-
- 	/**
- 	 * Indicates whether the underlying database is PostgreSQL.
- 	 *
- 	 * <p><b>Why this flag exists</b></p>
- 	 * <ul>
- 	 *   <li>
- 	 *     PostgreSQL guarantees stable ORDER BY semantics when reapplying
- 	 *     sorting after an ID-based paging query.
- 	 *   </li>
- 	 *   <li>
- 	 *     PostgreSQL optimizes OFFSET / LIMIT efficiently even on complex queries.
- 	 *   </li>
- 	 *   <li>
- 	 *     Other databases do NOT guarantee order preservation for
- 	 *     <code>IN (...)</code> queries and therefore require explicit ordering.
-@@ -144,86 +147,251 @@ public abstract class AbstractRepositoryImpl<
- 		QCLAZZ resolved = (QCLAZZ) PATH_RESOLVER.createPath(domainClass);
- 		path = resolved;
-
- 		PathBuilder<ENTITY> builder =
- 				new PathBuilder<>(path.getType(), path.getMetadata());
-
- 		querydsl = new Querydsl(entityManager, builder);
- 		queryFactory = new JPAQueryFactory(entityManager);
-
- 		audit = resolveAuditPath(path);
-
- 		IdentifiableType<ENTITY> identifiable =
- 				(IdentifiableType<ENTITY>) entityManager
- 						.getMetamodel()
- 						.managedType(domainClass);
-
- 		SingularAttribute<? super ENTITY, ID> idAttr =
- 				identifiable.getId(idClass);
-
- 		idExpr = Expressions.simplePath(
- 				idClass,
- 				path,
- 				idAttr.getName()
- 		);
-
-+		if (!Comparable.class.isAssignableFrom(idClass)) {
-+			throw new IllegalStateException(
-+					"ID type must be Comparable for deterministic paging. idClass=" + idClass.getName()
-+			);
-+		}
-+
- 		@SuppressWarnings("unchecked")
- 		Expression<? extends Comparable<?>> comparableIdExpr =
- 				(Expression<? extends Comparable<?>>) idExpr;
-
- 		idAscOrder = new OrderSpecifier<>(Order.ASC, comparableIdExpr);
- 	}
-
- 	// ----------------------------------------------------------------------
- 	// READ OPERATIONS
- 	// ----------------------------------------------------------------------
-
--	protected static QueryHints getRelatedDataHints(String... hints) {
--		if (ArrayUtils.isNotEmpty(hints)) {
--			MutableQueryHints qh = new MutableQueryHints();
--			qh.add("jakarta.persistence.fetchgraph", String.join(",", hints));
--			return qh;
-+	protected QueryHints getRelatedDataHints(String... hints) {
-+
-+		if (ArrayUtils.isEmpty(hints)) {
-+			return null;
-+		}
-+
-+		EntityGraph<?> graph = entityManager.createEntityGraph(path.getType());
-+		ManagedType<?> rootType = entityManager.getMetamodel().managedType(path.getType());
-+
-+		for (String hint : hints) {
-+			if (hint == null || hint.isBlank()) {
-+				continue;
-+			}
-+			String graphSpec = normalizeGraphSpec(hint, rootType.getJavaType().getSimpleName());
-+			applyGraphSpec(new EntityGraphContainer(graph), rootType, graphSpec);
- 		}
--		return null;
-+
-+		MutableQueryHints qh = new MutableQueryHints();
-+		qh.add("jakarta.persistence.fetchgraph", graph);
-+		return qh;
- 	}
-
- 	private static <T> List<List<T>> chunk(List<T> src, int size) {
-
- 		if (src == null || src.isEmpty()) {
- 			return List.of();
- 		}
-
- 		List<List<T>> out =
- 				new ArrayList<>((src.size() + size - 1) / size);
-
- 		for (int i = 0; i < src.size(); i += size) {
- 			out.add(src.subList(i, Math.min(src.size(), i + size)));
- 		}
-
- 		return out;
- 	}
-
-+	/**
-+	 * Strictly deduplicates root entities by ID while preserving order.
-+	 */
-+	protected Map<ID, ENTITY> deduplicateById(List<ENTITY> rows) {
-+
-+		if (rows == null || rows.isEmpty()) {
-+			return Map.of();
-+		}
-+
-+		Map<ID, ENTITY> unique = new LinkedHashMap<>(rows.size());
-+
-+		for (ENTITY e : rows) {
-+			@SuppressWarnings("unchecked")
-+			ID id = (ID) e.getId();
-+			unique.putIfAbsent(id, e);
-+		}
-+
-+		return unique;
-+	}
-+
-+	protected String normalizeGraphSpec(String graph, String rootName) {
-+
-+		if (graph == null) {
-+			return "";
-+		}
-+
-+		graph = graph.trim();
-+		if (graph.isEmpty()) {
-+			return "";
-+		}
-+
-+		// Strip optional root prefix "Role(...)" to reuse the inner specification.
-+		int start = graph.indexOf('(');
-+		int end = graph.lastIndexOf(')');
-+		if (start >= 0 && end > start) {
-+			return graph.substring(start + 1, end);
-+		}
-+
-+		// If the graph is just the root name, treat it as empty.
-+		if (graph.equals(rootName)) {
-+			return "";
-+		}
-+
-+		return graph;
-+	}
-+
-+	protected void applyGraphSpec(GraphContainer graph, ManagedType<?> rootType, String graphSpec) {
-+
-+		if (graphSpec == null || graphSpec.isBlank()) {
-+			return;
-+		}
-+
-+		int idx = 0;
-+		while (idx < graphSpec.length()) {
-+
-+			int nextParen = graphSpec.indexOf('(', idx);
-+			int nextComma = graphSpec.indexOf(',', idx);
-+
-+			int end = minPositive(nextParen, nextComma, graphSpec.length());
-+			if (end < 0) {
-+				end = graphSpec.length();
-+			}
-+
-+			String attrName = graphSpec.substring(idx, end).trim();
-+
-+			if (!attrName.isEmpty()) {
-+				Attribute<?, ?> attr = rootType.getAttribute(attrName);
-+
-+				if (nextParen >= 0 && nextParen == end) {
-+					int close = findMatchingParen(graphSpec, nextParen);
-+					String nested = graphSpec.substring(nextParen + 1, close);
-+
-+					ManagedType<?> nestedType = resolveManagedType(attr);
-+					Subgraph<?> subgraph = graph.addSubgraph(attr, nestedType);
-+					applyGraphSpec(new SubgraphContainer(subgraph), nestedType, nested);
-+					idx = close + 1;
-+					continue;
-+				}
-+				graph.addAttribute(attrName);
-+			}
-+
-+			idx = end + 1;
-+		}
-+	}
-+
-+	protected ManagedType<?> resolveManagedType(Attribute<?, ?> attr) {
-+
-+		if (attr instanceof SingularAttribute<?, ?> sa) {
-+			if (sa.getType() instanceof ManagedType<?> mt) {
-+				return mt;
-+			}
-+		}
-+
-+		if (attr instanceof PluralAttribute<?, ?, ?> pa) {
-+			if (pa.getElementType() instanceof ManagedType<?> mt) {
-+				return mt;
-+			}
-+		}
-+
-+		throw new IllegalStateException(
-+				"Attribute '" + attr.getName() + "' is not an entity path and cannot have nested graph hints"
-+		);
-+	}
-+
-+	protected interface GraphContainer {
-+		void addAttribute(String attribute);
-+
-+		Subgraph<?> addSubgraph(Attribute<?, ?> attr, ManagedType<?> nestedType);
-+	}
-+
-+	protected static final class EntityGraphContainer implements GraphContainer {
-+		private final EntityGraph<?> delegate;
-+
-+		EntityGraphContainer(EntityGraph<?> delegate) {
-+			this.delegate = delegate;
-+		}
-+
-+		@Override
-+		public void addAttribute(String attribute) {
-+			delegate.addAttributeNodes(attribute);
-+		}
-+
-+		@Override
-+		public Subgraph<?> addSubgraph(Attribute<?, ?> attr, ManagedType<?> nestedType) {
-+			return delegate.addSubgraph(attr.getName(), nestedType.getJavaType());
-+		}
-+	}
-+
-+	protected static final class SubgraphContainer implements GraphContainer {
-+		private final Subgraph<?> delegate;
-+
-+		SubgraphContainer(Subgraph<?> delegate) {
-+			this.delegate = delegate;
-+		}
-+
-+		@Override
-+		public void addAttribute(String attribute) {
-+			delegate.addAttributeNodes(attribute);
-+		}
-+
-+		@Override
-+		public Subgraph<?> addSubgraph(Attribute<?, ?> attr, ManagedType<?> nestedType) {
-+			return delegate.addSubgraph(attr.getName(), nestedType.getJavaType());
-+		}
-+	}
-+
- 	/**
- 	 * Simple primary-key lookup.
- 	 */
- 	@Override
- 	@Nonnull
- 	public Optional<ENTITY> findById(@Nonnull ID id) {
- 		Assert.notNull(id, "Id must not be null");
- 		return super.findById(id);
- 	}
-
- 	/**
- 	 * Returns exactly one entity or empty.
- 	 *
- 	 * <p>
- 	 * The criteria MUST be logically unique.
- 	 * If more than one row matches, an exception is thrown.
- 	 * </p>
- 	 */
- 	@Override
- 	public Optional<ENTITY> findOne(CRITERIA criteria, String... hints) {
-
- 		Assert.notNull(criteria, "Criteria must not be null");
-
- 		Predicate filter = criteria.getFilter(path);
-
-@@ -242,50 +410,51 @@ public abstract class AbstractRepositoryImpl<
- 			JPQLQuery<ENTITY> query =
- 					createQuery(filter, hints).select(path);
-
- 			applySortOrDefaultById(query, criteria);
-
- 			List<ENTITY> rows = query.limit(2).fetch();
-
- 			if (rows.isEmpty()) {
- 				return Optional.empty();
- 			}
- 			if (rows.size() > 1) {
- 				throw new IllegalStateException(
- 						"findOne() returned more than one result"
- 				);
- 			}
- 			return Optional.of(rows.getFirst());
- 		}
-
- 		// ------------------------------------------------------------
- 		// SAFE PATH — collection fetch (ID first)
- 		// ------------------------------------------------------------
- 		JPQLQuery<ID> idQuery =
- 				createQuery(filter).select(idExpr);
-
- 		applySortOrDefaultById(idQuery, criteria);
-+		assertNoAdditionalJoins((AbstractJPAQuery<?, ?>) idQuery, "findOne.idQuery");
-
- 		List<ID> ids = idQuery.limit(2).fetch();
-
- 		if (ids.isEmpty()) {
- 			return Optional.empty();
- 		}
- 		if (ids.size() > 1) {
- 			throw new IllegalStateException(
- 					"findOne() returned more than one result"
- 			);
- 		}
-
- 		JPQLQuery<ENTITY> entityQuery =
- 				createQuery(idExpr.eq(ids.getFirst()), hints)
- 						.select(path);
-
- 		return Optional.ofNullable(entityQuery.fetchOne());
- 	}
-
- 	// ----------------------------------------------------------------------
- 	// ID / COUNT / EXISTS
- 	// ----------------------------------------------------------------------
-
- 	/**
- 	 * Returns all matching entities without pagination.
-@@ -311,75 +480,72 @@ public abstract class AbstractRepositoryImpl<
- 		boolean requiresIdFirst =
- 				fetchGraphContainsCollection(hints);
-
- 		// ------------------------------------------------------------
- 		// FAST PATH — to-one fetch only (deterministic, no duplication)
- 		// ------------------------------------------------------------
- 		if (!requiresIdFirst) {
-
- 			JPQLQuery<ENTITY> query =
- 					createQuery(filter, hints).select(path);
-
- 			applySortOrDefaultById(query, criteria);
-
- 			return query.fetch();
- 		}
-
- 		// ------------------------------------------------------------
- 		// SAFE PATH — collection fetch allowed, ID-first + root dedup
- 		// ------------------------------------------------------------
-
- 		// Phase 1 — deterministic ID selection
- 		JPQLQuery<ID> idQuery =
- 				createQuery(filter).select(idExpr);
-
- 		applySortOrDefaultById(idQuery, criteria);
-+		assertNoAdditionalJoins((AbstractJPAQuery<?, ?>) idQuery, "findAll.idQuery");
-
- 		List<ID> ids = idQuery.fetch();
- 		if (ids.isEmpty()) {
- 			return List.of();
- 		}
-
- 		// Phase 2 — entity fetch with fetch graph
- 		JPQLQuery<ENTITY> entityQuery =
- 				createQuery(idExpr.in(ids), hints).select(path);
-
- 		applyStableOrderAfterIdPaging(entityQuery, criteria, ids);
-
- 		List<ENTITY> rows = entityQuery.fetch();
-
- 		// ------------------------------------------------------------
- 		// STRICT ROOT DEDUPLICATION (safe because NO pagination)
- 		// ------------------------------------------------------------
- 		// JPA may return duplicate roots when fetching collections.
- 		// Dedup is REQUIRED here to preserve set semantics.
- 		// This does NOT hide paging bugs because paging is forbidden.
--		Map<Long, ENTITY> unique = new LinkedHashMap<>(rows.size());
--
--		for (ENTITY e : rows) {
--			unique.putIfAbsent(e.getId(), e);
--		}
-+		Map<ID, ENTITY> unique = deduplicateById(rows);
-
- 		return new ArrayList<>(unique.values());
- 	}
-
- 	/**
- 	 * Safe pagination method.
- 	 *
- 	 * <p>
- 	 * Guarantees:
- 	 * <ul>
- 	 *   <li>Correct offset + limit behavior</li>
- 	 *   <li>No in-memory pagination</li>
- 	 *   <li>No duplicate rows</li>
- 	 *   <li>Stable ordering</li>
- 	 * </ul>
- 	 * </p>
- 	 */
- 	@Override
- 	public Page<ENTITY> findByPaging(CRITERIA criteria, String... hints) {
-
- 		Assert.notNull(criteria, "Criteria must not be null");
-
- 		Pageable pageable = criteria.toPageable();
- 		Assert.notNull(pageable, "Pageable must not be null");
-
-@@ -397,131 +563,149 @@ public abstract class AbstractRepositoryImpl<
- 					createQuery(filter, hints).select(path);
-
- 			applySortOrDefaultById(query, criteria);
-
- 			query = query.offset(pageable.getOffset())
- 					.limit(pageable.getPageSize());
-
- 			List<ENTITY> content = query.fetch();
- 			long total = count(criteria);
-
- 			return new PageImpl<>(content, pageable, total);
- 		}
-
- 		// ------------------------------------------------------------
- 		// PHASE 1 — ID PAGE (GLOBAL ORDER + OFFSET/LIMIT)
- 		// ------------------------------------------------------------
- 		JPQLQuery<ID> idQuery =
- 				createQuery(filter).select(idExpr);
-
- 		applySortOrDefaultById(idQuery, criteria);
-
- 		idQuery = idQuery
- 				.offset(pageable.getOffset())
- 				.limit(pageable.getPageSize());
-
-+		assertNoAdditionalJoins((AbstractJPAQuery<?, ?>) idQuery, "findByPaging.idQuery");
- 		List<ID> ids = idQuery.fetch();
-
- 		if (ids.isEmpty()) {
- 			return Page.empty(pageable);
- 		}
-
- 		// ------------------------------------------------------------
- 		// PHASE 2 — ENTITY FETCH
- 		// ------------------------------------------------------------
- 		JPQLQuery<ENTITY> entityQuery =
- 				createQuery(idExpr.in(ids), hints).select(path);
-
- 		applyStableOrderAfterIdPaging(entityQuery, criteria, ids);
-
--		List<ENTITY> content = entityQuery.fetch();
-+		List<ENTITY> rows = entityQuery.fetch();
-+		Map<ID, ENTITY> unique = deduplicateById(rows);
-+		List<ENTITY> content = new ArrayList<>(unique.values());
-+
-+		if (content.size() != ids.size()) {
-+			throw new IllegalStateException(
-+					"Phase-2 fetch returned " + content.size() +
-+							" unique roots for " + ids.size() + " ids. " +
-+							"FetchGraph likely produced join-multiplication or filtered rows."
-+			);
-+		}
-+
- 		long total = count(criteria);
-
- 		return new PageImpl<>(content, pageable, total);
- 	}
-
- 	/**
- 	 * Returns matching entity IDs.
- 	 *
- 	 * <p>
- 	 * Used internally for bulk operations.
- 	 * Ordering does NOT affect correctness here.
- 	 * </p>
- 	 */
- 	@Override
- 	public List<ID> findIds(CRITERIA criteria) {
-
- 		Assert.notNull(criteria, "Criteria must not be null");
-
- 		Predicate filter = criteria.getFilter(path);
-
- 		JPQLQuery<ID> query =
- 				createQuery(filter).select(idExpr);
-
- 		applySortOrDefaultById(query, criteria);
-+		assertNoAdditionalJoins((AbstractJPAQuery<?, ?>) query, "findIds");
-
- 		return query.fetch();
- 	}
-
- 	// ----------------------------------------------------------------------
- 	// WRITE OPERATIONS
- 	// ----------------------------------------------------------------------
-
- 	/**
- 	 * Count query with identical filter but no joins or pagination.
- 	 *
- 	 * <p>
- 	 * STRICT: COUNT must match the same filter used for paging decisions.
- 	 * No COUNT DISTINCT. No recovery.
- 	 * </p>
- 	 */
- 	@Override
- 	public long count(CRITERIA criteria) {
-
- 		Assert.notNull(criteria, "Criteria must not be null");
-
- 		Predicate filter = criteria.getFilter(path);
-
-+		AbstractJPAQuery<?, ?> query = createQuery(filter);
-+		assertNoAdditionalJoins(query, "count");
-+
- 		Long count =
--				createQuery(filter)
--						.select(idExpr.count())
-+				query.select(idExpr.count())
- 						.fetchOne();
-
- 		return count == null ? 0L : count;
- 	}
-
- 	/**
- 	 * Existence check.
- 	 */
- 	@Override
- 	public boolean exists(CRITERIA criteria) {
-
- 		Assert.notNull(criteria, "Criteria must not be null");
-
- 		Predicate filter = criteria.getFilter(path);
-
--		return createQuery(filter)
-+		AbstractJPAQuery<?, ?> query = createQuery(filter);
-+		assertNoAdditionalJoins(query, "exists");
-+
-+		return query
- 				.select(idExpr)
- 				.fetchFirst() != null;
- 	}
-
- 	// ----------------------------------------------------------------------
- 	// BULK OPERATIONS (ID-FIRST, SAFE)
- 	// ----------------------------------------------------------------------
-
- 	@Override
- 	public ENTITY saveRecord(ENTITY entity) {
- 		return super.saveAndFlush(entity);
- 	}
-
- 	@Override
- 	public List<ENTITY> saveAllRecords(Iterable<ENTITY> entities) {
- 		return super.saveAllAndFlush(entities);
- 	}
-
- 	@Override
- 	public long updateById(
- 			UpdateSpec<ENTITY> spec,
- 			ID id,
- 			long updatedBy) {
-
- 		Assert.notNull(spec, "UpdateSpec must not be null");
-@@ -623,50 +807,73 @@ public abstract class AbstractRepositoryImpl<
- 	}
-
- 	// ----------------------------------------------------------------------
- 	// QUERY CONSTRUCTION
- 	// ----------------------------------------------------------------------
-
- 	protected AbstractJPAQuery<?, ?> createQuery(
- 			Predicate predicate,
- 			String... hints) {
-
- 		AbstractJPAQuery<?, ?> query =
- 				querydsl.createQuery(path);
-
- 		if (predicate != null) {
- 			query.where(predicate);
- 		}
-
- 		QueryHints qh = getRelatedDataHints(hints);
- 		if (qh != null) {
- 			qh.forEach(query::setHint);
- 		}
-
- 		return query;
- 	}
-
-+	protected void assertNoAdditionalJoins(AbstractJPAQuery<?, ?> query, String context) {
-+
-+		List<JoinExpression> joins = query.getMetadata().getJoins();
-+		if (joins == null || joins.isEmpty()) {
-+			return;
-+		}
-+
-+		// The first join is the root entity (FROM). Any additional join is unsafe here.
-+		if (joins.size() > 1) {
-+			throw new IllegalStateException(
-+					"Unsafe join detected in " + context + ". " +
-+							"ID/count queries must not introduce additional joins. joins=" + joins
-+			);
-+		}
-+
-+		JoinExpression root = joins.getFirst();
-+		if (!Objects.equals(root.getTarget(), path)) {
-+			throw new IllegalStateException(
-+					"Unexpected join root in " + context + ". Expected " + path + " but found " + root.getTarget()
-+			);
-+		}
-+	}
-+
- 	protected final void afterBulkDml() {
- 		entityManager.flush();
- 		entityManager.clear();
- 	}
-
- 	protected void applyAudit(
- 			JPAUpdateClause update,
- 			Long updatedBy) {
-
- 		update.set(audit.updatedDate, LocalDateTime.now());
- 		update.set(audit.updatedBy, updatedBy);
- 	}
-
- 	// ----------------------------------------------------------------------
- 	// SORT SAFETY ENFORCEMENT (STRICT – FAIL FAST)
- 	// ----------------------------------------------------------------------
-
- 	/**
- 	 * Validates that ORDER BY clauses do NOT traverse collection-valued paths.
- 	 *
- 	 * <p>
- 	 * Sorting on to-many associations is mathematically incompatible with
- 	 * OFFSET/LIMIT pagination and is therefore forbidden at framework level.
- 	 * </p>
- 	 *
-diff --git a/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/service/base/BaseService.java b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/service/base/BaseService.java
-index b166adfcbb33e5ce4d7f81a1db8931b67f40ec8d..83f4603b6b90e0ea0cdccdd1c71ec5b49858a25d 100644
---- a/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/service/base/BaseService.java
-+++ b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/service/base/BaseService.java
-@@ -12,51 +12,51 @@ import com.tamantaw.projectx.persistence.exception.PersistenceException;
- import com.tamantaw.projectx.persistence.mapper.base.AbstractMapper;
- import com.tamantaw.projectx.persistence.mapper.base.MappingContext;
- import com.tamantaw.projectx.persistence.repository.base.AbstractRepository;
- import com.tamantaw.projectx.persistence.repository.base.UpdateSpec;
- import jakarta.persistence.EntityNotFoundException;
- import org.apache.logging.log4j.LogManager;
- import org.apache.logging.log4j.Logger;
+diff --git a/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/AdministratorLoginHistoryServiceIT.java b/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/AdministratorLoginHistoryServiceIT.java
+index bdec9ac9d809d347e196b7ff5a07c2339bd82470..6e3ddf776d5d97d068edeeb9bfdd44990f42eccf 100644
+--- a/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/AdministratorLoginHistoryServiceIT.java
++++ b/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/AdministratorLoginHistoryServiceIT.java
+@@ -1,81 +1,77 @@
+ package com.tamantaw.projectx.integrationTests;
+
+ import com.tamantaw.projectx.CommonTestBase;
+ import com.tamantaw.projectx.persistence.criteria.AdministratorLoginHistoryCriteria;
+ import com.tamantaw.projectx.persistence.dto.AdministratorDTO;
+ import com.tamantaw.projectx.persistence.dto.AdministratorLoginHistoryDTO;
+ import com.tamantaw.projectx.persistence.dto.base.PaginatedResult;
+ import com.tamantaw.projectx.persistence.entity.Administrator;
+-import com.tamantaw.projectx.persistence.entity.AdministratorLoginHistory;
+ import com.tamantaw.projectx.persistence.entity.QAdministratorLoginHistory;
+ import com.tamantaw.projectx.persistence.exception.ConsistencyViolationException;
+ import com.tamantaw.projectx.persistence.exception.PersistenceException;
+ import com.tamantaw.projectx.persistence.service.AdministratorLoginHistoryService;
+ import com.tamantaw.projectx.persistence.service.AdministratorService;
  import org.springframework.beans.factory.annotation.Autowired;
- import org.springframework.dao.DataIntegrityViolationException;
- import org.springframework.data.domain.Page;
- import org.springframework.data.domain.Pageable;
- import org.springframework.transaction.annotation.Transactional;
- import org.springframework.util.Assert;
+ import org.springframework.data.domain.Sort;
+ import org.testng.annotations.Test;
 
- import java.io.Serializable;
- import java.lang.reflect.Field;
- import java.lang.reflect.Modifier;
- import java.util.ArrayList;
+ import java.time.LocalDateTime;
  import java.util.List;
  import java.util.Optional;
 
- import static com.tamantaw.projectx.persistence.utils.LoggerConstants.DATA_INTEGRITY_VIOLATION_MSG;
+ import static org.testng.Assert.*;
 
- @Transactional(transactionManager = PrimaryPersistenceContext.TX_MANAGER, rollbackFor = Exception.class)
- public abstract class BaseService<
--		ID extends Serializable,
-+		ID extends Serializable & Comparable<ID>,
- 		ENTITY extends AbstractEntity,
- 		QCLAZZ extends EntityPathBase<ENTITY>,
- 		CRITERIA extends AbstractCriteria<QCLAZZ>,
- 		DTO extends AbstractDTO,
- 		MAPPER extends AbstractMapper<DTO, ENTITY>
- 		> {
-
- 	private static final Logger log =
- 			LogManager.getLogger("serviceLogs." + BaseService.class.getSimpleName());
-
- 	protected final MAPPER mapper;
- 	protected final AbstractRepository<ID, ENTITY, QCLAZZ, CRITERIA> repository;
+ public class AdministratorLoginHistoryServiceIT extends CommonTestBase {
 
  	@Autowired
- 	protected MappingContext mappingContext;
+ 	private AdministratorLoginHistoryService loginHistoryService;
 
- 	protected BaseService(
- 			AbstractRepository<ID, ENTITY, QCLAZZ, CRITERIA> repository,
- 			MAPPER mapper
- 	) {
- 		this.repository = repository;
- 		this.mapper = mapper;
+ 	@Autowired
+ 	private AdministratorService administratorService;
+
+ 	@Test
+ 	public void create_persistsLoginHistory() throws ConsistencyViolationException, PersistenceException {
+ 		AdministratorLoginHistoryDTO dto = buildDto(1L, "127.0.0.1", "Ubuntu", "Mozilla");
+
+ 		AdministratorLoginHistoryDTO saved = loginHistoryService.create(dto, TEST_CREATE_USER_ID);
+
+ 		logger.info("Saved AdministratorLoginHistory info : " + saved);
+
+ 		assertNotNull(saved.getId());
+ 		assertEquals(saved.getCreatedBy(), TEST_CREATE_USER_ID);
+ 		assertEquals(saved.getUpdatedBy(), TEST_CREATE_USER_ID);
+ 		assertNotNull(saved.getLoginDate());
  	}
 
- // ----------------------------------------------------------------------
+ 	@Test
+ 	public void findById_existingLoginHistory() throws Exception {
+ 		AdministratorLoginHistoryDTO saved = loginHistoryService.create(
+ 				buildDto(2L, "10.0.0.2", "Windows", "Chrome"),
+ 				TEST_CREATE_USER_ID
+ 		);
+
+-		entityManager.flush();
+-		entityManager.clear();
+-
+ 		AdministratorLoginHistoryCriteria criteria = new AdministratorLoginHistoryCriteria();
+ 		criteria.setId(saved.getId());
+ 		Optional<AdministratorLoginHistoryDTO> result = loginHistoryService.findOne(criteria, "AdministratorLoginHistory(administrator)");
+
+ 		assertTrue(result.isPresent());
+ 		assertEquals(result.get().getAdministrator().getId(), 2L);
+ 		assertEquals(result.get().getOs(), "Windows");
+ 		assertEquals(result.get().getClientAgent(), "Chrome");
+ 	}
+
+ 	@Test
+ 	public void findAll_byAdministratorId() throws Exception {
+ 		loginHistoryService.create(buildDto(1L, "192.168.1.10", "macOS", "Safari"), TEST_CREATE_USER_ID);
+ 		loginHistoryService.create(buildDto(1L, "192.168.1.11", "macOS", "Safari"), TEST_CREATE_USER_ID);
+
+ 		AdministratorLoginHistoryCriteria criteria = new AdministratorLoginHistoryCriteria();
+ 		criteria.setAdministratorId(1L);
+ 		//criteria.addSort(QAdministratorLoginHistory.administratorLoginHistory.administrator.name, Sort.Direction.ASC);
+
+ 		// this is String based sorting
+ 		criteria.addSortKey("administrator.name", Sort.Direction.ASC);
+
+ 		List<AdministratorLoginHistoryDTO> histories = loginHistoryService.findAll(criteria, "AdministratorLoginHistory(administrator)");
+
+ 		assertFalse(histories.isEmpty());
+@@ -190,55 +186,52 @@ public class AdministratorLoginHistoryServiceIT extends CommonTestBase {
+ 	public void deleteById_removesLoginHistoryByIdentifier() throws Exception {
+
+ 		// --------------------------------------------------
+ 		// GIVEN: a real administrator
+ 		// --------------------------------------------------
+ 		AdministratorDTO admin =
+ 				createAdministrator("delete-history@example.com");
+
+ 		AdministratorLoginHistoryDTO saved =
+ 				loginHistoryService.create(
+ 						buildDto(admin.getId(), "172.16.0.2", "Windows", "Edge"),
+ 						TEST_CREATE_USER_ID
+ 				);
+
+ 		// --------------------------------------------------
+ 		// WHEN
+ 		// --------------------------------------------------
+ 		boolean deleted =
+ 				loginHistoryService.deleteById(saved.getId());
+
+ 		// --------------------------------------------------
+ 		// THEN
+ 		// --------------------------------------------------
+ 		assertTrue(deleted);
+
+-		assertNull(
+-				entityManager.find(
+-						AdministratorLoginHistory.class,
+-						saved.getId()
+-				)
++		assertTrue(
++				loginHistoryService.findById(saved.getId()).isEmpty()
+ 		);
+ 	}
+
+ 	private AdministratorLoginHistoryDTO buildDto(Long adminId, String ip, String os, String agent) {
+ 		AdministratorLoginHistoryDTO dto = new AdministratorLoginHistoryDTO();
+ 		dto.setAdministratorId(adminId);
+ 		dto.setIpAddress(ip);
+ 		dto.setOs(os);
+ 		dto.setClientAgent(agent);
+ 		dto.setLoginDate(LocalDateTime.now());
+ 		return dto;
+ 	}
+
+ 	private AdministratorDTO createAdministrator(String loginId)
+ 			throws ConsistencyViolationException, PersistenceException {
+
+ 		AdministratorDTO dto = new AdministratorDTO();
+ 		dto.setName("Admin " + loginId);
+ 		dto.setLoginId(loginId);
+ 		dto.setPassword("secret");
+ 		dto.setStatus(Administrator.Status.ACTIVE);
+
+ 		return administratorService.create(dto, TEST_CREATE_USER_ID);
+ 	}
+ }
+diff --git a/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/AdministratorRoleServiceIT.java b/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/AdministratorRoleServiceIT.java
+index 761554e6e790574604b72c8827b3141c077fc3d1..915ecf61ac4d0d0019f098d73724307ccb2a5506 100644
+--- a/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/AdministratorRoleServiceIT.java
++++ b/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/AdministratorRoleServiceIT.java
+@@ -1,34 +1,33 @@
+ package com.tamantaw.projectx.integrationTests;
+
+ import com.tamantaw.projectx.CommonTestBase;
+ import com.tamantaw.projectx.persistence.criteria.AdministratorRoleCriteria;
+ import com.tamantaw.projectx.persistence.dto.AdministratorDTO;
+ import com.tamantaw.projectx.persistence.dto.AdministratorRoleDTO;
+ import com.tamantaw.projectx.persistence.dto.RoleDTO;
+ import com.tamantaw.projectx.persistence.entity.Administrator;
+-import com.tamantaw.projectx.persistence.entity.AdministratorRole;
+ import com.tamantaw.projectx.persistence.exception.ConsistencyViolationException;
+ import com.tamantaw.projectx.persistence.exception.PersistenceException;
+ import com.tamantaw.projectx.persistence.service.AdministratorRoleService;
+ import com.tamantaw.projectx.persistence.service.AdministratorService;
+ import com.tamantaw.projectx.persistence.service.RoleService;
+ import org.springframework.beans.factory.annotation.Autowired;
+ import org.testng.annotations.Test;
+
+ import java.util.List;
+ import java.util.Optional;
+
+ import static org.testng.Assert.*;
+
+ public class AdministratorRoleServiceIT extends CommonTestBase {
+
+ 	@Autowired
+ 	private AdministratorRoleService administratorRoleService;
+
+ 	@Autowired
+ 	private AdministratorService administratorService;
+
+ 	@Autowired
+ 	private RoleService roleService;
+
+ 	// ----------------------------------------------------------------------
+@@ -134,74 +133,71 @@ public class AdministratorRoleServiceIT extends CommonTestBase {
+ 	@Test
+ 	public void delete_removesAdministratorRole()
+ 			throws ConsistencyViolationException, PersistenceException {
+
+ 		AdministratorDTO newAdmin =
+ 				createAdministrator("unlink-admin@example.com");
+
+ 		RoleDTO role =
+ 				roleService.findById(1L).orElseThrow();
+
+ 		AdministratorRoleDTO dto = new AdministratorRoleDTO();
+ 		dto.setAdministratorId(newAdmin.getId());
+ 		dto.setRoleId(role.getId());
+
+ 		AdministratorRoleDTO saved =
+ 				administratorRoleService.create(dto, TEST_CREATE_USER_ID);
+
+ 		AdministratorRoleCriteria criteria = new AdministratorRoleCriteria();
+ 		criteria.setAdministratorId(newAdmin.getId());
+
+ 		long deleted =
+ 				administratorRoleService.delete(criteria);
+
+ 		assertEquals(deleted, 1L);
+
+-		entityManager.flush();
+-		entityManager.clear();
+-
+-		assertNull(
+-				entityManager.find(AdministratorRole.class, saved.getId())
++		assertTrue(
++				administratorRoleService.findById(saved.getId()).isEmpty()
+ 		);
+ 	}
+
+ 	@Test
+ 	public void deleteById_removesAdministratorRoleByIdentifier() throws Exception {
+
+ 		AdministratorDTO newAdmin =
+ 				createAdministrator("delete-by-id-admin@example.com");
+
+ 		RoleDTO role =
+ 				roleService.findById(1L).orElseThrow();
+
+ 		AdministratorRoleDTO dto = new AdministratorRoleDTO();
+ 		dto.setAdministratorId(newAdmin.getId());
+ 		dto.setRoleId(role.getId());
+
+ 		AdministratorRoleDTO saved =
+ 				administratorRoleService.create(dto, TEST_CREATE_USER_ID);
+
+ 		boolean deleted =
+ 				administratorRoleService.deleteById(saved.getId());
+
+ 		assertTrue(deleted);
+-		assertNull(
+-				entityManager.find(AdministratorRole.class, saved.getId())
++		assertTrue(
++				administratorRoleService.findById(saved.getId()).isEmpty()
+ 		);
+ 	}
+
+ 	// ----------------------------------------------------------------------
+ 	// HELPERS
+ 	// ----------------------------------------------------------------------
+
+ 	private AdministratorDTO createAdministrator(String loginId)
+ 			throws ConsistencyViolationException, PersistenceException {
+
+ 		AdministratorDTO dto = new AdministratorDTO();
+ 		dto.setName("Admin for Link " + loginId);
+ 		dto.setLoginId(loginId);
+ 		dto.setPassword("secret");
+ 		dto.setStatus(Administrator.Status.ACTIVE);
+
+ 		return administratorService.create(dto, TEST_CREATE_USER_ID);
+ 	}
+ }
+diff --git a/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/AdministratorServiceIT.java b/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/AdministratorServiceIT.java
+index d005efc6dc1239caa86a3d6ca7a1479d25ad5fa1..f7d9679deb14b5afe0a54d7d3cde5b0b4f126d63 100644
+--- a/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/AdministratorServiceIT.java
++++ b/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/AdministratorServiceIT.java
+@@ -1,134 +1,125 @@
+ package com.tamantaw.projectx.integrationTests;
+
+ import com.tamantaw.projectx.CommonTestBase;
+ import com.tamantaw.projectx.persistence.criteria.AdministratorCriteria;
++import com.tamantaw.projectx.persistence.criteria.AdministratorRoleCriteria;
+ import com.tamantaw.projectx.persistence.criteria.RoleCriteria;
+ import com.tamantaw.projectx.persistence.dto.AdministratorDTO;
+ import com.tamantaw.projectx.persistence.entity.Administrator;
+ import com.tamantaw.projectx.persistence.entity.AdministratorRole;
+ import com.tamantaw.projectx.persistence.service.AdministratorService;
++import com.tamantaw.projectx.persistence.service.AdministratorRoleService;
+ import org.springframework.beans.factory.annotation.Autowired;
+ import org.testng.annotations.Test;
+
+ import java.util.List;
+ import java.util.Optional;
+ import java.util.Set;
+ import java.util.stream.Collectors;
+
+ import static org.testng.Assert.*;
+
+ public class AdministratorServiceIT extends CommonTestBase {
+
+ 	@Autowired
+ 	private AdministratorService administratorService;
+
++	@Autowired
++	private AdministratorRoleService administratorRoleService;
++
+ 	@Test
+ 	public void create_withRoles_persistsAdministratorAndRoles() throws Exception {
+ 		AdministratorDTO dto = new AdministratorDTO();
+ 		dto.setName("Admin With Roles");
+ 		dto.setLoginId("admin-with-roles@example.com");
+ 		dto.setPassword("secret");
+ 		dto.setStatus(Administrator.Status.ACTIVE);
+
+ 		Set<Long> roleIds = Set.of(1L, 2L);
+
+ 		Administrator saved =
+ 				administratorService.create(dto, roleIds, TEST_CREATE_USER_ID);
+
+-		entityManager.flush();
+-		entityManager.clear();
++		AdministratorRoleCriteria criteria = new AdministratorRoleCriteria();
++		criteria.setAdministratorId(saved.getId());
+
+-		List<AdministratorRole> roles = entityManager
+-				.createQuery(
+-						"select ar from AdministratorRole ar where ar.administrator.id = :adminId",
+-						AdministratorRole.class
+-				)
+-				.setParameter("adminId", saved.getId())
+-				.getResultList();
++		List<AdministratorRole> roles =
++				administratorRoleService.findAll(criteria, "AdministratorRole(role)");
+
+ 		assertNotNull(saved.getId());
+ 		assertEquals(roles.size(), 2);
+ 		assertEquals(saved.getCreatedBy(), TEST_CREATE_USER_ID);
+ 		assertEquals(saved.getUpdatedBy(), TEST_CREATE_USER_ID);
+
+ 		assertTrue(
+ 				roles.stream()
+ 						.map(ar -> ar.getRole().getId())
+ 						.collect(Collectors.toSet())
+ 						.containsAll(List.of(1L, 2L))
+ 		);
+
+ 		assertTrue(
+ 				roles.stream().allMatch(ar ->
+ 						ar.getCreatedBy() == TEST_CREATE_USER_ID &&
+ 								ar.getUpdatedBy() == TEST_CREATE_USER_ID
+ 				)
+ 		);
+ 	}
+
+ 	@Test
+ 	public void updateAdministratorAndRoles_replacesRoles() throws Exception {
+
+ 		AdministratorDTO dto = new AdministratorDTO();
+ 		dto.setName("Admin For Update");
+ 		dto.setLoginId("update-roles-admin@example.com");
+ 		dto.setPassword("secret");
+ 		dto.setStatus(Administrator.Status.ACTIVE);
+
+ 		Administrator saved =
+ 				administratorService.create(
+ 						dto,
+ 						Set.of(1L),
+ 						TEST_CREATE_USER_ID
+ 				);
+
+-		entityManager.flush();
+-		entityManager.clear();
+-
+ 		AdministratorDTO updateDto = new AdministratorDTO();
+ 		updateDto.setId(saved.getId());
+ 		updateDto.setName("Admin Updated");
+ 		updateDto.setStatus(Administrator.Status.ACTIVE);
+
+ 		administratorService.updateAdministratorAndRoles(
+ 				updateDto,
+ 				Set.of(2L, 1L),
+ 				TEST_UPDATE_USER_ID
+ 		);
+
+-		entityManager.flush();
+-		entityManager.clear();
++		AdministratorRoleCriteria criteria = new AdministratorRoleCriteria();
++		criteria.setAdministratorId(saved.getId());
+
+ 		List<AdministratorRole> roles =
+-				entityManager.createQuery(
+-								"select ar from AdministratorRole ar join fetch ar.role " +
+-										"where ar.administrator.id = :adminId",
+-								AdministratorRole.class
+-						)
+-						.setParameter("adminId", saved.getId())
+-						.getResultList();
++				administratorRoleService.findAll(criteria, "AdministratorRole(role)");
+
+ 		assertEquals(roles.size(), 2);
+ 		assertTrue(
+ 				roles.stream()
+ 						.map(ar -> ar.getRole().getId())
+ 						.collect(Collectors.toSet())
+ 						.containsAll(List.of(1L, 2L))
+ 		);
+ 	}
+
+ 	@Test
+ 	public void findById_existingAdministrator() throws Exception {
+ 		Optional<AdministratorDTO> result =
+ 				administratorService.findById(1L);
+
+ 		assertTrue(result.isPresent());
+ 		assertEquals(result.get().getLoginId(), "alice@superuser");
+ 		assertEquals(result.get().getStatus(), Administrator.Status.ACTIVE);
+ 	}
+
+ 	@Test
+ 	public void findOne_byLoginId() throws Exception {
+ 		AdministratorCriteria criteria = new AdministratorCriteria();
+ 		criteria.setLoginId("bob@superuser");
+
+@@ -190,28 +181,28 @@ public class AdministratorServiceIT extends CommonTestBase {
+ 		updateDto.setStatus(Administrator.Status.SUSPENDED);
+
+ 		AdministratorDTO updated =
+ 				administratorService.update(updateDto, TEST_UPDATE_USER_ID);
+
+ 		assertEquals(updated.getName(), "Updated DTO Admin");
+ 		assertEquals(updated.getStatus(), Administrator.Status.SUSPENDED);
+ 		assertEquals(updated.getUpdatedBy(), TEST_UPDATE_USER_ID);
+ 	}
+
+ 	@Test
+ 	public void deleteById_removesAdministratorByIdentifier() throws Exception {
+ 		AdministratorDTO dto = new AdministratorDTO();
+ 		dto.setName("DeleteById Admin");
+ 		dto.setLoginId("delete-by-id-admin@example.com");
+ 		dto.setPassword("secret");
+ 		dto.setStatus(Administrator.Status.ACTIVE);
+
+ 		AdministratorDTO saved =
+ 				administratorService.create(dto, TEST_CREATE_USER_ID);
+
+ 		boolean deleted =
+ 				administratorService.deleteById(saved.getId());
+
+ 		assertTrue(deleted);
+-		assertNull(entityManager.find(Administrator.class, saved.getId()));
++		assertTrue(administratorService.findById(saved.getId()).isEmpty());
+ 	}
+ }
+diff --git a/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/RoleActionServiceIT.java b/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/RoleActionServiceIT.java
+index 25567aac09e49a9256ad635779a422a00c23a849..1b4ec7114a798275d9e8dbff32574aa32ed3424c 100644
+--- a/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/RoleActionServiceIT.java
++++ b/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/RoleActionServiceIT.java
+@@ -130,92 +130,87 @@ public class RoleActionServiceIT extends CommonTestBase {
+ 		RoleDTO newRole =
+ 				createRole("TEMP_ROLE");
+
+ 		ActionDTO newAction =
+ 				createAction(
+ 						"deleteActionLink",
+ 						"^/sec/actions/delete-link$"
+ 				);
+
+ 		RoleActionDTO dto = new RoleActionDTO();
+ 		dto.setRoleId(newRole.getId());
+ 		dto.setActionId(newAction.getId());
+
+ 		RoleActionDTO saved =
+ 				roleActionService.create(dto, TEST_CREATE_USER_ID);
+
+ 		RoleActionCriteria criteria = new RoleActionCriteria();
+ 		criteria.setRoleId(newRole.getId());
+ 		criteria.setActionId(newAction.getId());
+
+ 		long deleted =
+ 				roleActionService.delete(criteria);
+
+ 		assertEquals(deleted, 1L);
+
+-		entityManager.flush();
+-		entityManager.clear();
+-
+-		assertNull(
+-				entityManager.find(RoleAction.class, saved.getId())
++		assertTrue(
++				roleActionService.findById(saved.getId()).isEmpty()
+ 		);
+ 	}
+
+ 	@Test
+ 	public void deleteById_removesRoleActionByIdentifier() throws Exception {
+
+ 		RoleDTO newRole =
+ 				createRole("TEMP_ROLE");
+
+ 		ActionDTO newAction =
+ 				createAction(
+ 						"deleteByIdActionLink",
+ 						"^/sec/actions/delete-by-id-link$"
+ 				);
+
+ 		RoleActionDTO dto = new RoleActionDTO();
+ 		dto.setRoleId(newRole.getId());
+ 		dto.setActionId(newAction.getId());
+
+ 		RoleActionDTO saved =
+ 				roleActionService.create(dto, TEST_CREATE_USER_ID);
+
+ 		boolean deleted =
+ 				roleActionService.deleteById(saved.getId());
+
+ 		assertTrue(deleted);
+-		assertNull(
+-				entityManager.find(RoleAction.class, saved.getId())
+-		);
++		assertTrue(roleActionService.findById(saved.getId()).isEmpty());
+ 	}
+
+ 	// ----------------------------------------------------------------------
+ 	// HELPERS
+ 	// ----------------------------------------------------------------------
+
+ 	private RoleDTO createRole(String name)
+ 			throws ConsistencyViolationException, PersistenceException {
+
+ 		RoleDTO dto = new RoleDTO();
+ 		dto.setAppName("projectx");
+ 		dto.setName(name);
+ 		dto.setRoleType(Role.RoleType.CUSTOM);
+ 		dto.setDescription("Role for role-action integration test");
+
+ 		return roleService.create(dto, TEST_CREATE_USER_ID);
+ 	}
+
+ 	private ActionDTO createAction(String actionName, String url)
+ 			throws ConsistencyViolationException, PersistenceException {
+
+ 		ActionDTO dto = new ActionDTO();
+ 		dto.setAppName("projectx");
+ 		dto.setPage("Integration");
+ 		dto.setActionName(actionName);
+ 		dto.setDisplayName("Integration Action " + actionName);
+ 		dto.setActionType(Action.ActionType.SUB);
+ 		dto.setUrl(url);
+ 		dto.setDescription("Action for role-action integration test");
+
+ 		return actionService.create(dto, TEST_CREATE_USER_ID);
+ 	}
+-}
+\ No newline at end of file
++}
+diff --git a/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/RoleServiceIT.java b/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/RoleServiceIT.java
+index 662fcc325e8fa64b95c6942c70ab0ca1b6e7679f..c2854b50e3df58e5ad0e26b505d98b12106e1509 100644
+--- a/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/RoleServiceIT.java
++++ b/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/RoleServiceIT.java
+@@ -1,105 +1,98 @@
+ package com.tamantaw.projectx.integrationTests;
+
+ import com.tamantaw.projectx.CommonTestBase;
+ import com.tamantaw.projectx.persistence.criteria.ActionCriteria;
+ import com.tamantaw.projectx.persistence.criteria.RoleCriteria;
++import com.tamantaw.projectx.persistence.criteria.RoleActionCriteria;
+ import com.tamantaw.projectx.persistence.dto.RoleDTO;
+ import com.tamantaw.projectx.persistence.dto.base.PaginatedResult;
+ import com.tamantaw.projectx.persistence.entity.Action;
+ import com.tamantaw.projectx.persistence.entity.QRole;
+ import com.tamantaw.projectx.persistence.entity.Role;
+ import com.tamantaw.projectx.persistence.entity.RoleAction;
+ import com.tamantaw.projectx.persistence.exception.ConsistencyViolationException;
+ import com.tamantaw.projectx.persistence.exception.PersistenceException;
+ import com.tamantaw.projectx.persistence.repository.base.UpdateSpec;
++import com.tamantaw.projectx.persistence.service.RoleActionService;
+ import com.tamantaw.projectx.persistence.service.RoleService;
+-import jakarta.persistence.EntityManager;
+ import org.springframework.beans.factory.annotation.Autowired;
+ import org.springframework.data.domain.Sort;
+ import org.testng.annotations.Test;
+
+ import java.util.List;
+ import java.util.Optional;
+ import java.util.Set;
+ import java.util.stream.Collectors;
+
+ import static org.testng.Assert.assertEquals;
+ import static org.testng.Assert.assertTrue;
+ import static org.testng.AssertJUnit.*;
+
+ public class RoleServiceIT extends CommonTestBase {
+
+ 	@Autowired
+ 	private RoleService roleService;
+
+ 	@Autowired
+-	private EntityManager entityManager;
++	private RoleActionService roleActionService;
+
+ 	@Test
+ 	public void updateRoleAndActions_replacesActions() throws Exception {
+ 		// ------------------------------------------------------------
+ 		// Create Role with initial action
+ 		// ------------------------------------------------------------
+ 		RoleDTO dto = new RoleDTO();
+ 		dto.setAppName("projectx");
+ 		dto.setName("ROLE_FOR_UPDATE");
+ 		dto.setRoleType(Role.RoleType.CUSTOM);
+
+ 		Role saved = roleService.create(
+ 				dto,
+ 				Set.of(10021L),
+ 				TEST_CREATE_USER_ID
+ 		);
+
+ 		dto.setId(saved.getId());
+
+-		entityManager.flush();
+-		entityManager.clear();
+-
+ 		// ------------------------------------------------------------
+ 		// Update role with new action set
+ 		// ------------------------------------------------------------
+ 		roleService.updateRoleAndActions(
+ 				dto,
+ 				Set.of(10021L, 10022L),
+ 				TEST_UPDATE_USER_ID
+ 		);
+
+-		entityManager.flush();
+-		entityManager.clear();
+-
+ 		// ------------------------------------------------------------
+ 		// Verify role-actions
+ 		// ------------------------------------------------------------
+-		List<RoleAction> roleActions = entityManager
+-				.createQuery(
+-						"select ra from RoleAction ra join fetch ra.action where ra.role.id = :roleId",
+-						RoleAction.class
+-				)
+-				.setParameter("roleId", saved.getId())
+-				.getResultList();
++		RoleActionCriteria criteria = new RoleActionCriteria();
++		criteria.setRoleId(saved.getId());
++
++		List<RoleAction> roleActions =
++				roleActionService.findAll(criteria, "RoleAction(action)");
+
+ 		assertEquals(roleActions.size(), 2);
+
+ 		Set<Long> actionIds = roleActions.stream()
+ 				.map(ra -> ra.getAction().getId())
+ 				.collect(Collectors.toSet());
+
+ 		assertTrue(actionIds.containsAll(Set.of(10021L, 10022L)));
+ 	}
+
+ 	// ----------------------------------------------------------------------
+ 	// FIND BY ID (seed data)
+ 	// ----------------------------------------------------------------------
+
+ 	@Test
+ 	public void findById_existingRole() throws Exception {
+ 		Optional<RoleDTO> result = roleService.findById(1L);
+
+ 		assertTrue(result.isPresent());
+ 		assertEquals(result.get().getName(), "SUPER-USER");
+ 		assertEquals(result.get().getAppName(), "projectx");
+ 		assertEquals(result.get().getRoleType(), Role.RoleType.SUPERUSER);
+ 	}
+
+ 	// ----------------------------------------------------------------------
+@@ -166,167 +159,156 @@ public class RoleServiceIT extends CommonTestBase {
+ 		dto.setAppName("projectx");
+ 		dto.setName("TEMP_ROLE");
+ 		dto.setRoleType(Role.RoleType.CUSTOM);
+ 		dto.setDescription("Temporary role for IT test");
+
+ 		RoleDTO saved = roleService.create(dto, 100L);
+
+ 		assertNotNull(saved.getId());
+ 		assertEquals(saved.getName(), "TEMP_ROLE");
+ 		assertEquals(saved.getCreatedBy(), 100L);
+ 		assertEquals(saved.getUpdatedBy(), 100L);
+ 	}
+
+ 	@Test
+ 	public void create_withActions_persistsRoleAndActions() throws Exception {
+ 		RoleDTO dto = new RoleDTO();
+ 		dto.setAppName("projectx");
+ 		dto.setName("ROLE_WITH_ACTIONS");
+ 		dto.setRoleType(Role.RoleType.CUSTOM);
+
+ 		// include duplicate action ID to verify unique handling
+ 		Set<Long> actionIds = Set.of(10021L, 10022L);
+
+ 		Role saved = roleService.create(dto, actionIds, 123L);
+
+-		entityManager.flush();
+-		entityManager.clear();
++		RoleActionCriteria criteria = new RoleActionCriteria();
++		criteria.setRoleId(saved.getId());
+
+-		List<RoleAction> roleActions = entityManager
+-				.createQuery(
+-						"select ra from RoleAction ra join fetch ra.action where ra.role.id = :roleId",
+-						RoleAction.class
+-				)
+-				.setParameter("roleId", saved.getId())
+-				.getResultList();
++		List<RoleAction> roleActions =
++				roleActionService.findAll(criteria, "RoleAction(action)");
+
+ 		assertNotNull(saved.getId());
+ 		assertEquals(roleActions.size(), 2); // duplicate action id should be ignored
+ 		assertEquals(saved.getCreatedBy(), 123L);
+ 		assertEquals(saved.getUpdatedBy(), 123L);
+ 		assertTrue(
+ 				roleActions.stream()
+ 						.map(RoleAction::getAction)
+ 						.map(Action::getId)
+ 						.collect(Collectors.toSet())
+ 						.containsAll(List.of(10021L, 10022L))
+ 		);
+ 		assertTrue(
+ 				roleActions.stream()
+ 						.allMatch(ra -> ra.getCreatedBy() == 123L && ra.getUpdatedBy() == 123L)
+ 		);
+ 	}
+
+ 	// ----------------------------------------------------------------------
+ 	// UPDATE
+ 	// ----------------------------------------------------------------------
+
+ 	@Test
+ 	public void update_updatesRoleName() throws Exception {
+ 		RoleCriteria criteria = new RoleCriteria();
+ 		criteria.setName("ADMINISTRATOR");
+
+ 		UpdateSpec<Role> spec = (update, root) ->
+ 				update.set(QRole.role.name, "ADMIN_UPDATED");
+
+ 		long affected = roleService.update(spec, criteria, 200L);
+
+ 		assertEquals(affected, 1L);
+
+-		Role updated = entityManager
+-				.createQuery(
+-						"select r from Role r where r.name = :name",
+-						Role.class
+-				)
+-				.setParameter("name", "ADMIN_UPDATED")
+-				.getSingleResult();
++		RoleCriteria updatedCriteria = new RoleCriteria();
++		updatedCriteria.setName("ADMIN_UPDATED");
++
++		RoleDTO updated = roleService.findOne(updatedCriteria).orElseThrow();
+
+ 		assertEquals(updated.getUpdatedBy(), 200L);
+ 	}
+
+ 	@Test
+ 	public void update_withDto_updatesRoleFieldsAndAudit() throws Exception {
+ 		RoleDTO dto = new RoleDTO();
+ 		dto.setAppName("projectx");
+ 		dto.setName("DTO_UPDATE_ROLE");
+ 		dto.setRoleType(Role.RoleType.CUSTOM);
+ 		dto.setDescription("Role for DTO update");
+
+ 		RoleDTO saved = roleService.create(dto, TEST_CREATE_USER_ID);
+
+ 		RoleDTO updateDto = new RoleDTO();
+ 		updateDto.setId(saved.getId());
+ 		updateDto.setName("DTO_UPDATED_ROLE");
+ 		updateDto.setDescription("Updated via DTO update");
+
+ 		RoleDTO updated = roleService.update(updateDto, TEST_UPDATE_USER_ID);
+
+ 		assertEquals(updated.getName(), "DTO_UPDATED_ROLE");
+ 		assertEquals(updated.getDescription(), "Updated via DTO update");
+ 		assertEquals(updated.getUpdatedBy(), TEST_UPDATE_USER_ID);
+ 	}
+
+ 	// ----------------------------------------------------------------------
+ 	// DELETE
+ 	// ----------------------------------------------------------------------
+
+ 	@Test
+ 	public void delete_removesRole() throws ConsistencyViolationException, PersistenceException {
+ 		RoleDTO dto = new RoleDTO();
+ 		dto.setAppName("projectx");
+ 		dto.setName("DELETE_ME");
+ 		dto.setRoleType(Role.RoleType.CUSTOM);
+
+ 		RoleDTO saved = roleService.create(dto, 1L);
+
+ 		RoleCriteria criteria = new RoleCriteria();
+ 		criteria.setName("DELETE_ME");
+
+ 		long deleted = roleService.delete(criteria);
+
+ 		assertEquals(deleted, 1L);
+
+-		entityManager.flush();
+-		entityManager.clear();
+-
+-		assertNull(entityManager.find(Role.class, saved.getId()));
++		assertTrue(roleService.findById(saved.getId()).isEmpty());
+ 	}
+
+ 	@Test
+ 	public void deleteById_removesRoleByIdentifier() throws ConsistencyViolationException, PersistenceException {
+ 		RoleDTO dto = new RoleDTO();
+ 		dto.setAppName("projectx");
+ 		dto.setName("DELETE_BY_ID_ROLE");
+ 		dto.setRoleType(Role.RoleType.CUSTOM);
+ 		dto.setDescription("Role for deleteById test");
+
+ 		RoleDTO saved = roleService.create(dto, 1L);
+
+ 		boolean deleted = roleService.deleteById(saved.getId());
+
+ 		assertTrue(deleted);
+-		assertNull(entityManager.find(Role.class, saved.getId()));
++		assertTrue(roleService.findById(saved.getId()).isEmpty());
+ 	}
+
+ 	@Test
+ 	public void findRole_byActionCriteria_returnsRoleWithActions() throws PersistenceException {
+ 		// given
+ 		ActionCriteria actionCriteria = new ActionCriteria();
+ 		actionCriteria.setPage("Administrator");
+ 		RoleCriteria roleCriteria = new RoleCriteria();
+ 		roleCriteria.setAppName("projectx");
+ 		roleCriteria.setAction(actionCriteria);
+
+ 		// when
+ 		List<RoleDTO> roles = roleService.findAll(roleCriteria, "Role(roleActions(action))");
+
+ 		// then
+ 		assertFalse(roles.isEmpty());
+
+ 		RoleDTO role = roles.stream()
+ 				.filter(r -> "SUPER-USER".equals(r.getName()))
+ 				.findFirst()
+ 				.orElseThrow();
+
+ 		assertNotNull(role.getActions());
+ 		assertFalse(role.getActions().isEmpty());
+ 		showEntriesOfCollection(roles);

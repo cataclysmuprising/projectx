@@ -2,10 +2,12 @@ package com.tamantaw.projectx.integrationTests;
 
 import com.tamantaw.projectx.CommonTestBase;
 import com.tamantaw.projectx.persistence.criteria.AdministratorCriteria;
+import com.tamantaw.projectx.persistence.criteria.AdministratorRoleCriteria;
 import com.tamantaw.projectx.persistence.criteria.RoleCriteria;
 import com.tamantaw.projectx.persistence.dto.AdministratorDTO;
+import com.tamantaw.projectx.persistence.dto.AdministratorRoleDTO;
 import com.tamantaw.projectx.persistence.entity.Administrator;
-import com.tamantaw.projectx.persistence.entity.AdministratorRole;
+import com.tamantaw.projectx.persistence.service.AdministratorRoleService;
 import com.tamantaw.projectx.persistence.service.AdministratorService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.testng.annotations.Test;
@@ -22,6 +24,9 @@ public class AdministratorServiceIT extends CommonTestBase {
 	@Autowired
 	private AdministratorService administratorService;
 
+	@Autowired
+	private AdministratorRoleService administratorRoleService;
+
 	@Test
 	public void create_withRoles_persistsAdministratorAndRoles() throws Exception {
 		AdministratorDTO dto = new AdministratorDTO();
@@ -35,16 +40,11 @@ public class AdministratorServiceIT extends CommonTestBase {
 		Administrator saved =
 				administratorService.create(dto, roleIds, TEST_CREATE_USER_ID);
 
-		entityManager.flush();
-		entityManager.clear();
+		AdministratorRoleCriteria criteria = new AdministratorRoleCriteria();
+		criteria.setAdministratorId(saved.getId());
 
-		List<AdministratorRole> roles = entityManager
-				.createQuery(
-						"select ar from AdministratorRole ar where ar.administrator.id = :adminId",
-						AdministratorRole.class
-				)
-				.setParameter("adminId", saved.getId())
-				.getResultList();
+		List<AdministratorRoleDTO> roles =
+				administratorRoleService.findAll(criteria, "AdministratorRole(role)");
 
 		assertNotNull(saved.getId());
 		assertEquals(roles.size(), 2);
@@ -82,9 +82,6 @@ public class AdministratorServiceIT extends CommonTestBase {
 						TEST_CREATE_USER_ID
 				);
 
-		entityManager.flush();
-		entityManager.clear();
-
 		AdministratorDTO updateDto = new AdministratorDTO();
 		updateDto.setId(saved.getId());
 		updateDto.setName("Admin Updated");
@@ -96,17 +93,11 @@ public class AdministratorServiceIT extends CommonTestBase {
 				TEST_UPDATE_USER_ID
 		);
 
-		entityManager.flush();
-		entityManager.clear();
+		AdministratorRoleCriteria criteria = new AdministratorRoleCriteria();
+		criteria.setAdministratorId(saved.getId());
 
-		List<AdministratorRole> roles =
-				entityManager.createQuery(
-								"select ar from AdministratorRole ar join fetch ar.role " +
-										"where ar.administrator.id = :adminId",
-								AdministratorRole.class
-						)
-						.setParameter("adminId", saved.getId())
-						.getResultList();
+		List<AdministratorRoleDTO> roles =
+				administratorRoleService.findAll(criteria, "AdministratorRole(role)");
 
 		assertEquals(roles.size(), 2);
 		assertTrue(
@@ -212,6 +203,6 @@ public class AdministratorServiceIT extends CommonTestBase {
 				administratorService.deleteById(saved.getId());
 
 		assertTrue(deleted);
-		assertNull(entityManager.find(Administrator.class, saved.getId()));
+		assertTrue(administratorService.findById(saved.getId()).isEmpty());
 	}
 }
