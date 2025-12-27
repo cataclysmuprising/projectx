@@ -3,7 +3,7 @@
 <!-- Page Styles -->
 <div th:fragment="styles" th:remove="tag">
 	<link rel="stylesheet" th:href="@{'/web/static/css/common/bootstrap-select.min.css?v='+${buildNumber}}">
-	<link rel="stylesheet" th:href="@{'/web/static/css/app/user/input'+ ${isProduction == true ? '.min.css' : '.css'}+'?v='+${buildNumber}}">
+	<link rel="stylesheet" th:href="@{'/web/static/css/app/administrator/input'+ ${isProduction == true ? '.min.css' : '.css'}+'?v='+${buildNumber}}">
 </div>
 <!-- /Page Styles -->
 
@@ -11,7 +11,7 @@
 <div th:fragment="scripts" th:remove="tag">
 	<script th:src="@{'/web/static/js/common/bootstrap-select.min.js?v='+${buildNumber}}"></script>
 	<script th:src="@{'/web/static/js/common/jquery.validate.min.js?v='+${buildNumber}}"></script>
-	<script th:src="@{'/web/static/js/app/user/input'+ ${isProduction == true ? '.min.js' : '.js'}+'?v='+${buildNumber}}"></script>
+	<script th:src="@{'/web/static/js/app/administrator/input'+ ${isProduction == true ? '.min.js' : '.js'}+'?v='+${buildNumber}}"></script>
 </div>
 <!-- /Page Scripts -->
 
@@ -21,7 +21,7 @@
 		<div class="container-fluid">
 			<div class="row mb-2">
 				<div class="col-sm-6">
-					<h1>Staff Setup</h1>
+					<h1>Administrator Setup</h1>
 				</div>
 				<div class="col-sm-6">
 					<ol class="breadcrumb float-sm-right">
@@ -31,7 +31,7 @@
 						</li>
 						<li class="breadcrumb-item">
 							<i class="icon-users2 mr-1"></i>
-							<a th:href="@{/sec/staffs}">Staffs</a>
+							<a th:href="@{/web/sec/administrator}">Administrator</a>
 						</li>
 						<li class="breadcrumb-item active" th:text="${pageMode.name == 'CREATE' ? 'Add New' : 'Edit'}">Add New</li>
 					</ol>
@@ -45,35 +45,15 @@
 			<div class="card-header">
 				<h3 class="card-title text-center float-none">Please fill-up Required Informations</h3>
 			</div>
-			<form id="frm-user" method="post" role="form" th:action="@{${pageMode.name == 'CREATE' ? '/sec/staffs/add' : '/sec/staffs/' + userDto.id +'/edit' }}" th:object="${userDto}">
-				<input id="hdn-user-id" th:if="${pageMode.name == 'EDIT'}" th:value="${userDto.id}" type="hidden">
+			<form id="frm-administrator" method="post" role="form" th:action="@{${pageMode.name == 'CREATE' ? '/web/sec/administrator/add' : '/web/sec/administrator/' + administratorDto.id +'/edit' }}" th:object="${administratorDto}">
+				<input id="hdn-administrator-id" th:if="${pageMode.name == 'EDIT'}" th:value="${administratorDto.id}" type="hidden">
 
 				<div class="card-body">
 
-					<div class="form-group row" th:if="${#authorization.expression('hasAuthority(''SUPER-USER'')')}">
-						<label class="col-sm-6 col-md-3 col-form-label text-right required" for="roleIds">Bank</label>
-						<div class="col-sm-6 col-md-4">
-							<select class="dropdown-select form-control input-sm bank-selectpicker show-tick" data-live-search="true" data-size="5" id="lst-bank" title="Select Bank">
-							</select>
-						</div>
-						<label class="col-sm-6 col-md-1 col-form-label text-right required" for="status">Branch</label>
-						<div class="col-sm-6 col-md-4">
-							<select class="dropdown-select form-control  input-sm branch-selectpicker show-tick" data-live-search="true" data-size="5" id="lst-branch" th:field="*{branchId}" title="Select Branch">
-							</select>
-						</div>
-					</div>
-
 					<div class="form-group row">
-						<label class="col-sm-3 col-form-label text-right required" for="officerName">Officer Name : </label>
+						<label class="col-sm-3 col-form-label text-right required" for="adminName">Administrator Name : </label>
 						<div class="col-sm-9">
-							<input class="form-control form-control-sm" id="officerName" name="officerName" placeholder="Officer Full Name" th:field="*{officerName}" type="text"/>
-						</div>
-					</div>
-
-					<div class="form-group row">
-						<label class="col-sm-3 col-form-label text-right required" for="officerRank">Officer Rank : </label>
-						<div class="col-sm-9">
-							<input class="form-control form-control-sm" id="officerRank" placeholder="Officer Rank" th:field="*{officerRank}" type="text"/>
+							<input class="form-control form-control-sm" id="adminName" name="name" placeholder="Administrator Full Name" th:field="*{name}" type="text"/>
 						</div>
 					</div>
 
@@ -82,7 +62,7 @@
 						<div class="col-sm-9" th:classappend="${pageMode.name == 'EDIT' } ? 'col-form-label' : ''" th:switch="${pageMode.name}">
 							<div th:class="${pageMode.name == 'EDIT'} ? 'd-inline-block' : ''">
 								<input class="form-control form-control-sm" id="loginId" placeholder="Enter Login ID" th:case="'CREATE'" th:field="*{loginId}" type="text"/>
-								<span th:case="'EDIT'" th:text="${userDto.loginId}"></span>
+								<span th:case="'EDIT'" th:text="${administratorDto.loginId}"></span>
 							</div>
 							<div class="d-inline-block ml-3" th:if="${pageMode.name == 'EDIT'}">
 								<button class="btn btn-flat btn-secondary" id="btnResetPassword" type="button">
@@ -96,37 +76,22 @@
 					<div class="form-group row" th:if="${pageMode.name == 'CREATE'}">
 						<label class="col-sm-3 col-form-label text-right required" for="password">Password : </label>
 						<div class="col-sm-9">
-							<input class="form-control form-control-sm" id="password" name="password" placeholder="Enter User Password" th:field="*{password}" type="password"/>
-						</div>
-					</div>
-
-					<div class="form-group row">
-						<label class="col-sm-3 col-form-label text-right required" for="contactPhone">Phone : </label>
-						<div class="col-sm-9">
-							<input class="form-control form-control-sm" id="contactPhone" name="contactPhone" placeholder="Contact Phone" th:field="*{contactPhone}" type="text"/>
+							<input class="form-control form-control-sm" id="password" name="password" placeholder="Enter Password" th:field="*{password}" type="password"/>
 						</div>
 					</div>
 
 					<div class="form-group row">
 						<label class="col-sm-6 col-md-3 col-form-label text-right required" for="roleIds">Roles : </label>
 						<div class="col-sm-6 col-md-5">
-							<select class="form-control selectpicker show-tick" data-live-search="true" data-size="5" id="roleIds" multiple="multiple" th:attr="data-selected=${userDto.roleIds}" th:field="*{roleIds}" title="Select ...">
+							<select class="form-control selectpicker show-tick" data-live-search="true" data-size="5" id="roleIds" multiple="multiple" th:attr="data-selected=${administratorDto.roleIds}" th:field="*{roleIds}" title="Select ...">
 							</select>
 						</div>
 						<label class="col-sm-6 col-md-1 col-form-label text-right required" for="status">Status : </label>
 						<div class="col-sm-6 col-md-3">
 							<select class="form-control selectpicker show-tick" id="status" name="status" th:field="*{status}">
 								<option value="ACTIVE">Active</option>
-								<option value="LOCKED">Locked</option>
-								<option value="BLACKLISTED">Blacklisted</option>
+								<option value="SUSPENDED">Suspended</option>
 							</select>
-						</div>
-					</div>
-
-					<div class="form-group row">
-						<label class="col-sm-3 col-form-label text-right required" for="remark">Remark : </label>
-						<div class="col-sm-9">
-							<textarea class="form-control" id="remark" name="remark" placeholder="Remark" rows="5" th:field="*{remark}" type="text"></textarea>
 						</div>
 					</div>
 				</div>

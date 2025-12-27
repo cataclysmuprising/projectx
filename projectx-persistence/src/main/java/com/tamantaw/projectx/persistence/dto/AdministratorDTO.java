@@ -1,5 +1,6 @@
 package com.tamantaw.projectx.persistence.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.tamantaw.projectx.persistence.dto.base.AbstractDTO;
 import com.tamantaw.projectx.persistence.entity.Administrator;
 import lombok.Getter;
@@ -19,6 +20,7 @@ public class AdministratorDTO extends AbstractDTO {
 
 	private String loginId;
 
+	@JsonIgnore
 	private String password;
 
 	private Administrator.Status status;

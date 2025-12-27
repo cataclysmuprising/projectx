@@ -1,6 +1,7 @@
 package com.tamantaw.projectx.backend.controller.rest.web;
 
 import com.tamantaw.projectx.backend.BackendApplication;
+import com.tamantaw.projectx.backend.common.annotation.RestLoggable;
 import com.tamantaw.projectx.backend.controller.rest.BaseRESTController;
 import com.tamantaw.projectx.persistence.criteria.ActionCriteria;
 import com.tamantaw.projectx.persistence.dto.ActionDTO;
@@ -16,6 +17,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/web/sec/action")
+@RestLoggable(profile = "dev")
 public class ActionApiController extends BaseRESTController {
 
 	@Autowired

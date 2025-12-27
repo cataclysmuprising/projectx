@@ -1,62 +1,75 @@
 package com.tamantaw.projectx.backend.common.validation;
 
 import com.tamantaw.projectx.backend.common.converters.LocalizedMessageResolver;
-import com.tamantaw.projectx.backend.common.exception.UnSupportedValidationCheckException;
 import com.tamantaw.projectx.backend.common.response.PageMode;
 import jakarta.annotation.Nonnull;
-import lombok.Getter;
-import lombok.Setter;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 import org.springframework.validation.Errors;
 import org.springframework.validation.Validator;
 
-import java.net.URI;
 import java.util.Collection;
 import java.util.Map;
-import java.util.regex.Pattern;
 
-@Component
-public class BaseValidator implements Validator {
+public abstract class BaseValidator<T> implements Validator {
 
-	private static final Pattern DIGITS = Pattern.compile("[\\-+]?\\d+");
-	private static final Pattern UNSIGNED_DIGITS = Pattern.compile("\\d+");
-	private static final Pattern ALPHABET = Pattern.compile("^[a-zA-Z_ ]+$");
-
-	/* ============================================================
-	 * Common helpers
-	 * ============================================================ */
-	private static final Pattern ALPHANUMERIC = Pattern.compile("^[a-zA-Z_0-9 ]+$");
-	private static final Pattern QUERY = Pattern.compile("^[a-zA-Z_0-9 /\\-.@]+$");
-	private static final Pattern CAPITAL = Pattern.compile("^[A-Z_ \\-]+$");
-
-	/* ============================================================
-	 * Equality
-	 * ============================================================ */
-	private static final Pattern SMALL = Pattern.compile("^[a-z_ \\-]+$");
-
-	/* ============================================================
-	 * Numeric / length validation
-	 * ============================================================ */
-	private static final Pattern UNICODE = Pattern.compile("^[\\p{L} .'-]+$");
-	private static final Pattern EMAIL =
-			Pattern.compile("^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,6}$",
-					Pattern.CASE_INSENSITIVE);
-	@Getter
-	@Setter
-	protected PageMode pageMode;
-	/* ============================================================
-	 * Regex patterns (precompiled)
-	 * ============================================================ */
 	@Autowired
 	protected LocalizedMessageResolver messageSource;
 
-	protected void reject(FieldValidator fv, String messageKey, Object... args) {
+	// ------------------------------------------------------------
+	// Spring Validator contract
+	// ------------------------------------------------------------
+
+	@Override
+	public final boolean supports(@Nonnull Class<?> clazz) {
+		return getSupportedClass().isAssignableFrom(clazz);
+	}
+
+	protected abstract Class<T> getSupportedClass();
+
+	@Override
+	@SuppressWarnings("unchecked")
+	public final void validate(@Nonnull Object target, @Nonnull Errors errors) {
+		validateTyped((T) target, errors, PageMode.VIEW);
+	}
+
+	// ------------------------------------------------------------
+	// Explicit validation entry
+	// ------------------------------------------------------------
+
+	public final void validate(
+			Object target,
+			Errors errors,
+			PageMode pageMode
+	) {
+		if (!supports(target.getClass())) {
+			throw new IllegalArgumentException(
+					"Validator " + getClass().getSimpleName()
+							+ " does not support " + target.getClass().getSimpleName()
+			);
+		}
+		validateTyped(getSupportedClass().cast(target), errors, pageMode);
+	}
+
+	protected abstract void validateTyped(
+			T target,
+			Errors errors,
+			PageMode pageMode
+	);
+
+	// ------------------------------------------------------------
+	// Common helpers (unchanged, but cleaner)
+	// ------------------------------------------------------------
+
+	protected void reject(FieldValidator fv, String key, Object... args) {
 		fv.getErrors().rejectValue(
 				fv.getTargetId(),
 				"",
-				messageSource.getMessage(messageKey, args)
+				messageSource.getMessage(key, args)
 		);
+	}
+
+	protected boolean hasErrors(Errors errors, String field) {
+		return !errors.getFieldErrors(field).isEmpty();
 	}
 
 	protected boolean isEmpty(Object target) {
@@ -65,7 +78,7 @@ public class BaseValidator implements Validator {
 				return true;
 			}
 			case String s -> {
-				return s.isEmpty();
+				return s.isBlank();
 			}
 			case Collection<?> c -> {
 				return c.isEmpty();
@@ -82,129 +95,50 @@ public class BaseValidator implements Validator {
 		return false;
 	}
 
-	public boolean validateIsEmpty(FieldValidator fv) {
-		if (!fv.getErrors().getFieldErrors(fv.getTargetId()).isEmpty()) {
+	protected boolean validateRequired(FieldValidator fv) {
+		if (hasErrors(fv.getErrors(), fv.getTargetId())) {
 			return true;
 		}
-
 		if (isEmpty(fv.getTarget())) {
-			String key = (fv.getTarget() instanceof String || fv.getTarget() == null)
-					? "Validation.common.Field.Required"
-					: "Validation.common.Field.ChooseOne";
-
-			reject(fv, key, fv.getDisplayName());
+			reject(
+					fv,
+					fv.getTarget() instanceof String
+							? "Validation.common.Field.Required"
+							: "Validation.common.Field.ChooseOne",
+					fv.getDisplayName()
+			);
 			return true;
 		}
 		return false;
 	}
 
-	public void validateIsEqual(String targetId,
-	                            FieldValidator fv1,
-	                            FieldValidator fv2,
-	                            Errors errors) {
-
-		if (!validateIsEmpty(fv1) && !validateIsEmpty(fv2)
-				&& !fv1.getTarget().equals(fv2.getTarget())) {
-
-			errors.rejectValue(
-					targetId,
-					"",
-					messageSource.getMessage(
-							"Validation.common.Field.DoNotMatch",
-							fv1.getDisplayName(),
-							fv2.getDisplayName()
-					)
-			);
-		}
-	}
-
-	public void validateIsValidMinValue(FieldValidator fv, Number min) {
-		if (validateIsEmpty(fv)) {
+	protected void validateMin(FieldValidator fv, Number min) {
+		if (validateRequired(fv)) {
 			return;
 		}
 
-		Object target = fv.getTarget();
-		if (target instanceof String s && s.length() < min.intValue()) {
+		Object v = fv.getTarget();
+		if (v instanceof String s && s.length() < min.intValue()) {
 			reject(fv, "Validation.common.Field.Min.String", fv.getDisplayName(), min);
 		}
-		else if (target instanceof Number n && n.doubleValue() < min.doubleValue()) {
+		else if (v instanceof Number n && n.doubleValue() < min.doubleValue()) {
 			reject(fv, "Validation.common.Field.Min.Number", fv.getDisplayName(), min);
 		}
 	}
 
-	public void validateIsValidMaxValue(FieldValidator fv, Number max) {
-		if (validateIsEmpty(fv)) {
+	protected void validateMax(FieldValidator fv, Number max) {
+		if (validateRequired(fv)) {
 			return;
 		}
 
-		Object target = fv.getTarget();
-		if (target instanceof String s && s.length() > max.intValue()) {
+		Object v = fv.getTarget();
+		if (v instanceof String s && s.length() > max.intValue()) {
 			reject(fv, "Validation.common.Field.Max.String", fv.getDisplayName(), max);
 		}
-		else if (target instanceof Number n && n.doubleValue() > max.doubleValue()) {
+		else if (v instanceof Number n && n.doubleValue() > max.doubleValue()) {
 			reject(fv, "Validation.common.Field.Max.Number", fv.getDisplayName(), max);
 		}
-		else if (!(target instanceof String || target instanceof Number)) {
-			throw new UnSupportedValidationCheckException();
-		}
-	}
-
-	/* ============================================================
-	 * Regex validators
-	 * ============================================================ */
-
-	public void validatePattern(FieldValidator fv, Pattern pattern, String messageKey) {
-		if (validateIsEmpty(fv)) {
-			return;
-		}
-
-		if (!(fv.getTarget() instanceof String s) || !pattern.matcher(s).matches()) {
-			reject(fv, messageKey, fv.getDisplayName());
-		}
-	}
-
-	public void validateIsValidEmail(FieldValidator fv) {
-		validatePattern(fv, EMAIL, "Validation.common.Field.InvalidEmail");
-	}
-
-	public boolean validateIsValidEmail(String value) {
-		return value != null && EMAIL.matcher(value).matches();
-	}
-
-	/* ============================================================
-	 * URL
-	 * ============================================================ */
-
-	public void validateIsValidURL(FieldValidator fv) {
-		if (validateIsEmpty(fv)) {
-			return;
-		}
-
-		if (fv.getTarget() instanceof String s) {
-			try {
-				new URI(s).toURL();
-			}
-			catch (Exception e) {
-				reject(fv, "Validation.common.Field.InvalidURL", s);
-			}
-		}
-		else {
-			throw new UnSupportedValidationCheckException();
-		}
-	}
-
-	/* ============================================================
-	 * Validator interface
-	 * ============================================================ */
-
-	@Override
-	public boolean supports(@Nonnull Class<?> clazz) {
-		return true;
-	}
-
-	@Override
-	public void validate(@Nonnull Object target, @Nonnull Errors errors) {
-		// intentionally empty
 	}
 }
+
 

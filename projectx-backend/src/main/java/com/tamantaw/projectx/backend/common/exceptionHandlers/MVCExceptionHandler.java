@@ -1,6 +1,7 @@
 package com.tamantaw.projectx.backend.common.exceptionHandlers;
 
 import com.tamantaw.projectx.backend.common.exception.DocumentExpiredException;
+import com.tamantaw.projectx.backend.common.exception.ValidationFailedException;
 import com.tamantaw.projectx.backend.controller.mvc.BaseMVCController;
 import com.tamantaw.projectx.persistence.exception.BusinessException;
 import com.tamantaw.projectx.persistence.exception.ConsistencyViolationException;
@@ -175,6 +176,51 @@ public class MVCExceptionHandler {
 
 		return errorView(HttpStatus.CONFLICT, "/error/409", auth, request);
 	}
+
+	@ExceptionHandler(ValidationFailedException.class)
+	@ResponseStatus(HttpStatus.BAD_REQUEST)
+	public Object handleValidationFailed(
+			ValidationFailedException e,
+			Authentication auth,
+			HttpServletRequest request
+	) {
+		// Validation is not a "server error"
+		errorLogger.warn(LoggerConstants.LOG_BREAKER_OPEN);
+		errorLogger.warn("Handler ==> handleValidationFailed");
+		errorLogger.warn("Validation failed view={}", e.getErrorView());
+		errorLogger.warn(LoggerConstants.LOG_BREAKER_CLOSE);
+
+		// API / AJAX: return RFC7807 problem
+		if (isApiRequest(request)) {
+			return problem(
+					HttpStatus.BAD_REQUEST,
+					"Validation failed",
+					"https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.1",
+					request
+			);
+		}
+
+		String view = e.getErrorView();
+
+		// If developer passed redirect:..., respect it.
+		// This works perfectly with your PRG flash attributes already set by the Aspect.
+		if (view != null && view.startsWith("redirect:")) {
+			ModelAndView mav = new ModelAndView(view);
+			mav.setStatus(HttpStatus.BAD_REQUEST);
+			return mav;
+		}
+
+		// Normal forward render: return the actual form view
+		ModelAndView mav = new ModelAndView();
+		mav.setViewName(view);
+		mav.setStatus(HttpStatus.BAD_REQUEST);
+
+		// Restore model attributes captured in exception
+		e.getModelAttributes().forEach(mav::addObject);
+
+		return mav;
+	}
+
 
 	/* ============================================================
 	 * 500 – INTERNAL SERVER ERROR

@@ -1,5 +1,6 @@
 package com.tamantaw.projectx.backend.controller.mvc;
 
+import com.tamantaw.projectx.backend.common.annotation.MVCLoggable;
 import com.tamantaw.projectx.backend.common.thymeleaf.Layout;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -9,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import java.util.Locale;
 
 @Controller
+@MVCLoggable(profile = "dev")
 public class AuthenticationController extends BaseMVCController {
 
 	@GetMapping("/web/pub/login")

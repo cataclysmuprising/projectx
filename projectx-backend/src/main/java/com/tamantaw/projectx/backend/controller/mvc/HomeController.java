@@ -1,5 +1,6 @@
 package com.tamantaw.projectx.backend.controller.mvc;
 
+import com.tamantaw.projectx.backend.common.annotation.MVCLoggable;
 import com.tamantaw.projectx.backend.common.thymeleaf.Layout;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpHeaders;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 
 @Controller
 @RequestMapping("/")
+@MVCLoggable(profile = "dev")
 public class HomeController extends BaseMVCController {
 
 	@GetMapping

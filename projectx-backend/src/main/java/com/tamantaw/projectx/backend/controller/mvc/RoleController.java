@@ -23,7 +23,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.util.HashSet;
+import java.util.Set;
 
 import static com.tamantaw.projectx.backend.BackendApplication.SUPER_USER_ROLE_ID;
 
@@ -32,7 +32,8 @@ import static com.tamantaw.projectx.backend.BackendApplication.SUPER_USER_ROLE_I
 @RequestMapping("/web/sec/role")
 public class RoleController extends BaseMVCController {
 
-	private static final Logger applicationLogger = LogManager.getLogger("applicationLogs." + RoleController.class.getName());
+	private static final Logger log =
+			LogManager.getLogger("applicationLogs." + RoleController.class.getName());
 
 	@Autowired
 	private RoleService roleService;
@@ -40,15 +41,27 @@ public class RoleController extends BaseMVCController {
 	@Autowired
 	private RoleActionService roleActionService;
 
+	/* ============================================================
+	 * Init
+	 * ============================================================ */
+
 	@Override
 	public void subInit(Model model) {
 		setAuthorities(model, "Role");
 	}
 
+	/* ============================================================
+	 * Home
+	 * ============================================================ */
+
 	@GetMapping
 	public String home() {
 		return "/role/home";
 	}
+
+	/* ============================================================
+	 * Create
+	 * ============================================================ */
 
 	@GetMapping("/add")
 	public String add(Model model) {
@@ -58,69 +71,164 @@ public class RoleController extends BaseMVCController {
 	}
 
 	@PostMapping("/add")
-	@ValidateEntity(validator = RoleValidator.class, errorView = "/role/input", pageMode = PageMode.CREATE)
-	public String add(Model model, RedirectAttributes redirectAttributes, @ModelAttribute("roleDto") RoleDTO roleDto, BindingResult bindResult) throws ConsistencyViolationException, PersistenceException {
+	@ValidateEntity(
+			validator = RoleValidator.class,
+			errorView = "redirect:/web/sec/role/add",
+			pageMode = PageMode.CREATE
+	)
+	public String add(
+			@ModelAttribute("roleDto") RoleDTO roleDto,
+			BindingResult bindingResult,
+			Model model,
+			RedirectAttributes redirectAttributes
+	) throws PersistenceException, ConsistencyViolationException {
+
 		roleDto.setRoleType(Role.RoleType.CUSTOM);
 		roleDto.setAppName(BackendApplication.APP_NAME);
-		RoleDTO newDto = roleService.create(roleDto, getSignInClientId());
-		applicationLogger.info("New role has been successfully registered with ID# <{}>", newDto.getId());
-		setPageMessage(redirectAttributes, "Success", "Notification.common.Page.SuccessfullyRegistered", PageMessageStyle.SUCCESS, "Role");
+
+		RoleDTO created =
+				roleService.create(roleDto, getSignInClientId());
+
+		log.info(
+				"New role registered id={}",
+				created.getId()
+		);
+
+		setPageMessage(
+				redirectAttributes,
+				"Success",
+				"Notification.common.Page.SuccessfullyRegistered",
+				PageMessageStyle.SUCCESS,
+				"Role"
+		);
+
 		return "redirect:/web/sec/role";
 	}
 
-	@GetMapping("/{id}/edit")
-	public String edit(@PathVariable long id, Model model, RedirectAttributes redirectAttributes) throws PersistenceException {
-		model.addAttribute("pageMode", PageMode.EDIT);
-		RoleCriteria criteria = new RoleCriteria();
-		criteria.setId(id);
-		HashSet<Long> superUserRoleId = new HashSet<>();
-		superUserRoleId.add(SUPER_USER_ROLE_ID);
-		criteria.setExcludeIds(superUserRoleId);
+	/* ============================================================
+	 * Edit
+	 * ============================================================ */
 
-		RoleDTO roleDTO = roleService.findOne(criteria, "Role(roleActions(action),administratorRoles(administrator))").orElseThrow(() -> new ContentNotFoundException("No matching role found for give ID # <" + id + ">"));
-		if (roleDTO.getRoleType() == Role.RoleType.BUILT_IN) {
-			setPageMessage(true, redirectAttributes, "Access Denied!", "Editing BUILD IN roles are not allowed!", PageMessageStyle.ERROR);
+	@GetMapping("/{id}/edit")
+	public String edit(
+			@PathVariable long id,
+			Model model,
+			RedirectAttributes redirectAttributes
+	) throws PersistenceException {
+
+		model.addAttribute("pageMode", PageMode.EDIT);
+
+		RoleDTO roleDto = roleService
+				.findOne(buildCriteria(id),
+						"Role(roleActions(action),administratorRoles(administrator))")
+				.orElseThrow(() ->
+						new ContentNotFoundException(
+								"No matching role found for ID <" + id + ">"
+						)
+				);
+
+		if (roleDto.getRoleType() == Role.RoleType.BUILT_IN) {
+			setPageMessage(
+					redirectAttributes,
+					"Access Denied!",
+					"Editing BUILD IN roles are not allowed!",
+					PageMessageStyle.ERROR
+			);
 			return "redirect:/web/sec/role";
 		}
 
-		model.addAttribute("roleDto", roleDTO);
+		model.addAttribute("roleDto", roleDto);
 		return "/role/input";
 	}
 
-	@PostMapping("/{roleId}/edit")
-	@ValidateEntity(validator = RoleValidator.class, errorView = "/web/role/input", pageMode = PageMode.EDIT)
-	public String edit(Model model, @PathVariable long roleId, RedirectAttributes redirectAttributes, @ModelAttribute("roleDTO") RoleDTO roleDTO, BindingResult bindResult) throws PersistenceException, ConsistencyViolationException {
-		RoleCriteria criteria = new RoleCriteria();
-		criteria.setId(roleId);
-		HashSet<Long> superUserRoleId = new HashSet<>();
-		superUserRoleId.add(SUPER_USER_ROLE_ID);
-		criteria.setExcludeIds(superUserRoleId);
+	@PostMapping("/{id}/edit")
+	@ValidateEntity(
+			validator = RoleValidator.class,
+			errorView = "redirect:/web/sec/role/{id}/edit",
+			pageMode = PageMode.EDIT
+	)
+	public String edit(
+			@PathVariable long id,
+			@ModelAttribute("roleDto") RoleDTO roleDto,
+			BindingResult bindingResult,
+			Model model,
+			RedirectAttributes redirectAttributes
+	) throws PersistenceException, ConsistencyViolationException {
 
-		if (!roleService.exists(criteria)) {
-			throw new ContentNotFoundException("No matching role found for give ID # <" + roleId + ">");
+		if (!roleService.exists(buildCriteria(id))) {
+			throw new ContentNotFoundException(
+					"No matching role found for ID <" + id + ">"
+			);
 		}
 
-		roleDTO.setId(roleId);
-		roleService.updateRoleAndActions(roleDTO, roleDTO.getActionIds(), getSignInClientId());
-		setPageMessage(redirectAttributes, "Success", "Notification.common.Page.SuccessfullyUpdated", PageMessageStyle.SUCCESS, "Role");
-		return "redirect:/sec/role";
+		roleDto.setId(id);
+
+		roleService.updateRoleAndActions(
+				roleDto,
+				roleDto.getActionIds(),
+				getSignInClientId()
+		);
+
+		setPageMessage(
+				redirectAttributes,
+				"Success",
+				"Notification.common.Page.SuccessfullyUpdated",
+				PageMessageStyle.SUCCESS,
+				"Role"
+		);
+
+		return "redirect:/web/sec/role";
 	}
 
-	@GetMapping("/{id}/delete")
-	public String delete(@PathVariable long id, RedirectAttributes redirectAttributes) throws PersistenceException {
-		RoleCriteria criteria = new RoleCriteria();
-		criteria.setId(id);
-		HashSet<Long> superUserRoleId = new HashSet<>();
-		superUserRoleId.add(SUPER_USER_ROLE_ID);
-		criteria.setExcludeIds(superUserRoleId);
-		RoleDTO roleDTO = roleService.findOne(criteria).orElseThrow(() -> new ContentNotFoundException("No matching role found for give ID # <" + id + ">"));
+	/* ============================================================
+	 * Delete
+	 * ============================================================ */
 
-		if (roleDTO.getRoleType() == Role.RoleType.BUILT_IN) {
-			setPageMessage(true, redirectAttributes, "Access Denied!", "Deleting BUILD IN roles are not allowed!", PageMessageStyle.ERROR);
+	@GetMapping("/{id}/delete")
+	public String delete(
+			@PathVariable long id,
+			RedirectAttributes redirectAttributes
+	) throws PersistenceException {
+
+		RoleDTO roleDto = roleService
+				.findOne(buildCriteria(id))
+				.orElseThrow(() ->
+						new ContentNotFoundException(
+								"No matching role found for ID <" + id + ">"
+						)
+				);
+
+		if (roleDto.getRoleType() == Role.RoleType.BUILT_IN) {
+			setPageMessage(
+					redirectAttributes,
+					"Access Denied!",
+					"Deleting BUILD IN roles are not allowed!",
+					PageMessageStyle.ERROR
+			);
 			return "redirect:/web/sec/role";
 		}
+
 		roleService.deleteById(id);
-		setPageMessage(redirectAttributes, "Success", "Notification.common.Page.SuccessfullyRemoved", PageMessageStyle.SUCCESS, "Role");
+
+		setPageMessage(
+				redirectAttributes,
+				"Success",
+				"Notification.common.Page.SuccessfullyRemoved",
+				PageMessageStyle.SUCCESS,
+				"Role"
+		);
+
 		return "redirect:/web/sec/role";
+	}
+
+	/* ============================================================
+	 * Helpers
+	 * ============================================================ */
+
+	private RoleCriteria buildCriteria(long id) {
+		RoleCriteria criteria = new RoleCriteria();
+		criteria.setId(id);
+		criteria.setExcludeIds(Set.of(SUPER_USER_ROLE_ID));
+		return criteria;
 	}
 }
