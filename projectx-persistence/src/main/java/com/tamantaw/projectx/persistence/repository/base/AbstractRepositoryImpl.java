@@ -647,14 +647,14 @@ public abstract class AbstractRepositoryImpl<
 				.fetchFirst() != null;
 	}
 
+	// ----------------------------------------------------------------------
+	// WRITE OPERATIONS
+	// ----------------------------------------------------------------------
+
 	@Override
 	public ENTITY saveRecord(ENTITY entity) {
 		return super.saveAndFlush(entity);
 	}
-
-	// ----------------------------------------------------------------------
-	// WRITE OPERATIONS
-	// ----------------------------------------------------------------------
 
 	@Override
 	public List<ENTITY> saveAllRecords(Iterable<ENTITY> entities) {

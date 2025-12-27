@@ -6,6 +6,7 @@ import com.tamantaw.projectx.persistence.dto.AdministratorDTO;
 import com.tamantaw.projectx.persistence.dto.AdministratorLoginHistoryDTO;
 import com.tamantaw.projectx.persistence.dto.base.PaginatedResult;
 import com.tamantaw.projectx.persistence.entity.Administrator;
+import com.tamantaw.projectx.persistence.entity.AdministratorLoginHistory;
 import com.tamantaw.projectx.persistence.entity.QAdministratorLoginHistory;
 import com.tamantaw.projectx.persistence.exception.ConsistencyViolationException;
 import com.tamantaw.projectx.persistence.exception.PersistenceException;
@@ -213,7 +214,7 @@ public class AdministratorLoginHistoryServiceIT extends CommonTestBase {
 
 		assertNull(
 				entityManager.find(
-						com.tamantaw.projectx.persistence.entity.AdministratorLoginHistory.class,
+						AdministratorLoginHistory.class,
 						saved.getId()
 				)
 		);
