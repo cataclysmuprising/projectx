@@ -1,956 +1,173 @@
-diff --git a/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/ActionServiceIT.java b/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/ActionServiceIT.java
-index c8eed61f4279c01d1c59aa08d7823f129825c824..b2670307aadead82a6292f57d50bf44f23c89bc9 100644
---- a/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/ActionServiceIT.java
-+++ b/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/ActionServiceIT.java
-@@ -82,107 +82,98 @@ public class ActionServiceIT extends CommonTestBase {
- 	}
-
- 	@Test
- 	public void update_updatesDisplayName() throws Exception {
- 		ActionDTO dto = new ActionDTO();
- 		dto.setAppName("projectx");
- 		dto.setPage("TempPage");
- 		dto.setActionName("tempActionUpdate");
- 		dto.setDisplayName("Temp action");
- 		dto.setActionType(Action.ActionType.SUB);
- 		dto.setUrl("/web/sec/temp");
- 		dto.setDescription("Temporary action for update test");
-
- 		actionService.create(dto, TEST_CREATE_USER_ID);
-
- 		ActionCriteria criteria = new ActionCriteria();
- 		criteria.setActionName("tempActionUpdate");
-
- 		UpdateSpec<Action> spec = (update, root) ->
- 				update.set(QAction.action.displayName, "Updated Temp Action");
-
- 		long affected = actionService.update(spec, criteria, TEST_UPDATE_USER_ID);
-
- 		assertEquals(affected, 1L);
-
--		Action updated = entityManager
--				.createQuery(
--						"select a from Action a where a.actionName = :name",
--						Action.class
--				)
--				.setParameter("name", "tempActionUpdate")
--				.getSingleResult();
-+		ActionDTO updated = actionService.findOne(criteria).orElseThrow();
-
- 		assertEquals(updated.getDisplayName(), "Updated Temp Action");
- 		assertEquals(updated.getUpdatedBy(), TEST_UPDATE_USER_ID);
- 	}
-
- 	@Test
- 	public void update_withDto_appliesChangesAndAudit() throws Exception {
- 		ActionDTO dto = new ActionDTO();
- 		dto.setAppName("projectx");
- 		dto.setPage("DtoPage");
- 		dto.setActionName("dtoUpdateAction");
- 		dto.setDisplayName("DTO update action");
- 		dto.setActionType(Action.ActionType.SUB);
- 		dto.setUrl("/web/sec/dto-update-action");
- 		dto.setDescription("Temporary action for DTO update test");
-
- 		ActionDTO saved = actionService.create(dto, TEST_CREATE_USER_ID);
-
- 		ActionDTO updateDto = new ActionDTO();
- 		updateDto.setId(saved.getId());
- 		updateDto.setDisplayName("DTO Updated Action");
- 		updateDto.setDescription("Updated via DTO update method");
-
- 		ActionDTO updated = actionService.update(updateDto, TEST_UPDATE_USER_ID);
-
- 		assertEquals(updated.getDisplayName(), "DTO Updated Action");
- 		assertEquals(updated.getDescription(), "Updated via DTO update method");
- 		assertEquals(updated.getUpdatedBy(), TEST_UPDATE_USER_ID);
- 	}
-
- 	@Test
- 	public void delete_removesAction() throws ConsistencyViolationException, PersistenceException {
- 		ActionDTO dto = new ActionDTO();
- 		dto.setAppName("projectx");
- 		dto.setPage("TempPage");
- 		dto.setActionName("tempDeleteAction");
- 		dto.setDisplayName("Temp delete action");
- 		dto.setActionType(Action.ActionType.SUB);
- 		dto.setUrl("/web/sec/delete-action");
- 		dto.setDescription("Temporary action for delete test");
-
- 		ActionDTO saved = actionService.create(dto, TEST_CREATE_USER_ID);
-
- 		ActionCriteria criteria = new ActionCriteria();
- 		criteria.setActionName("tempDeleteAction");
-
- 		long deleted = actionService.delete(criteria);
-
- 		assertEquals(deleted, 1L);
-
--		entityManager.flush();
--		entityManager.clear();
--
--		assertNull(entityManager.find(Action.class, saved.getId()));
-+		assertTrue(actionService.findById(saved.getId()).isEmpty());
- 	}
-
- 	@Test
- 	public void deleteById_removesActionByIdentifier() throws ConsistencyViolationException, PersistenceException {
- 		ActionDTO dto = new ActionDTO();
- 		dto.setAppName("projectx");
- 		dto.setPage("TempPage");
- 		dto.setActionName("tempDeleteByIdAction");
- 		dto.setDisplayName("Temp delete-by-id action");
- 		dto.setActionType(Action.ActionType.SUB);
- 		dto.setUrl("/web/sec/delete-by-id-action");
- 		dto.setDescription("Temporary action for deleteById test");
-
- 		ActionDTO saved = actionService.create(dto, TEST_CREATE_USER_ID);
-
- 		boolean deleted = actionService.deleteById(saved.getId());
-
- 		assertTrue(deleted);
--		assertNull(entityManager.find(Action.class, saved.getId()));
-+		assertTrue(actionService.findById(saved.getId()).isEmpty());
- 	}
- }
-diff --git a/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/AdministratorLoginHistoryServiceIT.java b/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/AdministratorLoginHistoryServiceIT.java
-index bdec9ac9d809d347e196b7ff5a07c2339bd82470..6e3ddf776d5d97d068edeeb9bfdd44990f42eccf 100644
---- a/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/AdministratorLoginHistoryServiceIT.java
-+++ b/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/AdministratorLoginHistoryServiceIT.java
-@@ -1,81 +1,77 @@
- package com.tamantaw.projectx.integrationTests;
-
- import com.tamantaw.projectx.CommonTestBase;
- import com.tamantaw.projectx.persistence.criteria.AdministratorLoginHistoryCriteria;
- import com.tamantaw.projectx.persistence.dto.AdministratorDTO;
- import com.tamantaw.projectx.persistence.dto.AdministratorLoginHistoryDTO;
- import com.tamantaw.projectx.persistence.dto.base.PaginatedResult;
- import com.tamantaw.projectx.persistence.entity.Administrator;
--import com.tamantaw.projectx.persistence.entity.AdministratorLoginHistory;
- import com.tamantaw.projectx.persistence.entity.QAdministratorLoginHistory;
- import com.tamantaw.projectx.persistence.exception.ConsistencyViolationException;
- import com.tamantaw.projectx.persistence.exception.PersistenceException;
- import com.tamantaw.projectx.persistence.service.AdministratorLoginHistoryService;
- import com.tamantaw.projectx.persistence.service.AdministratorService;
- import org.springframework.beans.factory.annotation.Autowired;
- import org.springframework.data.domain.Sort;
- import org.testng.annotations.Test;
-
- import java.time.LocalDateTime;
- import java.util.List;
- import java.util.Optional;
-
- import static org.testng.Assert.*;
-
- public class AdministratorLoginHistoryServiceIT extends CommonTestBase {
-
- 	@Autowired
- 	private AdministratorLoginHistoryService loginHistoryService;
-
- 	@Autowired
- 	private AdministratorService administratorService;
-
- 	@Test
- 	public void create_persistsLoginHistory() throws ConsistencyViolationException, PersistenceException {
- 		AdministratorLoginHistoryDTO dto = buildDto(1L, "127.0.0.1", "Ubuntu", "Mozilla");
-
- 		AdministratorLoginHistoryDTO saved = loginHistoryService.create(dto, TEST_CREATE_USER_ID);
-
- 		logger.info("Saved AdministratorLoginHistory info : " + saved);
-
- 		assertNotNull(saved.getId());
- 		assertEquals(saved.getCreatedBy(), TEST_CREATE_USER_ID);
- 		assertEquals(saved.getUpdatedBy(), TEST_CREATE_USER_ID);
- 		assertNotNull(saved.getLoginDate());
- 	}
-
- 	@Test
- 	public void findById_existingLoginHistory() throws Exception {
- 		AdministratorLoginHistoryDTO saved = loginHistoryService.create(
- 				buildDto(2L, "10.0.0.2", "Windows", "Chrome"),
- 				TEST_CREATE_USER_ID
- 		);
-
--		entityManager.flush();
--		entityManager.clear();
--
- 		AdministratorLoginHistoryCriteria criteria = new AdministratorLoginHistoryCriteria();
- 		criteria.setId(saved.getId());
- 		Optional<AdministratorLoginHistoryDTO> result = loginHistoryService.findOne(criteria, "AdministratorLoginHistory(administrator)");
-
- 		assertTrue(result.isPresent());
- 		assertEquals(result.get().getAdministrator().getId(), 2L);
- 		assertEquals(result.get().getOs(), "Windows");
- 		assertEquals(result.get().getClientAgent(), "Chrome");
- 	}
-
- 	@Test
- 	public void findAll_byAdministratorId() throws Exception {
- 		loginHistoryService.create(buildDto(1L, "192.168.1.10", "macOS", "Safari"), TEST_CREATE_USER_ID);
- 		loginHistoryService.create(buildDto(1L, "192.168.1.11", "macOS", "Safari"), TEST_CREATE_USER_ID);
-
- 		AdministratorLoginHistoryCriteria criteria = new AdministratorLoginHistoryCriteria();
- 		criteria.setAdministratorId(1L);
- 		//criteria.addSort(QAdministratorLoginHistory.administratorLoginHistory.administrator.name, Sort.Direction.ASC);
-
- 		// this is String based sorting
- 		criteria.addSortKey("administrator.name", Sort.Direction.ASC);
-
- 		List<AdministratorLoginHistoryDTO> histories = loginHistoryService.findAll(criteria, "AdministratorLoginHistory(administrator)");
-
- 		assertFalse(histories.isEmpty());
-@@ -190,55 +186,52 @@ public class AdministratorLoginHistoryServiceIT extends CommonTestBase {
- 	public void deleteById_removesLoginHistoryByIdentifier() throws Exception {
-
- 		// --------------------------------------------------
- 		// GIVEN: a real administrator
- 		// --------------------------------------------------
- 		AdministratorDTO admin =
- 				createAdministrator("delete-history@example.com");
-
- 		AdministratorLoginHistoryDTO saved =
- 				loginHistoryService.create(
- 						buildDto(admin.getId(), "172.16.0.2", "Windows", "Edge"),
- 						TEST_CREATE_USER_ID
- 				);
-
- 		// --------------------------------------------------
- 		// WHEN
- 		// --------------------------------------------------
- 		boolean deleted =
- 				loginHistoryService.deleteById(saved.getId());
-
- 		// --------------------------------------------------
- 		// THEN
- 		// --------------------------------------------------
- 		assertTrue(deleted);
-
--		assertNull(
--				entityManager.find(
--						AdministratorLoginHistory.class,
--						saved.getId()
--				)
-+		assertTrue(
-+				loginHistoryService.findById(saved.getId()).isEmpty()
- 		);
- 	}
-
- 	private AdministratorLoginHistoryDTO buildDto(Long adminId, String ip, String os, String agent) {
- 		AdministratorLoginHistoryDTO dto = new AdministratorLoginHistoryDTO();
- 		dto.setAdministratorId(adminId);
- 		dto.setIpAddress(ip);
- 		dto.setOs(os);
- 		dto.setClientAgent(agent);
- 		dto.setLoginDate(LocalDateTime.now());
- 		return dto;
- 	}
-
- 	private AdministratorDTO createAdministrator(String loginId)
- 			throws ConsistencyViolationException, PersistenceException {
-
- 		AdministratorDTO dto = new AdministratorDTO();
- 		dto.setName("Admin " + loginId);
- 		dto.setLoginId(loginId);
- 		dto.setPassword("secret");
- 		dto.setStatus(Administrator.Status.ACTIVE);
-
- 		return administratorService.create(dto, TEST_CREATE_USER_ID);
- 	}
- }
-diff --git a/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/AdministratorRoleServiceIT.java b/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/AdministratorRoleServiceIT.java
-index 761554e6e790574604b72c8827b3141c077fc3d1..915ecf61ac4d0d0019f098d73724307ccb2a5506 100644
---- a/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/AdministratorRoleServiceIT.java
-+++ b/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/AdministratorRoleServiceIT.java
-@@ -1,34 +1,33 @@
- package com.tamantaw.projectx.integrationTests;
-
- import com.tamantaw.projectx.CommonTestBase;
- import com.tamantaw.projectx.persistence.criteria.AdministratorRoleCriteria;
- import com.tamantaw.projectx.persistence.dto.AdministratorDTO;
- import com.tamantaw.projectx.persistence.dto.AdministratorRoleDTO;
- import com.tamantaw.projectx.persistence.dto.RoleDTO;
- import com.tamantaw.projectx.persistence.entity.Administrator;
--import com.tamantaw.projectx.persistence.entity.AdministratorRole;
- import com.tamantaw.projectx.persistence.exception.ConsistencyViolationException;
- import com.tamantaw.projectx.persistence.exception.PersistenceException;
- import com.tamantaw.projectx.persistence.service.AdministratorRoleService;
- import com.tamantaw.projectx.persistence.service.AdministratorService;
- import com.tamantaw.projectx.persistence.service.RoleService;
- import org.springframework.beans.factory.annotation.Autowired;
- import org.testng.annotations.Test;
-
- import java.util.List;
- import java.util.Optional;
-
- import static org.testng.Assert.*;
-
- public class AdministratorRoleServiceIT extends CommonTestBase {
-
- 	@Autowired
- 	private AdministratorRoleService administratorRoleService;
-
- 	@Autowired
- 	private AdministratorService administratorService;
-
- 	@Autowired
- 	private RoleService roleService;
-
- 	// ----------------------------------------------------------------------
-@@ -134,74 +133,71 @@ public class AdministratorRoleServiceIT extends CommonTestBase {
- 	@Test
- 	public void delete_removesAdministratorRole()
- 			throws ConsistencyViolationException, PersistenceException {
-
- 		AdministratorDTO newAdmin =
- 				createAdministrator("unlink-admin@example.com");
-
- 		RoleDTO role =
- 				roleService.findById(1L).orElseThrow();
-
- 		AdministratorRoleDTO dto = new AdministratorRoleDTO();
- 		dto.setAdministratorId(newAdmin.getId());
- 		dto.setRoleId(role.getId());
-
- 		AdministratorRoleDTO saved =
- 				administratorRoleService.create(dto, TEST_CREATE_USER_ID);
-
- 		AdministratorRoleCriteria criteria = new AdministratorRoleCriteria();
- 		criteria.setAdministratorId(newAdmin.getId());
-
- 		long deleted =
- 				administratorRoleService.delete(criteria);
-
- 		assertEquals(deleted, 1L);
-
--		entityManager.flush();
--		entityManager.clear();
--
--		assertNull(
--				entityManager.find(AdministratorRole.class, saved.getId())
-+		assertTrue(
-+				administratorRoleService.findById(saved.getId()).isEmpty()
- 		);
- 	}
-
- 	@Test
- 	public void deleteById_removesAdministratorRoleByIdentifier() throws Exception {
-
- 		AdministratorDTO newAdmin =
- 				createAdministrator("delete-by-id-admin@example.com");
-
- 		RoleDTO role =
- 				roleService.findById(1L).orElseThrow();
-
- 		AdministratorRoleDTO dto = new AdministratorRoleDTO();
- 		dto.setAdministratorId(newAdmin.getId());
- 		dto.setRoleId(role.getId());
-
- 		AdministratorRoleDTO saved =
- 				administratorRoleService.create(dto, TEST_CREATE_USER_ID);
-
- 		boolean deleted =
- 				administratorRoleService.deleteById(saved.getId());
-
- 		assertTrue(deleted);
--		assertNull(
--				entityManager.find(AdministratorRole.class, saved.getId())
-+		assertTrue(
-+				administratorRoleService.findById(saved.getId()).isEmpty()
- 		);
- 	}
-
- 	// ----------------------------------------------------------------------
- 	// HELPERS
- 	// ----------------------------------------------------------------------
-
- 	private AdministratorDTO createAdministrator(String loginId)
- 			throws ConsistencyViolationException, PersistenceException {
-
- 		AdministratorDTO dto = new AdministratorDTO();
- 		dto.setName("Admin for Link " + loginId);
- 		dto.setLoginId(loginId);
- 		dto.setPassword("secret");
- 		dto.setStatus(Administrator.Status.ACTIVE);
-
- 		return administratorService.create(dto, TEST_CREATE_USER_ID);
- 	}
- }
-diff --git a/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/AdministratorServiceIT.java b/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/AdministratorServiceIT.java
-index d005efc6dc1239caa86a3d6ca7a1479d25ad5fa1..f7d9679deb14b5afe0a54d7d3cde5b0b4f126d63 100644
---- a/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/AdministratorServiceIT.java
-+++ b/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/AdministratorServiceIT.java
-@@ -1,134 +1,125 @@
- package com.tamantaw.projectx.integrationTests;
-
- import com.tamantaw.projectx.CommonTestBase;
- import com.tamantaw.projectx.persistence.criteria.AdministratorCriteria;
-+import com.tamantaw.projectx.persistence.criteria.AdministratorRoleCriteria;
- import com.tamantaw.projectx.persistence.criteria.RoleCriteria;
- import com.tamantaw.projectx.persistence.dto.AdministratorDTO;
- import com.tamantaw.projectx.persistence.entity.Administrator;
- import com.tamantaw.projectx.persistence.entity.AdministratorRole;
- import com.tamantaw.projectx.persistence.service.AdministratorService;
-+import com.tamantaw.projectx.persistence.service.AdministratorRoleService;
- import org.springframework.beans.factory.annotation.Autowired;
- import org.testng.annotations.Test;
-
- import java.util.List;
- import java.util.Optional;
- import java.util.Set;
- import java.util.stream.Collectors;
-
- import static org.testng.Assert.*;
-
- public class AdministratorServiceIT extends CommonTestBase {
-
- 	@Autowired
- 	private AdministratorService administratorService;
-
-+	@Autowired
-+	private AdministratorRoleService administratorRoleService;
+diff --git a/projectx-backend/src/main/java/com/tamantaw/projectx/backend/common/exceptionHandlers/ErrorHandlerFilter.java b/projectx-backend/src/main/java/com/tamantaw/projectx/backend/common/exceptionHandlers/ErrorHandlerFilter.java
+index c1b74dce698a7316611d6b7d55ff433ca48a5914..1a39d8629e2b7121dd141227ef7d2fcb3e9da2ad 100644
+--- a/projectx-backend/src/main/java/com/tamantaw/projectx/backend/common/exceptionHandlers/ErrorHandlerFilter.java
++++ b/projectx-backend/src/main/java/com/tamantaw/projectx/backend/common/exceptionHandlers/ErrorHandlerFilter.java
+@@ -1,71 +1,75 @@
+ package com.tamantaw.projectx.backend.common.exceptionHandlers;
+
+ import jakarta.servlet.*;
+ import jakarta.servlet.http.HttpServletRequest;
+ import jakarta.servlet.http.HttpServletResponse;
++import org.apache.logging.log4j.LogManager;
++import org.apache.logging.log4j.Logger;
+ import org.springframework.http.HttpStatus;
+ import org.springframework.http.MediaType;
+ import org.springframework.http.ProblemDetail;
+ import org.springframework.security.web.DefaultRedirectStrategy;
+ import org.springframework.security.web.RedirectStrategy;
+ import org.springframework.stereotype.Component;
+ import tools.jackson.databind.ObjectMapper;
+
+ import java.io.IOException;
++import java.net.URI;
+ import java.time.Instant;
+
+ // To handle all exceptions out of Spring Controllers
+ @Component
+ public class ErrorHandlerFilter implements Filter {
+
++	private static final Logger errorLogger =
++			LogManager.getLogger("errorLogs." + ErrorHandlerFilter.class.getName());
 +
- 	@Test
- 	public void create_withRoles_persistsAdministratorAndRoles() throws Exception {
- 		AdministratorDTO dto = new AdministratorDTO();
- 		dto.setName("Admin With Roles");
- 		dto.setLoginId("admin-with-roles@example.com");
- 		dto.setPassword("secret");
- 		dto.setStatus(Administrator.Status.ACTIVE);
+ 	private final RedirectStrategy redirectStrategy = new DefaultRedirectStrategy();
+ 	private final ObjectMapper objectMapper;
 
- 		Set<Long> roleIds = Set.of(1L, 2L);
-
- 		Administrator saved =
- 				administratorService.create(dto, roleIds, TEST_CREATE_USER_ID);
-
--		entityManager.flush();
--		entityManager.clear();
-+		AdministratorRoleCriteria criteria = new AdministratorRoleCriteria();
-+		criteria.setAdministratorId(saved.getId());
-
--		List<AdministratorRole> roles = entityManager
--				.createQuery(
--						"select ar from AdministratorRole ar where ar.administrator.id = :adminId",
--						AdministratorRole.class
--				)
--				.setParameter("adminId", saved.getId())
--				.getResultList();
-+		List<AdministratorRole> roles =
-+				administratorRoleService.findAll(criteria, "AdministratorRole(role)");
-
- 		assertNotNull(saved.getId());
- 		assertEquals(roles.size(), 2);
- 		assertEquals(saved.getCreatedBy(), TEST_CREATE_USER_ID);
- 		assertEquals(saved.getUpdatedBy(), TEST_CREATE_USER_ID);
-
- 		assertTrue(
- 				roles.stream()
- 						.map(ar -> ar.getRole().getId())
- 						.collect(Collectors.toSet())
- 						.containsAll(List.of(1L, 2L))
- 		);
-
- 		assertTrue(
- 				roles.stream().allMatch(ar ->
- 						ar.getCreatedBy() == TEST_CREATE_USER_ID &&
- 								ar.getUpdatedBy() == TEST_CREATE_USER_ID
- 				)
- 		);
+ 	public ErrorHandlerFilter(ObjectMapper objectMapper) {
+ 		this.objectMapper = objectMapper;
  	}
 
- 	@Test
- 	public void updateAdministratorAndRoles_replacesRoles() throws Exception {
+ 	@Override
+ 	public void doFilter(ServletRequest request,
+ 	                     ServletResponse response,
+-	                     FilterChain filterChain) throws IOException {
++	                     FilterChain filterChain) throws IOException, ServletException {
 
- 		AdministratorDTO dto = new AdministratorDTO();
- 		dto.setName("Admin For Update");
- 		dto.setLoginId("update-roles-admin@example.com");
- 		dto.setPassword("secret");
- 		dto.setStatus(Administrator.Status.ACTIVE);
+ 		HttpServletRequest req = (HttpServletRequest) request;
+ 		HttpServletResponse res = (HttpServletResponse) response;
 
- 		Administrator saved =
- 				administratorService.create(
- 						dto,
- 						Set.of(1L),
- 						TEST_CREATE_USER_ID
- 				);
+ 		try {
+ 			filterChain.doFilter(request, response);
+ 		}
+ 		catch (Exception ex) {
++			errorLogger.error("Unhandled exception caught by filter for path {}", req.getRequestURI(), ex);
++
+ 			if (res.isCommitted()) {
+-				return;
++				throw ex instanceof ServletException ? (ServletException) ex : new ServletException(ex);
+ 			}
 
--		entityManager.flush();
--		entityManager.clear();
--
- 		AdministratorDTO updateDto = new AdministratorDTO();
- 		updateDto.setId(saved.getId());
- 		updateDto.setName("Admin Updated");
- 		updateDto.setStatus(Administrator.Status.ACTIVE);
+ 			boolean isApi =
+ 					req.getRequestURI().startsWith("/api/")
+-							|| "XMLHttpRequest".equals(req.getHeader("X-Requested-With"));
++						|| "XMLHttpRequest".equals(req.getHeader("X-Requested-With"));
 
- 		administratorService.updateAdministratorAndRoles(
- 				updateDto,
- 				Set.of(2L, 1L),
- 				TEST_UPDATE_USER_ID
- 		);
+ 			if (isApi) {
+-				ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.FORBIDDEN);
+-				problem.setTitle(HttpStatus.FORBIDDEN.getReasonPhrase());
+-				problem.setDetail("Unknown exception occurred!");
++				ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
++				problem.setTitle(HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase());
++				problem.setDetail("Unexpected server error occurred");
++				problem.setInstance(URI.create(req.getRequestURI()));
+ 				problem.setProperty("timestamp", Instant.now());
+ 				problem.setProperty("path", req.getRequestURI());
 
--		entityManager.flush();
--		entityManager.clear();
-+		AdministratorRoleCriteria criteria = new AdministratorRoleCriteria();
-+		criteria.setAdministratorId(saved.getId());
-
- 		List<AdministratorRole> roles =
--				entityManager.createQuery(
--								"select ar from AdministratorRole ar join fetch ar.role " +
--										"where ar.administrator.id = :adminId",
--								AdministratorRole.class
--						)
--						.setParameter("adminId", saved.getId())
--						.getResultList();
-+				administratorRoleService.findAll(criteria, "AdministratorRole(role)");
-
- 		assertEquals(roles.size(), 2);
- 		assertTrue(
- 				roles.stream()
- 						.map(ar -> ar.getRole().getId())
- 						.collect(Collectors.toSet())
- 						.containsAll(List.of(1L, 2L))
- 		);
- 	}
-
- 	@Test
- 	public void findById_existingAdministrator() throws Exception {
- 		Optional<AdministratorDTO> result =
- 				administratorService.findById(1L);
-
- 		assertTrue(result.isPresent());
- 		assertEquals(result.get().getLoginId(), "alice@superuser");
- 		assertEquals(result.get().getStatus(), Administrator.Status.ACTIVE);
- 	}
-
- 	@Test
- 	public void findOne_byLoginId() throws Exception {
- 		AdministratorCriteria criteria = new AdministratorCriteria();
- 		criteria.setLoginId("bob@superuser");
-
-@@ -190,28 +181,28 @@ public class AdministratorServiceIT extends CommonTestBase {
- 		updateDto.setStatus(Administrator.Status.SUSPENDED);
-
- 		AdministratorDTO updated =
- 				administratorService.update(updateDto, TEST_UPDATE_USER_ID);
-
- 		assertEquals(updated.getName(), "Updated DTO Admin");
- 		assertEquals(updated.getStatus(), Administrator.Status.SUSPENDED);
- 		assertEquals(updated.getUpdatedBy(), TEST_UPDATE_USER_ID);
- 	}
-
- 	@Test
- 	public void deleteById_removesAdministratorByIdentifier() throws Exception {
- 		AdministratorDTO dto = new AdministratorDTO();
- 		dto.setName("DeleteById Admin");
- 		dto.setLoginId("delete-by-id-admin@example.com");
- 		dto.setPassword("secret");
- 		dto.setStatus(Administrator.Status.ACTIVE);
-
- 		AdministratorDTO saved =
- 				administratorService.create(dto, TEST_CREATE_USER_ID);
-
- 		boolean deleted =
- 				administratorService.deleteById(saved.getId());
-
- 		assertTrue(deleted);
--		assertNull(entityManager.find(Administrator.class, saved.getId()));
-+		assertTrue(administratorService.findById(saved.getId()).isEmpty());
+-				res.setStatus(HttpStatus.FORBIDDEN.value());
++				res.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
+ 				res.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+ 				res.getWriter().write(objectMapper.writeValueAsString(problem));
+ 			}
+ 			else {
+-				req.setAttribute(RequestDispatcher.ERROR_STATUS_CODE, 500);
+-				try {
+-					req.getRequestDispatcher("/web/pub/error/500").forward(req, res);
+-				}
+-				catch (ServletException e) {
+-					throw new RuntimeException(e);
+-				}
++				req.setAttribute(RequestDispatcher.ERROR_STATUS_CODE, HttpStatus.INTERNAL_SERVER_ERROR.value());
++				res.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
++				req.getRequestDispatcher("/web/pub/error/500").forward(req, res);
+ 			}
+ 		}
  	}
  }
-diff --git a/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/RoleActionServiceIT.java b/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/RoleActionServiceIT.java
-index 25567aac09e49a9256ad635779a422a00c23a849..1b4ec7114a798275d9e8dbff32574aa32ed3424c 100644
---- a/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/RoleActionServiceIT.java
-+++ b/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/RoleActionServiceIT.java
-@@ -130,92 +130,87 @@ public class RoleActionServiceIT extends CommonTestBase {
- 		RoleDTO newRole =
- 				createRole("TEMP_ROLE");
-
- 		ActionDTO newAction =
- 				createAction(
- 						"deleteActionLink",
- 						"^/sec/actions/delete-link$"
- 				);
-
- 		RoleActionDTO dto = new RoleActionDTO();
- 		dto.setRoleId(newRole.getId());
- 		dto.setActionId(newAction.getId());
-
- 		RoleActionDTO saved =
- 				roleActionService.create(dto, TEST_CREATE_USER_ID);
-
- 		RoleActionCriteria criteria = new RoleActionCriteria();
- 		criteria.setRoleId(newRole.getId());
- 		criteria.setActionId(newAction.getId());
-
- 		long deleted =
- 				roleActionService.delete(criteria);
-
- 		assertEquals(deleted, 1L);
-
--		entityManager.flush();
--		entityManager.clear();
 -
--		assertNull(
--				entityManager.find(RoleAction.class, saved.getId())
-+		assertTrue(
-+				roleActionService.findById(saved.getId()).isEmpty()
- 		);
- 	}
-
- 	@Test
- 	public void deleteById_removesRoleActionByIdentifier() throws Exception {
-
- 		RoleDTO newRole =
- 				createRole("TEMP_ROLE");
-
- 		ActionDTO newAction =
- 				createAction(
- 						"deleteByIdActionLink",
- 						"^/sec/actions/delete-by-id-link$"
- 				);
-
- 		RoleActionDTO dto = new RoleActionDTO();
- 		dto.setRoleId(newRole.getId());
- 		dto.setActionId(newAction.getId());
-
- 		RoleActionDTO saved =
- 				roleActionService.create(dto, TEST_CREATE_USER_ID);
-
- 		boolean deleted =
- 				roleActionService.deleteById(saved.getId());
-
- 		assertTrue(deleted);
--		assertNull(
--				entityManager.find(RoleAction.class, saved.getId())
--		);
-+		assertTrue(roleActionService.findById(saved.getId()).isEmpty());
- 	}
-
- 	// ----------------------------------------------------------------------
- 	// HELPERS
- 	// ----------------------------------------------------------------------
-
- 	private RoleDTO createRole(String name)
- 			throws ConsistencyViolationException, PersistenceException {
-
- 		RoleDTO dto = new RoleDTO();
- 		dto.setAppName("projectx");
- 		dto.setName(name);
- 		dto.setRoleType(Role.RoleType.CUSTOM);
- 		dto.setDescription("Role for role-action integration test");
-
- 		return roleService.create(dto, TEST_CREATE_USER_ID);
- 	}
-
- 	private ActionDTO createAction(String actionName, String url)
- 			throws ConsistencyViolationException, PersistenceException {
-
- 		ActionDTO dto = new ActionDTO();
- 		dto.setAppName("projectx");
- 		dto.setPage("Integration");
- 		dto.setActionName(actionName);
- 		dto.setDisplayName("Integration Action " + actionName);
- 		dto.setActionType(Action.ActionType.SUB);
- 		dto.setUrl(url);
- 		dto.setDescription("Action for role-action integration test");
-
- 		return actionService.create(dto, TEST_CREATE_USER_ID);
- 	}
--}
-\ No newline at end of file
+diff --git a/projectx-backend/src/test/java/com/tamantaw/projectx/backend/common/exceptionHandlers/ErrorHandlerFilterTest.java b/projectx-backend/src/test/java/com/tamantaw/projectx/backend/common/exceptionHandlers/ErrorHandlerFilterTest.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..8a2a846761c0e6aefd432462d7ca84145ecb1f2e
+--- /dev/null
++++ b/projectx-backend/src/test/java/com/tamantaw/projectx/backend/common/exceptionHandlers/ErrorHandlerFilterTest.java
+@@ -0,0 +1,72 @@
++package com.tamantaw.projectx.backend.common.exceptionHandlers;
++
++import jakarta.servlet.FilterChain;
++import jakarta.servlet.ServletException;
++import org.junit.jupiter.api.BeforeEach;
++import org.junit.jupiter.api.Test;
++import org.springframework.http.MediaType;
++import org.springframework.http.ProblemDetail;
++import org.springframework.mock.web.MockHttpServletRequest;
++import org.springframework.mock.web.MockHttpServletResponse;
++import tools.jackson.databind.ObjectMapper;
++
++import java.io.IOException;
++import java.util.Map;
++
++import static org.assertj.core.api.Assertions.assertThat;
++
++class ErrorHandlerFilterTest {
++
++	private ErrorHandlerFilter filter;
++	private ObjectMapper objectMapper;
++
++	@BeforeEach
++	void setUp() {
++		objectMapper = new ObjectMapper();
++		filter = new ErrorHandlerFilter(objectMapper);
++	}
++
++	@Test
++	void whenApiRequestThrowsException_returnsProblemDetail500() throws ServletException, IOException {
++		MockHttpServletRequest request = new MockHttpServletRequest();
++		request.setRequestURI("/api/test");
++		request.addHeader("X-Requested-With", "XMLHttpRequest");
++		MockHttpServletResponse response = new MockHttpServletResponse();
++
++		FilterChain failingChain = (req, res) -> {
++			throw new RuntimeException("boom");
++		};
++
++		filter.doFilter(request, response, failingChain);
++
++		assertThat(response.getStatus()).isEqualTo(500);
++		assertThat(response.getContentType()).isEqualTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
++
++		ProblemDetail problemDetail = objectMapper.readValue(response.getContentAsByteArray(), ProblemDetail.class);
++		assertThat(problemDetail.getStatus()).isEqualTo(500);
++		assertThat(problemDetail.getTitle()).isEqualTo("Internal Server Error");
++		assertThat(problemDetail.getDetail()).isEqualTo("Unexpected server error occurred");
++		assertThat(problemDetail.getInstance()).hasToString("/api/test");
++
++		Map<String, Object> properties = problemDetail.getProperties();
++		assertThat(properties.get("path")).isEqualTo("/api/test");
++		assertThat(properties.get("timestamp")).isNotNull();
++	}
++
++	@Test
++	void whenWebRequestThrowsException_forwardsTo500Page() throws ServletException, IOException {
++		MockHttpServletRequest request = new MockHttpServletRequest();
++		request.setRequestURI("/web/page");
++		MockHttpServletResponse response = new MockHttpServletResponse();
++
++		FilterChain failingChain = (req, res) -> {
++			throw new RuntimeException("boom");
++		};
++
++		filter.doFilter(request, response, failingChain);
++
++		assertThat(response.getStatus()).isEqualTo(500);
++		assertThat(response.getForwardedUrl()).isEqualTo("/web/pub/error/500");
++		assertThat(response.getContentAsString()).isEmpty();
++	}
 +}
-diff --git a/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/RoleServiceIT.java b/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/RoleServiceIT.java
-index 662fcc325e8fa64b95c6942c70ab0ca1b6e7679f..c2854b50e3df58e5ad0e26b505d98b12106e1509 100644
---- a/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/RoleServiceIT.java
-+++ b/projectx-persistence/src/test/java/com/tamantaw/projectx/integrationTests/RoleServiceIT.java
-@@ -1,105 +1,98 @@
- package com.tamantaw.projectx.integrationTests;
-
- import com.tamantaw.projectx.CommonTestBase;
- import com.tamantaw.projectx.persistence.criteria.ActionCriteria;
- import com.tamantaw.projectx.persistence.criteria.RoleCriteria;
-+import com.tamantaw.projectx.persistence.criteria.RoleActionCriteria;
- import com.tamantaw.projectx.persistence.dto.RoleDTO;
- import com.tamantaw.projectx.persistence.dto.base.PaginatedResult;
- import com.tamantaw.projectx.persistence.entity.Action;
- import com.tamantaw.projectx.persistence.entity.QRole;
- import com.tamantaw.projectx.persistence.entity.Role;
- import com.tamantaw.projectx.persistence.entity.RoleAction;
- import com.tamantaw.projectx.persistence.exception.ConsistencyViolationException;
- import com.tamantaw.projectx.persistence.exception.PersistenceException;
- import com.tamantaw.projectx.persistence.repository.base.UpdateSpec;
-+import com.tamantaw.projectx.persistence.service.RoleActionService;
- import com.tamantaw.projectx.persistence.service.RoleService;
--import jakarta.persistence.EntityManager;
- import org.springframework.beans.factory.annotation.Autowired;
- import org.springframework.data.domain.Sort;
- import org.testng.annotations.Test;
-
- import java.util.List;
- import java.util.Optional;
- import java.util.Set;
- import java.util.stream.Collectors;
-
- import static org.testng.Assert.assertEquals;
- import static org.testng.Assert.assertTrue;
- import static org.testng.AssertJUnit.*;
-
- public class RoleServiceIT extends CommonTestBase {
-
- 	@Autowired
- 	private RoleService roleService;
-
- 	@Autowired
--	private EntityManager entityManager;
-+	private RoleActionService roleActionService;
-
- 	@Test
- 	public void updateRoleAndActions_replacesActions() throws Exception {
- 		// ------------------------------------------------------------
- 		// Create Role with initial action
- 		// ------------------------------------------------------------
- 		RoleDTO dto = new RoleDTO();
- 		dto.setAppName("projectx");
- 		dto.setName("ROLE_FOR_UPDATE");
- 		dto.setRoleType(Role.RoleType.CUSTOM);
-
- 		Role saved = roleService.create(
- 				dto,
- 				Set.of(10021L),
- 				TEST_CREATE_USER_ID
- 		);
-
- 		dto.setId(saved.getId());
-
--		entityManager.flush();
--		entityManager.clear();
--
- 		// ------------------------------------------------------------
- 		// Update role with new action set
- 		// ------------------------------------------------------------
- 		roleService.updateRoleAndActions(
- 				dto,
- 				Set.of(10021L, 10022L),
- 				TEST_UPDATE_USER_ID
- 		);
-
--		entityManager.flush();
--		entityManager.clear();
--
- 		// ------------------------------------------------------------
- 		// Verify role-actions
- 		// ------------------------------------------------------------
--		List<RoleAction> roleActions = entityManager
--				.createQuery(
--						"select ra from RoleAction ra join fetch ra.action where ra.role.id = :roleId",
--						RoleAction.class
--				)
--				.setParameter("roleId", saved.getId())
--				.getResultList();
-+		RoleActionCriteria criteria = new RoleActionCriteria();
-+		criteria.setRoleId(saved.getId());
-+
-+		List<RoleAction> roleActions =
-+				roleActionService.findAll(criteria, "RoleAction(action)");
-
- 		assertEquals(roleActions.size(), 2);
-
- 		Set<Long> actionIds = roleActions.stream()
- 				.map(ra -> ra.getAction().getId())
- 				.collect(Collectors.toSet());
-
- 		assertTrue(actionIds.containsAll(Set.of(10021L, 10022L)));
- 	}
-
- 	// ----------------------------------------------------------------------
- 	// FIND BY ID (seed data)
- 	// ----------------------------------------------------------------------
-
- 	@Test
- 	public void findById_existingRole() throws Exception {
- 		Optional<RoleDTO> result = roleService.findById(1L);
-
- 		assertTrue(result.isPresent());
- 		assertEquals(result.get().getName(), "SUPER-USER");
- 		assertEquals(result.get().getAppName(), "projectx");
- 		assertEquals(result.get().getRoleType(), Role.RoleType.SUPERUSER);
- 	}
-
- 	// ----------------------------------------------------------------------
-@@ -166,167 +159,156 @@ public class RoleServiceIT extends CommonTestBase {
- 		dto.setAppName("projectx");
- 		dto.setName("TEMP_ROLE");
- 		dto.setRoleType(Role.RoleType.CUSTOM);
- 		dto.setDescription("Temporary role for IT test");
-
- 		RoleDTO saved = roleService.create(dto, 100L);
-
- 		assertNotNull(saved.getId());
- 		assertEquals(saved.getName(), "TEMP_ROLE");
- 		assertEquals(saved.getCreatedBy(), 100L);
- 		assertEquals(saved.getUpdatedBy(), 100L);
- 	}
-
- 	@Test
- 	public void create_withActions_persistsRoleAndActions() throws Exception {
- 		RoleDTO dto = new RoleDTO();
- 		dto.setAppName("projectx");
- 		dto.setName("ROLE_WITH_ACTIONS");
- 		dto.setRoleType(Role.RoleType.CUSTOM);
-
- 		// include duplicate action ID to verify unique handling
- 		Set<Long> actionIds = Set.of(10021L, 10022L);
-
- 		Role saved = roleService.create(dto, actionIds, 123L);
-
--		entityManager.flush();
--		entityManager.clear();
-+		RoleActionCriteria criteria = new RoleActionCriteria();
-+		criteria.setRoleId(saved.getId());
-
--		List<RoleAction> roleActions = entityManager
--				.createQuery(
--						"select ra from RoleAction ra join fetch ra.action where ra.role.id = :roleId",
--						RoleAction.class
--				)
--				.setParameter("roleId", saved.getId())
--				.getResultList();
-+		List<RoleAction> roleActions =
-+				roleActionService.findAll(criteria, "RoleAction(action)");
-
- 		assertNotNull(saved.getId());
- 		assertEquals(roleActions.size(), 2); // duplicate action id should be ignored
- 		assertEquals(saved.getCreatedBy(), 123L);
- 		assertEquals(saved.getUpdatedBy(), 123L);
- 		assertTrue(
- 				roleActions.stream()
- 						.map(RoleAction::getAction)
- 						.map(Action::getId)
- 						.collect(Collectors.toSet())
- 						.containsAll(List.of(10021L, 10022L))
- 		);
- 		assertTrue(
- 				roleActions.stream()
- 						.allMatch(ra -> ra.getCreatedBy() == 123L && ra.getUpdatedBy() == 123L)
- 		);
- 	}
-
- 	// ----------------------------------------------------------------------
- 	// UPDATE
- 	// ----------------------------------------------------------------------
-
- 	@Test
- 	public void update_updatesRoleName() throws Exception {
- 		RoleCriteria criteria = new RoleCriteria();
- 		criteria.setName("ADMINISTRATOR");
-
- 		UpdateSpec<Role> spec = (update, root) ->
- 				update.set(QRole.role.name, "ADMIN_UPDATED");
-
- 		long affected = roleService.update(spec, criteria, 200L);
-
- 		assertEquals(affected, 1L);
-
--		Role updated = entityManager
--				.createQuery(
--						"select r from Role r where r.name = :name",
--						Role.class
--				)
--				.setParameter("name", "ADMIN_UPDATED")
--				.getSingleResult();
-+		RoleCriteria updatedCriteria = new RoleCriteria();
-+		updatedCriteria.setName("ADMIN_UPDATED");
-+
-+		RoleDTO updated = roleService.findOne(updatedCriteria).orElseThrow();
-
- 		assertEquals(updated.getUpdatedBy(), 200L);
- 	}
-
- 	@Test
- 	public void update_withDto_updatesRoleFieldsAndAudit() throws Exception {
- 		RoleDTO dto = new RoleDTO();
- 		dto.setAppName("projectx");
- 		dto.setName("DTO_UPDATE_ROLE");
- 		dto.setRoleType(Role.RoleType.CUSTOM);
- 		dto.setDescription("Role for DTO update");
-
- 		RoleDTO saved = roleService.create(dto, TEST_CREATE_USER_ID);
-
- 		RoleDTO updateDto = new RoleDTO();
- 		updateDto.setId(saved.getId());
- 		updateDto.setName("DTO_UPDATED_ROLE");
- 		updateDto.setDescription("Updated via DTO update");
-
- 		RoleDTO updated = roleService.update(updateDto, TEST_UPDATE_USER_ID);
-
- 		assertEquals(updated.getName(), "DTO_UPDATED_ROLE");
- 		assertEquals(updated.getDescription(), "Updated via DTO update");
- 		assertEquals(updated.getUpdatedBy(), TEST_UPDATE_USER_ID);
- 	}
-
- 	// ----------------------------------------------------------------------
- 	// DELETE
- 	// ----------------------------------------------------------------------
-
- 	@Test
- 	public void delete_removesRole() throws ConsistencyViolationException, PersistenceException {
- 		RoleDTO dto = new RoleDTO();
- 		dto.setAppName("projectx");
- 		dto.setName("DELETE_ME");
- 		dto.setRoleType(Role.RoleType.CUSTOM);
-
- 		RoleDTO saved = roleService.create(dto, 1L);
-
- 		RoleCriteria criteria = new RoleCriteria();
- 		criteria.setName("DELETE_ME");
-
- 		long deleted = roleService.delete(criteria);
-
- 		assertEquals(deleted, 1L);
-
--		entityManager.flush();
--		entityManager.clear();
--
--		assertNull(entityManager.find(Role.class, saved.getId()));
-+		assertTrue(roleService.findById(saved.getId()).isEmpty());
- 	}
-
- 	@Test
- 	public void deleteById_removesRoleByIdentifier() throws ConsistencyViolationException, PersistenceException {
- 		RoleDTO dto = new RoleDTO();
- 		dto.setAppName("projectx");
- 		dto.setName("DELETE_BY_ID_ROLE");
- 		dto.setRoleType(Role.RoleType.CUSTOM);
- 		dto.setDescription("Role for deleteById test");
-
- 		RoleDTO saved = roleService.create(dto, 1L);
-
- 		boolean deleted = roleService.deleteById(saved.getId());
-
- 		assertTrue(deleted);
--		assertNull(entityManager.find(Role.class, saved.getId()));
-+		assertTrue(roleService.findById(saved.getId()).isEmpty());
- 	}
-
- 	@Test
- 	public void findRole_byActionCriteria_returnsRoleWithActions() throws PersistenceException {
- 		// given
- 		ActionCriteria actionCriteria = new ActionCriteria();
- 		actionCriteria.setPage("Administrator");
- 		RoleCriteria roleCriteria = new RoleCriteria();
- 		roleCriteria.setAppName("projectx");
- 		roleCriteria.setAction(actionCriteria);
-
- 		// when
- 		List<RoleDTO> roles = roleService.findAll(roleCriteria, "Role(roleActions(action))");
-
- 		// then
- 		assertFalse(roles.isEmpty());
-
- 		RoleDTO role = roles.stream()
- 				.filter(r -> "SUPER-USER".equals(r.getName()))
- 				.findFirst()
- 				.orElseThrow();
-
- 		assertNotNull(role.getActions());
- 		assertFalse(role.getActions().isEmpty());
- 		showEntriesOfCollection(roles);

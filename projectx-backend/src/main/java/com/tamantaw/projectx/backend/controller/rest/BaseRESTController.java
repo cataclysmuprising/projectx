@@ -31,7 +31,7 @@ public abstract class BaseRESTController {
 	@Autowired
 	private ObjectMapper mapper;
 
-	protected Long getSignInAdministratorId() {
+	public Long getSignInAdministratorId() {
 		AuthenticatedClient loginAdmin = getSignInAdministrator();
 		if (loginAdmin != null) {
 			return loginAdmin.getId();

@@ -1,5 +1,6 @@
 package com.tamantaw.projectx.backend.common.exceptionHandlers;
 
+import com.tamantaw.projectx.backend.common.exception.RequestValidationException;
 import com.tamantaw.projectx.persistence.exception.BusinessException;
 import com.tamantaw.projectx.persistence.exception.ConsistencyViolationException;
 import com.tamantaw.projectx.persistence.exception.ContentNotFoundException;
@@ -60,6 +61,24 @@ public class RestExceptionHandler {
 				ex.getMessage(),
 				"https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.1"
 		);
+	}
+
+	@ExceptionHandler(RequestValidationException.class)
+	public ProblemDetail handleRequestValidation(RequestValidationException ex) {
+
+		errorLogger.warn("Validation failed: {}", ex.getMessage());
+
+		ProblemDetail pd = problem(
+				HttpStatus.BAD_REQUEST,
+				ex.getMessage(),
+				"https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.1"
+		);
+
+		if (ex.getValidationErrors() != null && !ex.getValidationErrors().isEmpty()) {
+			pd.setProperty("violations", ex.getValidationErrors());
+		}
+
+		return pd;
 	}
 
 	/* ============================================================

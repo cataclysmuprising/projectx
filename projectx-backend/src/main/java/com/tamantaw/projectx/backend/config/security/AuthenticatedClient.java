@@ -31,6 +31,10 @@ public class AuthenticatedClient implements UserDetails {
 		this.roleNames = roleNames;
 	}
 
+	private boolean hasActiveStatus() {
+		return administrator.getStatus() == Administrator.Status.ACTIVE;
+	}
+
 	@Override
 	@Nonnull
 	public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -67,12 +71,22 @@ public class AuthenticatedClient implements UserDetails {
 	}
 
 	@Override
+	public boolean isAccountNonExpired() {
+		return hasActiveStatus();
+	}
+
+	@Override
 	public boolean isAccountNonLocked() {
-		return administrator.getStatus() == Administrator.Status.ACTIVE;
+		return hasActiveStatus();
+	}
+
+	@Override
+	public boolean isCredentialsNonExpired() {
+		return hasActiveStatus();
 	}
 
 	@Override
 	public boolean isEnabled() {
-		return administrator.getStatus() == Administrator.Status.ACTIVE;
+		return hasActiveStatus();
 	}
 }

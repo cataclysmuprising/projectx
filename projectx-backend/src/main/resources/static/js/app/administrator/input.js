@@ -1,5 +1,5 @@
 function init() {
-    // initValidator();
+    initValidator();
     loadRoles();
 }
 
