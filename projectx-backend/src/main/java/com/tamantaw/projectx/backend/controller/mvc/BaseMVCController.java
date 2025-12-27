@@ -109,21 +109,11 @@ public abstract class BaseMVCController {
 		);
 
 		if (actions == null || actions.isEmpty()) {
-			model.addAttribute("permissions", Map.of());
+			model.addAttribute("permissions", Set.of());
 			return;
 		}
 
-		// single namespace → safer for templates
-		Map<String, Boolean> permissions = new HashMap<>();
-
-		actions.forEach(action -> {
-			permissions.put(action, true);
-
-			// 🔙 backward compatibility for Thymeleaf
-			model.addAttribute(action, true);
-		});
-
-		model.addAttribute("permissions", permissions);
+		model.addAttribute("permissions", actions);
 	}
 
 	/* ============================================================

@@ -450,7 +450,15 @@ function getPageMode() {
 }
 
 function hasAuthority(actionName) {
-    return $("#" + actionName).val() === "true";
+    return window.APP_PERMISSIONS.includes(actionName);
+}
+
+function hasAnyAuthority(...actions) {
+    return actions.some(a => window.APP_PERMISSIONS.includes(a));
+}
+
+function hasAllAuthorities(...actions) {
+    return actions.every(a => window.APP_PERMISSIONS.includes(a));
 }
 
 function convertJSONValueToCommaSeparateString(acceptanceElemSelector) {
