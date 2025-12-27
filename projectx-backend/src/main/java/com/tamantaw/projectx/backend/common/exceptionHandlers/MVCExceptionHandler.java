@@ -178,19 +178,12 @@ public class MVCExceptionHandler {
 	}
 
 	@ExceptionHandler(ValidationFailedException.class)
-	@ResponseStatus(HttpStatus.BAD_REQUEST)
 	public Object handleValidationFailed(
 			ValidationFailedException e,
-			Authentication auth,
 			HttpServletRequest request
 	) {
-		// Validation is not a "server error"
-		errorLogger.warn(LoggerConstants.LOG_BREAKER_OPEN);
-		errorLogger.warn("Handler ==> handleValidationFailed");
 		errorLogger.warn("Validation failed view={}", e.getErrorView());
-		errorLogger.warn(LoggerConstants.LOG_BREAKER_CLOSE);
 
-		// API / AJAX: return RFC7807 problem
 		if (isApiRequest(request)) {
 			return problem(
 					HttpStatus.BAD_REQUEST,
@@ -200,24 +193,15 @@ public class MVCExceptionHandler {
 			);
 		}
 
-		String view = e.getErrorView();
-
-		// If developer passed redirect:..., respect it.
-		// This works perfectly with your PRG flash attributes already set by the Aspect.
-		if (view != null && view.startsWith("redirect:")) {
-			ModelAndView mav = new ModelAndView(view);
-			mav.setStatus(HttpStatus.BAD_REQUEST);
-			return mav;
+		// Redirect: flash already written by Aspect into FlashMap
+		if (e.getErrorView().startsWith("redirect:")) {
+			return e.getErrorView(); // IMPORTANT: return String, not ModelAndView
 		}
 
-		// Normal forward render: return the actual form view
-		ModelAndView mav = new ModelAndView();
-		mav.setViewName(view);
-		mav.setStatus(HttpStatus.BAD_REQUEST);
-
-		// Restore model attributes captured in exception
-		e.getModelAttributes().forEach(mav::addObject);
-
+		// Forward render
+		ModelAndView mav = new ModelAndView(e.getErrorView());
+		mav.addObject("validationErrors", e.getValidationErrors());
+		mav.addObject("pageMessage", e.getPageMessage());
 		return mav;
 	}
 

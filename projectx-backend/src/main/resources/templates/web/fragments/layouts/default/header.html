@@ -3,11 +3,9 @@
 
 	<script th:inline="javascript">
 		window.APP_PERMISSIONS = /*[[${permissions}]]*/ [];
+		window.APP_VALIDATION_ERRORS = /*[[${validationErrors}]]*/ {};
 	</script>
 
-	<div id="validationErrors" style="display: none;" th:each="item : ${validationErrors}">
-		<span class="error-item" th:attr="data-id=${item.key},data-error-message=${item.value}"></span>
-	</div>
 	<input id="pageMode" th:value="${pageMode}" type="hidden">
 	<input id="hdnAdministratorId" th:value="${loginAdministratorId}" type="hidden">
 

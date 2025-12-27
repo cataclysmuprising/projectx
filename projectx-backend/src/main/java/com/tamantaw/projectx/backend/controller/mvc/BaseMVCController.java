@@ -97,23 +97,23 @@ public abstract class BaseMVCController {
 
 		model.addAttribute("pageName", pageName);
 
-		AuthenticatedClient loginUser = getSignInClientInfo();
-		if (loginUser == null) {
+		AuthenticatedClient loginAdministrator = getSignInClientInfo();
+		if (loginAdministrator == null) {
 			return;
 		}
 
-		Set<String> actions = actionRegistry.resolveAvailableActionsForUser(
+		Set<String> permissions = actionRegistry.resolveAvailableActionsForUser(
 				BackendApplication.APP_NAME,
 				pageName,
-				loginUser.getRoleNames()
+				loginAdministrator.getRoleNames()
 		);
 
-		if (actions == null || actions.isEmpty()) {
+		if (permissions == null || permissions.isEmpty()) {
 			model.addAttribute("permissions", Set.of());
 			return;
 		}
 
-		model.addAttribute("permissions", actions);
+		model.addAttribute("permissions", permissions);
 	}
 
 	/* ============================================================

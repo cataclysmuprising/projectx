@@ -56,8 +56,16 @@ public class AdministratorController extends BaseMVCController {
 
 	@GetMapping("/add")
 	public String add(Model model) {
-		model.addAttribute("pageMode", PageMode.CREATE);
-		model.addAttribute("administratorDto", new AdministratorDTO());
+
+		// Preserve PRG values if present
+		if (!model.containsAttribute("pageMode")) {
+			model.addAttribute("pageMode", PageMode.CREATE);
+		}
+
+		if (!model.containsAttribute("administratorDto")) {
+			model.addAttribute("administratorDto", new AdministratorDTO());
+		}
+
 		return "/administrator/input";
 	}
 

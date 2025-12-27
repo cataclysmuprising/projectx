@@ -6,6 +6,7 @@ import com.tamantaw.projectx.backend.common.response.PageMessage;
 import com.tamantaw.projectx.backend.common.response.PageMessageStyle;
 import com.tamantaw.projectx.backend.common.validation.BaseValidator;
 import com.tamantaw.projectx.persistence.dto.base.AbstractDTO;
+import jakarta.servlet.http.HttpServletRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.aspectj.lang.JoinPoint;
@@ -20,10 +21,15 @@ import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+import org.springframework.web.servlet.FlashMap;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.servlet.support.RequestContextUtils;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -78,9 +84,23 @@ public class CheckValidationAspect extends BaseAspect {
 		Object[] args = joinPoint.getArgs();
 		Method method = resolveMethod(joinPoint);
 
-		// ------------------------------------------------------------
-		// 2) Extract DTO + matching BindingResult + Model/RedirectAttributes
-		// ------------------------------------------------------------
+		/* ------------------------------------------------------------
+		 * 2a) HARDENING: enforce exactly ONE AbstractDTO parameter
+		 * ------------------------------------------------------------ */
+		long dtoCount = Arrays.stream(args)
+				.filter(AbstractDTO.class::isInstance)
+				.count();
+
+		if (dtoCount > 1) {
+			throw new IllegalStateException(
+					"@ValidateEntity supports only ONE AbstractDTO parameter per method: " +
+							targetClass.getSimpleName() + "#" + method.getName()
+			);
+		}
+
+		/* ------------------------------------------------------------
+		 * 2b) Extract DTO + matching BindingResult + Model/RedirectAttributes
+		 * ------------------------------------------------------------ */
 		Extraction extraction = extractDtoAndBindingResult(method, args);
 
 		AbstractDTO dto = extraction.dto;
@@ -110,6 +130,13 @@ public class CheckValidationAspect extends BaseAspect {
 		@SuppressWarnings("unchecked")
 		BaseValidator<AbstractDTO> validator =
 				(BaseValidator<AbstractDTO>) appContext.getBean(validateEntity.validator());
+
+		if (!validator.supports(dto.getClass())) {
+			throw new IllegalStateException(
+					"Validator " + validator.getClass().getSimpleName() +
+							" does not support DTO type " + dto.getClass().getSimpleName()
+			);
+		}
 
 		validator.validate(dto, bindingResult, validateEntity.pageMode());
 
@@ -156,26 +183,29 @@ public class CheckValidationAspect extends BaseAspect {
 		// 8) Publish errors for view (PRG via flash OR forward via model)
 		// ------------------------------------------------------------
 		if (redirectAttributes != null) {
-			// PRG: preserve DTO and BindingResult in flash attributes (Spring-compatible keys)
-			// - DTO name: use @ModelAttribute name if present, else derive safe default
+
 			String attrName = extraction.modelAttributeName != null
 					? extraction.modelAttributeName
 					: (dto.getClass().getSimpleName().replaceFirst("DTO$", "") + "Dto");
 
+			// --- existing ---
 			redirectAttributes.addFlashAttribute(attrName, dto);
-
-			// Spring expects BindingResult to be stored under this key:
-			// "org.springframework.validation.BindingResult.<attrName>"
 			redirectAttributes.addFlashAttribute(
 					BindingResult.MODEL_KEY_PREFIX + attrName,
 					bindingResult
 			);
-
-			// Your explicit map + message (useful for custom UI)
 			redirectAttributes.addFlashAttribute("pageMode", validateEntity.pageMode());
 			redirectAttributes.addFlashAttribute("validationErrors", validationErrors);
 			redirectAttributes.addFlashAttribute("pageMessage", pageMessage);
+
+			// --- CRITICAL FIX: also write to FlashMap (because we throw before controller returns) ---
+			putFlash(attrName, dto);
+			putFlash(BindingResult.MODEL_KEY_PREFIX + attrName, bindingResult);
+			putFlash("pageMode", validateEntity.pageMode());
+			putFlash("validationErrors", validationErrors);
+			putFlash("pageMessage", pageMessage);
 		}
+
 		else if (model != null) {
 			// Forward render
 			model.addAttribute("pageMode", validateEntity.pageMode());
@@ -197,13 +227,17 @@ public class CheckValidationAspect extends BaseAspect {
 		// ------------------------------------------------------------
 		String errorView = validateEntity.errorView();
 		if (errorView == null || errorView.isBlank()) {
-			// Safer default if dev forgot to supply it (prevents redirect loops or null view)
-			errorView = "error/405";
+			throw new IllegalStateException(
+					"@ValidateEntity.errorView must be defined for " +
+							targetClass.getSimpleName() + "#" + method.getName()
+			);
 		}
 
-		// If you rely on model for forward view, pass it.
-		// For PRG, your handler can ignore model and redirect.
-		throw new ValidationFailedException(model, errorView);
+		throw new ValidationFailedException(
+				validationErrors,
+				pageMessage,
+				errorView
+		);
 	}
 
 	// ---------------------------------------------------------------------
@@ -281,6 +315,16 @@ public class CheckValidationAspect extends BaseAspect {
 			}
 		}
 		return null;
+	}
+
+	private void putFlash(String key, Object value) {
+		var ra = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+		if (ra == null) {
+			return;
+		}
+		HttpServletRequest request = ra.getRequest();
+		FlashMap flashMap = RequestContextUtils.getOutputFlashMap(request);
+		flashMap.putIfAbsent(key, value);
 	}
 
 	private record Extraction(AbstractDTO dto, BindingResult bindingResult, String modelAttributeName) {

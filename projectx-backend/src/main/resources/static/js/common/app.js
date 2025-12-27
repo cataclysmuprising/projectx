@@ -329,22 +329,39 @@ function clearOldValidationErrorMessages() {
 }
 
 function loadValidationErrors() {
-    let errorElems = $("#validationErrors .error-item");
-    if (errorElems.length > 0) {
-        clearOldValidationErrorMessages();
-        $.each(errorElems, function (index, item) {
-            let elementId = $(item).attr("data-id").replace(new RegExp("\\.", "g"), '_');
-            let errorElem = $("#" + elementId);
-            let container = errorElem;
-            if (errorElem.hasClass('selectpicker') || errorElem.hasClass('dropdown-select')) {
-                container = errorElem.closest('.bootstrap-select');
-            }
-            if (errorElem.length) {
-                container.addClass('is-invalid');
-                container.after('<div class="invalid-feedback">' + $(item).attr("data-error-message") + '</div>');
-            }
-        });
+
+    if (!window.APP_VALIDATION_ERRORS) {
+        return;
     }
+
+    const errors = window.APP_VALIDATION_ERRORS;
+
+    if (Object.keys(errors).length === 0) {
+        return;
+    }
+
+    clearOldValidationErrorMessages();
+
+    $.each(errors, function (field, message) {
+
+        let elementId = field.replace(/\./g, '_');
+        let errorElem = $("#" + elementId);
+
+        if (!errorElem.length) {
+            return;
+        }
+
+        let container = errorElem;
+
+        if (errorElem.hasClass('selectpicker') || errorElem.hasClass('dropdown-select')) {
+            container = errorElem.closest('.bootstrap-select');
+        }
+
+        container.addClass('is-invalid');
+        container.after(
+            '<div class="invalid-feedback">' + message + '</div>'
+        );
+    });
 }
 
 function notify(title, message, style) {
