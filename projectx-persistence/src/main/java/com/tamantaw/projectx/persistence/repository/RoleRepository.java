@@ -4,8 +4,9 @@ import com.tamantaw.projectx.persistence.criteria.RoleCriteria;
 import com.tamantaw.projectx.persistence.entity.QRole;
 import com.tamantaw.projectx.persistence.entity.Role;
 import com.tamantaw.projectx.persistence.repository.base.AbstractRepositoryImpl;
+import jakarta.annotation.PostConstruct;
 import jakarta.persistence.EntityManager;
-import org.springframework.beans.factory.annotation.Qualifier;
+import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Repository;
 
 import static com.tamantaw.projectx.persistence.config.PrimaryPersistenceContext.EM_FACTORY;
@@ -21,9 +22,15 @@ public class RoleRepository
 
 	private final QRole qEntity = QRole.role;
 
-	public RoleRepository(
-			@Qualifier(EM_FACTORY) EntityManager entityManager) {
+	@PersistenceContext(unitName = EM_FACTORY)
+	private EntityManager entityManager;
 
-		super(Role.class, Long.class, entityManager);
+	public RoleRepository() {
+		super(Role.class, Long.class);
+	}
+
+	@PostConstruct
+	public void init() {
+		initialize(entityManager);
 	}
 }

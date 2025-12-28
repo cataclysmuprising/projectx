@@ -5,8 +5,9 @@ import com.tamantaw.projectx.persistence.entity.QRoleAction;
 import com.tamantaw.projectx.persistence.entity.RoleAction;
 import com.tamantaw.projectx.persistence.exception.BusinessException;
 import com.tamantaw.projectx.persistence.repository.base.AbstractRepositoryImpl;
+import jakarta.annotation.PostConstruct;
 import jakarta.persistence.EntityManager;
-import org.springframework.beans.factory.annotation.Qualifier;
+import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -24,13 +25,20 @@ public class RoleActionRepository
 
 	private final QRoleAction qEntity = QRoleAction.roleAction;
 
-	public RoleActionRepository(
-			@Qualifier(EM_FACTORY) EntityManager entityManager) {
+	@PersistenceContext(unitName = EM_FACTORY)
+	private EntityManager entityManager;
 
-		super(RoleAction.class, Long.class, entityManager);
+	public RoleActionRepository() {
+		super(RoleAction.class, Long.class);
+	}
+
+	@PostConstruct
+	public void init() {
+		initialize(entityManager);
 	}
 
 	public List<Long> findActionIdsByRoleId(Long roleId) throws BusinessException {
+		assertInitialized();
 		try {
 			QRoleAction roleAction = QRoleAction.roleAction;
 			//@formatter:off

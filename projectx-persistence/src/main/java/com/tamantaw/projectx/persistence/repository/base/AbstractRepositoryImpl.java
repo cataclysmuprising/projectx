@@ -66,7 +66,6 @@ public abstract class AbstractRepositoryImpl<
 		ENTITY extends AbstractEntity,
 		QCLAZZ extends EntityPathBase<ENTITY>,
 		CRITERIA extends AbstractCriteria<QCLAZZ>>
-		extends SimpleJpaRepository<ENTITY, ID>
 		implements AbstractRepository<ID, ENTITY, QCLAZZ, CRITERIA> {
 
 	// ----------------------------------------------------------------------
@@ -115,13 +114,17 @@ public abstract class AbstractRepositoryImpl<
 	// CORE FIELDS
 	// ----------------------------------------------------------------------
 
-	protected final EntityManager entityManager;
-	protected final SimpleExpression<ID> idExpr;
-	protected final OrderSpecifier<?> idAscOrder;
-	protected final QCLAZZ path;
-	protected final QAbstractEntity audit;
-	protected final Querydsl querydsl;
-	protected final JPAQueryFactory queryFactory;
+	protected final Class<ENTITY> domainClass;
+	protected final Class<ID> idClass;
+	protected EntityManager entityManager;
+	protected SimpleExpression<ID> idExpr;
+	protected OrderSpecifier<?> idAscOrder;
+	protected QCLAZZ path;
+	protected QAbstractEntity audit;
+	protected Querydsl querydsl;
+	protected JPAQueryFactory queryFactory;
+	protected SimpleJpaRepository<ENTITY, ID> simpleJpaRepository;
+	private boolean initialized;
 
 	// ----------------------------------------------------------------------
 	// CONSTRUCTOR
@@ -129,10 +132,39 @@ public abstract class AbstractRepositoryImpl<
 
 	protected AbstractRepositoryImpl(
 			Class<ENTITY> domainClass,
-			Class<ID> idClass,
-			EntityManager entityManager) {
+			Class<ID> idClass) {
 
-		super(
+		this.domainClass = domainClass;
+		this.idClass = idClass;
+	}
+
+	private static <T> List<List<T>> chunk(List<T> src, int size) {
+
+		if (src == null || src.isEmpty()) {
+			return List.of();
+		}
+
+		List<List<T>> out =
+				new ArrayList<>((src.size() + size - 1) / size);
+
+		for (int i = 0; i < src.size(); i += size) {
+			out.add(src.subList(i, Math.min(src.size(), i + size)));
+		}
+
+		return out;
+	}
+
+	// ----------------------------------------------------------------------
+	// READ OPERATIONS
+	// ----------------------------------------------------------------------
+
+	protected void initialize(EntityManager entityManager) {
+
+		Assert.notNull(entityManager, "EntityManager must not be null");
+		Assert.state(!initialized, "AbstractRepositoryImpl is already initialized");
+
+		this.entityManager = entityManager;
+		simpleJpaRepository = new SimpleJpaRepository<>(
 				new JpaMetamodelEntityInformation<>(
 						domainClass,
 						entityManager.getMetamodel(),
@@ -140,8 +172,6 @@ public abstract class AbstractRepositoryImpl<
 				),
 				entityManager
 		);
-
-		this.entityManager = entityManager;
 
 		@SuppressWarnings("unchecked")
 		QCLAZZ resolved = (QCLAZZ) PATH_RESOLVER.createPath(domainClass);
@@ -176,26 +206,11 @@ public abstract class AbstractRepositoryImpl<
 		}
 
 		idAscOrder = new OrderSpecifier<>(Order.ASC, (Expression<? extends Comparable<?>>) idExpr);
+		initialized = true;
 	}
 
-	// ----------------------------------------------------------------------
-	// READ OPERATIONS
-	// ----------------------------------------------------------------------
-
-	private static <T> List<List<T>> chunk(List<T> src, int size) {
-
-		if (src == null || src.isEmpty()) {
-			return List.of();
-		}
-
-		List<List<T>> out =
-				new ArrayList<>((src.size() + size - 1) / size);
-
-		for (int i = 0; i < src.size(); i += size) {
-			out.add(src.subList(i, Math.min(src.size(), i + size)));
-		}
-
-		return out;
+	protected final void assertInitialized() {
+		Assert.state(initialized, "AbstractRepositoryImpl has not been initialized");
 	}
 
 	protected QueryHints getRelatedDataHints(String... hints) {
@@ -339,8 +354,9 @@ public abstract class AbstractRepositoryImpl<
 	@Override
 	@Nonnull
 	public Optional<ENTITY> findById(@Nonnull ID id) {
+		assertInitialized();
 		Assert.notNull(id, "Id must not be null");
-		return super.findById(id);
+		return simpleJpaRepository.findById(id);
 	}
 
 	/**
@@ -354,6 +370,7 @@ public abstract class AbstractRepositoryImpl<
 	@Override
 	public Optional<ENTITY> findOne(CRITERIA criteria, String... hints) {
 
+		assertInitialized();
 		Assert.notNull(criteria, "Criteria must not be null");
 
 		Predicate filter = criteria.getFilter(path);
@@ -425,6 +442,7 @@ public abstract class AbstractRepositoryImpl<
 	@Override
 	public List<ENTITY> findAll(CRITERIA criteria, String... hints) {
 
+		assertInitialized();
 		Assert.notNull(criteria, "Criteria must not be null");
 
 		// Enforce correct API usage
@@ -503,6 +521,7 @@ public abstract class AbstractRepositoryImpl<
 	@Override
 	public Page<ENTITY> findByPaging(CRITERIA criteria, String... hints) {
 
+		assertInitialized();
 		Assert.notNull(criteria, "Criteria must not be null");
 
 		Pageable pageable = criteria.toPageable();
@@ -587,6 +606,7 @@ public abstract class AbstractRepositoryImpl<
 	@Override
 	public List<ID> findIds(CRITERIA criteria) {
 
+		assertInitialized();
 		Assert.notNull(criteria, "Criteria must not be null");
 
 		Predicate filter = criteria.getFilter(path);
@@ -615,6 +635,7 @@ public abstract class AbstractRepositoryImpl<
 	@Override
 	public long count(CRITERIA criteria) {
 
+		assertInitialized();
 		Assert.notNull(criteria, "Criteria must not be null");
 
 		Predicate filter = criteria.getFilter(path);
@@ -635,6 +656,7 @@ public abstract class AbstractRepositoryImpl<
 	@Override
 	public boolean exists(CRITERIA criteria) {
 
+		assertInitialized();
 		Assert.notNull(criteria, "Criteria must not be null");
 
 		Predicate filter = criteria.getFilter(path);
@@ -653,12 +675,14 @@ public abstract class AbstractRepositoryImpl<
 
 	@Override
 	public ENTITY saveRecord(ENTITY entity) {
-		return super.saveAndFlush(entity);
+		assertInitialized();
+		return simpleJpaRepository.saveAndFlush(entity);
 	}
 
 	@Override
 	public List<ENTITY> saveAllRecords(Iterable<ENTITY> entities) {
-		return super.saveAllAndFlush(entities);
+		assertInitialized();
+		return simpleJpaRepository.saveAllAndFlush(entities);
 	}
 
 	@Override
@@ -667,6 +691,7 @@ public abstract class AbstractRepositoryImpl<
 			ID id,
 			long updatedBy) {
 
+		assertInitialized();
 		Assert.notNull(spec, "UpdateSpec must not be null");
 
 		JPAUpdateClause update = queryFactory.update(path);
@@ -692,6 +717,7 @@ public abstract class AbstractRepositoryImpl<
 			CRITERIA criteria,
 			Long updatedBy) {
 
+		assertInitialized();
 		Assert.notNull(criteria, "Criteria must not be null");
 		Assert.notNull(spec, "UpdateSpec must not be null");
 
@@ -729,6 +755,7 @@ public abstract class AbstractRepositoryImpl<
 	@Override
 	public boolean deleteWithId(@Nonnull ID id) {
 
+		assertInitialized();
 		Assert.notNull(id, "Id must not be null");
 
 		long affected =
@@ -747,6 +774,7 @@ public abstract class AbstractRepositoryImpl<
 	@Override
 	public long deleteByCriteria(CRITERIA criteria) {
 
+		assertInitialized();
 		Assert.notNull(criteria, "Criteria must not be null");
 
 		// STRICT: ID-first delete avoids join side effects.

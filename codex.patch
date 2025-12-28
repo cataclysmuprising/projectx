@@ -1,173 +1,892 @@
-diff --git a/projectx-backend/src/main/java/com/tamantaw/projectx/backend/common/exceptionHandlers/ErrorHandlerFilter.java b/projectx-backend/src/main/java/com/tamantaw/projectx/backend/common/exceptionHandlers/ErrorHandlerFilter.java
-index c1b74dce698a7316611d6b7d55ff433ca48a5914..1a39d8629e2b7121dd141227ef7d2fcb3e9da2ad 100644
---- a/projectx-backend/src/main/java/com/tamantaw/projectx/backend/common/exceptionHandlers/ErrorHandlerFilter.java
-+++ b/projectx-backend/src/main/java/com/tamantaw/projectx/backend/common/exceptionHandlers/ErrorHandlerFilter.java
-@@ -1,71 +1,75 @@
- package com.tamantaw.projectx.backend.common.exceptionHandlers;
+diff --git a/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/ActionRepository.java b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/ActionRepository.java
+index 9fa02b468347111c77f9b7fc26541883444cd2df..5e7975056f81524bf719131807cf5d7770548cac 100644
+--- a/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/ActionRepository.java
++++ b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/ActionRepository.java
+@@ -1,35 +1,43 @@
+ package com.tamantaw.projectx.persistence.repository;
 
- import jakarta.servlet.*;
- import jakarta.servlet.http.HttpServletRequest;
- import jakarta.servlet.http.HttpServletResponse;
-+import org.apache.logging.log4j.LogManager;
-+import org.apache.logging.log4j.Logger;
- import org.springframework.http.HttpStatus;
- import org.springframework.http.MediaType;
- import org.springframework.http.ProblemDetail;
- import org.springframework.security.web.DefaultRedirectStrategy;
- import org.springframework.security.web.RedirectStrategy;
- import org.springframework.stereotype.Component;
- import tools.jackson.databind.ObjectMapper;
+ import com.tamantaw.projectx.persistence.criteria.ActionCriteria;
+ import com.tamantaw.projectx.persistence.entity.Action;
+ import com.tamantaw.projectx.persistence.entity.QAction;
+ import com.tamantaw.projectx.persistence.repository.base.AbstractRepositoryImpl;
+ import jakarta.persistence.EntityManager;
+-import org.springframework.beans.factory.annotation.Qualifier;
++import jakarta.persistence.PersistenceContext;
++import jakarta.annotation.PostConstruct;
+ import org.springframework.stereotype.Repository;
 
- import java.io.IOException;
-+import java.net.URI;
- import java.time.Instant;
+ import java.util.List;
 
- // To handle all exceptions out of Spring Controllers
- @Component
- public class ErrorHandlerFilter implements Filter {
+ import static com.tamantaw.projectx.persistence.config.PrimaryPersistenceContext.EM_FACTORY;
 
-+	private static final Logger errorLogger =
-+			LogManager.getLogger("errorLogs." + ErrorHandlerFilter.class.getName());
+ @Repository
+ public class ActionRepository
+ 		extends AbstractRepositoryImpl<
+ 		Long,
+ 		Action,
+ 		QAction,
+ 		ActionCriteria
+ 		> {
+
+ 	private static final QAction qAction = QAction.action;
+
+-	public ActionRepository(
+-			@Qualifier(EM_FACTORY) EntityManager entityManager) {
++	@PersistenceContext(unitName = EM_FACTORY)
++	private EntityManager entityManager;
+
+-		super(Action.class, Long.class, entityManager);
++	public ActionRepository() {
++		super(Action.class, Long.class);
++	}
 +
- 	private final RedirectStrategy redirectStrategy = new DefaultRedirectStrategy();
- 	private final ObjectMapper objectMapper;
-
- 	public ErrorHandlerFilter(ObjectMapper objectMapper) {
- 		this.objectMapper = objectMapper;
++	@PostConstruct
++	public void init() {
++		initialize(entityManager);
  	}
 
- 	@Override
- 	public void doFilter(ServletRequest request,
- 	                     ServletResponse response,
--	                     FilterChain filterChain) throws IOException {
-+	                     FilterChain filterChain) throws IOException, ServletException {
+ 	public List<String> selectPages(String appName) {
++		assertInitialized();
+ 		return queryFactory.selectDistinct(qAction.page).from(qAction).where(qAction.appName.eq(appName)).fetch();
+ 	}
+-}
+\ No newline at end of file
++}
+diff --git a/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/AdministratorLoginHistoryRepository.java b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/AdministratorLoginHistoryRepository.java
+index d6dc3496484bfb514372abb82ad3c2c731b0967a..60ea7d3130664bb210e0e1e244e55ca605127f15 100644
+--- a/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/AdministratorLoginHistoryRepository.java
++++ b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/AdministratorLoginHistoryRepository.java
+@@ -1,25 +1,34 @@
+ package com.tamantaw.projectx.persistence.repository;
 
- 		HttpServletRequest req = (HttpServletRequest) request;
- 		HttpServletResponse res = (HttpServletResponse) response;
+ import com.tamantaw.projectx.persistence.criteria.AdministratorLoginHistoryCriteria;
+ import com.tamantaw.projectx.persistence.entity.AdministratorLoginHistory;
+ import com.tamantaw.projectx.persistence.entity.QAdministratorLoginHistory;
+ import com.tamantaw.projectx.persistence.repository.base.AbstractRepositoryImpl;
+ import jakarta.persistence.EntityManager;
+-import org.springframework.beans.factory.annotation.Qualifier;
++import jakarta.persistence.PersistenceContext;
++import jakarta.annotation.PostConstruct;
+ import org.springframework.stereotype.Repository;
 
- 		try {
- 			filterChain.doFilter(request, response);
- 		}
- 		catch (Exception ex) {
-+			errorLogger.error("Unhandled exception caught by filter for path {}", req.getRequestURI(), ex);
+ import static com.tamantaw.projectx.persistence.config.PrimaryPersistenceContext.EM_FACTORY;
+
+ @Repository
+ public class AdministratorLoginHistoryRepository
+ 		extends AbstractRepositoryImpl<
+ 		Long,
+ 		AdministratorLoginHistory,
+ 		QAdministratorLoginHistory,
+ 		AdministratorLoginHistoryCriteria
+ 		> {
+
+-	public AdministratorLoginHistoryRepository(@Qualifier(EM_FACTORY) EntityManager entityManager) {
+-		super(AdministratorLoginHistory.class, Long.class, entityManager);
++	@PersistenceContext(unitName = EM_FACTORY)
++	private EntityManager entityManager;
 +
- 			if (res.isCommitted()) {
--				return;
-+				throw ex instanceof ServletException ? (ServletException) ex : new ServletException(ex);
- 			}
++	public AdministratorLoginHistoryRepository() {
++		super(AdministratorLoginHistory.class, Long.class);
++	}
++
++	@PostConstruct
++	public void init() {
++		initialize(entityManager);
+ 	}
+ }
+diff --git a/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/AdministratorRepository.java b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/AdministratorRepository.java
+index c29e7c9663bfccad84b10268c4e6bf9f4dfcbe70..965e4a3e5292f6a23b02ef3aa2bb9ce040efea5d 100644
+--- a/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/AdministratorRepository.java
++++ b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/AdministratorRepository.java
+@@ -1,27 +1,35 @@
+ package com.tamantaw.projectx.persistence.repository;
 
- 			boolean isApi =
- 					req.getRequestURI().startsWith("/api/")
--							|| "XMLHttpRequest".equals(req.getHeader("X-Requested-With"));
-+						|| "XMLHttpRequest".equals(req.getHeader("X-Requested-With"));
+ import com.tamantaw.projectx.persistence.criteria.AdministratorCriteria;
+ import com.tamantaw.projectx.persistence.entity.Administrator;
+ import com.tamantaw.projectx.persistence.entity.QAdministrator;
+ import com.tamantaw.projectx.persistence.repository.base.AbstractRepositoryImpl;
+ import jakarta.persistence.EntityManager;
+-import org.springframework.beans.factory.annotation.Qualifier;
++import jakarta.persistence.PersistenceContext;
++import jakarta.annotation.PostConstruct;
+ import org.springframework.stereotype.Repository;
 
- 			if (isApi) {
--				ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.FORBIDDEN);
--				problem.setTitle(HttpStatus.FORBIDDEN.getReasonPhrase());
--				problem.setDetail("Unknown exception occurred!");
-+				ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
-+				problem.setTitle(HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase());
-+				problem.setDetail("Unexpected server error occurred");
-+				problem.setInstance(URI.create(req.getRequestURI()));
- 				problem.setProperty("timestamp", Instant.now());
- 				problem.setProperty("path", req.getRequestURI());
+ import static com.tamantaw.projectx.persistence.config.PrimaryPersistenceContext.EM_FACTORY;
 
--				res.setStatus(HttpStatus.FORBIDDEN.value());
-+				res.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
- 				res.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
- 				res.getWriter().write(objectMapper.writeValueAsString(problem));
- 			}
- 			else {
--				req.setAttribute(RequestDispatcher.ERROR_STATUS_CODE, 500);
--				try {
--					req.getRequestDispatcher("/web/pub/error/500").forward(req, res);
--				}
--				catch (ServletException e) {
--					throw new RuntimeException(e);
--				}
-+				req.setAttribute(RequestDispatcher.ERROR_STATUS_CODE, HttpStatus.INTERNAL_SERVER_ERROR.value());
-+				res.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
-+				req.getRequestDispatcher("/web/pub/error/500").forward(req, res);
- 			}
+ @Repository
+ public class AdministratorRepository
+ 		extends AbstractRepositoryImpl<
+ 		Long,
+ 		Administrator,
+ 		QAdministrator,
+ 		AdministratorCriteria
+ 		> {
+
+-	public AdministratorRepository(@Qualifier(EM_FACTORY) EntityManager entityManager) {
+-		super(Administrator.class, Long.class, entityManager);
++	@PersistenceContext(unitName = EM_FACTORY)
++	private EntityManager entityManager;
++
++	public AdministratorRepository() {
++		super(Administrator.class, Long.class);
+ 	}
+-}
+
++	@PostConstruct
++	public void init() {
++		initialize(entityManager);
++	}
++}
+
+diff --git a/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/AdministratorRoleRepository.java b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/AdministratorRoleRepository.java
+index 1003c25cc1ffb1c9cccd7dff421b03ad6f21a97e..adc88e60699190662e114ba940f2e584d91f19b1 100644
+--- a/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/AdministratorRoleRepository.java
++++ b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/AdministratorRoleRepository.java
+@@ -1,28 +1,34 @@
+ package com.tamantaw.projectx.persistence.repository;
+
+ import com.tamantaw.projectx.persistence.criteria.AdministratorRoleCriteria;
+ import com.tamantaw.projectx.persistence.entity.AdministratorRole;
+ import com.tamantaw.projectx.persistence.entity.QAdministratorRole;
+ import com.tamantaw.projectx.persistence.repository.base.AbstractRepositoryImpl;
+ import jakarta.persistence.EntityManager;
+-import org.springframework.beans.factory.annotation.Qualifier;
++import jakarta.persistence.PersistenceContext;
++import jakarta.annotation.PostConstruct;
+ import org.springframework.stereotype.Repository;
+
+ import static com.tamantaw.projectx.persistence.config.PrimaryPersistenceContext.EM_FACTORY;
+
+ @Repository
+ public class AdministratorRoleRepository
+ 		extends AbstractRepositoryImpl<
+ 		Long,
+ 		AdministratorRole,
+ 		QAdministratorRole,
+ 		AdministratorRoleCriteria
+ 		> {
+
+-	public AdministratorRoleRepository(
+-			@Qualifier(EM_FACTORY) EntityManager entityManager) {
++	@PersistenceContext(unitName = EM_FACTORY)
++	private EntityManager entityManager;
+
+-		super(AdministratorRole.class, Long.class, entityManager);
++	public AdministratorRoleRepository() {
++		super(AdministratorRole.class, Long.class);
+ 	}
+-}
+
++	@PostConstruct
++	public void init() {
++		initialize(entityManager);
++	}
++}
+diff --git a/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/RoleActionRepository.java b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/RoleActionRepository.java
+index 2a85e401256b06fca4654f20490039344b1f5e84..5c511c68af9de387ee82a915c2ce6fdbb1662bee 100644
+--- a/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/RoleActionRepository.java
++++ b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/RoleActionRepository.java
+@@ -1,46 +1,54 @@
+ package com.tamantaw.projectx.persistence.repository;
+
+ import com.tamantaw.projectx.persistence.criteria.RoleActionCriteria;
+ import com.tamantaw.projectx.persistence.entity.QRoleAction;
+ import com.tamantaw.projectx.persistence.entity.RoleAction;
+ import com.tamantaw.projectx.persistence.exception.BusinessException;
+ import com.tamantaw.projectx.persistence.repository.base.AbstractRepositoryImpl;
+ import jakarta.persistence.EntityManager;
+-import org.springframework.beans.factory.annotation.Qualifier;
++import jakarta.persistence.PersistenceContext;
++import jakarta.annotation.PostConstruct;
+ import org.springframework.stereotype.Repository;
+
+ import java.util.List;
+
+ import static com.tamantaw.projectx.persistence.config.PrimaryPersistenceContext.EM_FACTORY;
+
+ @Repository
+ public class RoleActionRepository
+ 		extends AbstractRepositoryImpl<
+ 		Long,
+ 		RoleAction,
+ 		QRoleAction,
+ 		RoleActionCriteria
+ 		> {
+
+ 	private final QRoleAction qEntity = QRoleAction.roleAction;
+
+-	public RoleActionRepository(
+-			@Qualifier(EM_FACTORY) EntityManager entityManager) {
++	@PersistenceContext(unitName = EM_FACTORY)
++	private EntityManager entityManager;
+
+-		super(RoleAction.class, Long.class, entityManager);
++	public RoleActionRepository() {
++		super(RoleAction.class, Long.class);
++	}
++
++	@PostConstruct
++	public void init() {
++		initialize(entityManager);
+ 	}
+
+ 	public List<Long> findActionIdsByRoleId(Long roleId) throws BusinessException {
++		assertInitialized();
+ 		try {
+ 			QRoleAction roleAction = QRoleAction.roleAction;
+ 			//@formatter:off
+ 			return queryFactory.select(roleAction.action.id)
+ 					.from(roleAction)
+ 					.where(roleAction.role.id.eq(roleId))
+ 					.fetch();
+ 		}
+ 		catch (Exception e) {
+ 			throw new BusinessException(e.getMessage(),e);
  		}
  	}
  }
+diff --git a/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/RoleRepository.java b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/RoleRepository.java
+index c057b82b73ffc5f1e42f8877850ea59834aa7165..b711c1f15abec8d9b485553efda2923b23e78fe4 100644
+--- a/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/RoleRepository.java
++++ b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/RoleRepository.java
+@@ -1,29 +1,36 @@
+ package com.tamantaw.projectx.persistence.repository;
+
+ import com.tamantaw.projectx.persistence.criteria.RoleCriteria;
+ import com.tamantaw.projectx.persistence.entity.QRole;
+ import com.tamantaw.projectx.persistence.entity.Role;
+ import com.tamantaw.projectx.persistence.repository.base.AbstractRepositoryImpl;
+ import jakarta.persistence.EntityManager;
+-import org.springframework.beans.factory.annotation.Qualifier;
++import jakarta.persistence.PersistenceContext;
++import jakarta.annotation.PostConstruct;
+ import org.springframework.stereotype.Repository;
+
+ import static com.tamantaw.projectx.persistence.config.PrimaryPersistenceContext.EM_FACTORY;
+
+ @Repository
+ public class RoleRepository
+ 		extends AbstractRepositoryImpl<
+ 		Long,
+ 		Role,
+ 		QRole,
+ 		RoleCriteria
+ 		> {
+
+ 	private final QRole qEntity = QRole.role;
+
+-	public RoleRepository(
+-			@Qualifier(EM_FACTORY) EntityManager entityManager) {
++	@PersistenceContext(unitName = EM_FACTORY)
++	private EntityManager entityManager;
+
+-		super(Role.class, Long.class, entityManager);
++	public RoleRepository() {
++		super(Role.class, Long.class);
++	}
++
++	@PostConstruct
++	public void init() {
++		initialize(entityManager);
+ 	}
+ }
+diff --git a/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/base/AbstractRepositoryImpl.java b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/base/AbstractRepositoryImpl.java
+index bcefeb269fe8709f0032715fc23a1e839ab089d4..7bf3d29471d27ba1a42cfdf54429f42c75f16d89 100644
+--- a/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/base/AbstractRepositoryImpl.java
++++ b/projectx-persistence/src/main/java/com/tamantaw/projectx/persistence/repository/base/AbstractRepositoryImpl.java
+@@ -41,169 +41,184 @@ import java.util.*;
+  * - Explicit API contracts
+  *
+  * <p>
+  * This class intentionally avoids “magic behavior”.
+  * Every performance-critical decision is explicit and documented.
+  * </p>
+  *
+  * <p><b>STRICT GUARANTEE</b></p>
+  * <ul>
+  *   <li>❌ Hibernate in-memory paging</li>
+  *   <li>❌ Duplicate entities</li>
+  *   <li>❌ Missing records</li>
+  *   <li>❌ Broken pagination with joins</li>
+  *   <li>❌ Incorrect total counts</li>
+  *   <li>❌ Non-deterministic ordering</li>
+  * </ul>
+  *
+  * <p>
+  * If the caller requests an unsafe operation (e.g. to-many ORDER BY),
+  * this repository fails fast with a clear exception. There is no “best effort”
+  * fallback that could silently corrupt paging results.
+  * </p>
+  */
+ public abstract class AbstractRepositoryImpl<
+ 		ID extends Serializable & Comparable<ID>,
+-		ENTITY extends AbstractEntity,
+-		QCLAZZ extends EntityPathBase<ENTITY>,
+-		CRITERIA extends AbstractCriteria<QCLAZZ>>
+-		extends SimpleJpaRepository<ENTITY, ID>
++	ENTITY extends AbstractEntity,
++	QCLAZZ extends EntityPathBase<ENTITY>,
++	CRITERIA extends AbstractCriteria<QCLAZZ>>
+ 		implements AbstractRepository<ID, ENTITY, QCLAZZ, CRITERIA> {
+
+ 	// ----------------------------------------------------------------------
+ 	// STATIC CONFIGURATION
+ 	// ----------------------------------------------------------------------
+
+ 	/**
+ 	 * Indicates whether the underlying database is PostgreSQL.
+ 	 *
+ 	 * <p><b>Why this flag exists</b></p>
+ 	 * <ul>
+ 	 *   <li>
+ 	 *     PostgreSQL guarantees stable ORDER BY semantics when reapplying
+ 	 *     sorting after an ID-based paging query.
+ 	 *   </li>
+ 	 *   <li>
+ 	 *     PostgreSQL optimizes OFFSET / LIMIT efficiently even on complex queries.
+ 	 *   </li>
+ 	 *   <li>
+ 	 *     Other databases do NOT guarantee order preservation for
+ 	 *     <code>IN (...)</code> queries and therefore require explicit ordering.
+ 	 *   </li>
+ 	 * </ul>
+ 	 *
+ 	 * <p><b>Design decision</b></p>
+ 	 * <ul>
+ 	 *   <li>We do NOT auto-detect the DB dialect.</li>
+ 	 *   <li>Auto-detection hides behavior and may change after upgrades.</li>
+ 	 *   <li>This flag makes pagination behavior explicit and reviewable.</li>
+ 	 * </ul>
+ 	 *
+ 	 * <p>
+ 	 * ⚠️ Changing this flag affects SQL generation and must be reviewed
+ 	 * together with DB choice and indexing strategy.
+ 	 * </p>
+ 	 */
+ 	public static final boolean IS_POSTGRES_DB = true;
+
+ 	private static final EntityPathResolver PATH_RESOLVER =
+ 			SimpleEntityPathResolver.INSTANCE;
+
+ 	private static final Logger logger =
+ 			LogManager.getLogger("repositoryLogs." + AbstractRepositoryImpl.class.getName());
+
+ 	// ----------------------------------------------------------------------
+ 	// CORE FIELDS
+ 	// ----------------------------------------------------------------------
+
+-	protected final EntityManager entityManager;
+-	protected final SimpleExpression<ID> idExpr;
+-	protected final OrderSpecifier<?> idAscOrder;
+-	protected final QCLAZZ path;
+-	protected final QAbstractEntity audit;
+-	protected final Querydsl querydsl;
+-	protected final JPAQueryFactory queryFactory;
++	protected final Class<ENTITY> domainClass;
++	protected final Class<ID> idClass;
++	protected EntityManager entityManager;
++	protected SimpleExpression<ID> idExpr;
++	protected OrderSpecifier<?> idAscOrder;
++	protected QCLAZZ path;
++	protected QAbstractEntity audit;
++	protected Querydsl querydsl;
++	protected JPAQueryFactory queryFactory;
++	protected SimpleJpaRepository<ENTITY, ID> simpleJpaRepository;
++	private boolean initialized;
+
+ 	// ----------------------------------------------------------------------
+ 	// CONSTRUCTOR
+ 	// ----------------------------------------------------------------------
+
+ 	protected AbstractRepositoryImpl(
+ 			Class<ENTITY> domainClass,
+-			Class<ID> idClass,
+-			EntityManager entityManager) {
++			Class<ID> idClass) {
+
+-		super(
++		this.domainClass = domainClass;
++		this.idClass = idClass;
++	}
++
++	protected void initialize(EntityManager entityManager) {
++
++		Assert.notNull(entityManager, "EntityManager must not be null");
++		Assert.state(!initialized, "AbstractRepositoryImpl is already initialized");
++
++		this.entityManager = entityManager;
++		this.simpleJpaRepository = new SimpleJpaRepository<>(
+ 				new JpaMetamodelEntityInformation<>(
+ 						domainClass,
+ 						entityManager.getMetamodel(),
+ 						entityManager.getEntityManagerFactory().getPersistenceUnitUtil()
+ 				),
+ 				entityManager
+ 		);
+
+-		this.entityManager = entityManager;
 -
-diff --git a/projectx-backend/src/test/java/com/tamantaw/projectx/backend/common/exceptionHandlers/ErrorHandlerFilterTest.java b/projectx-backend/src/test/java/com/tamantaw/projectx/backend/common/exceptionHandlers/ErrorHandlerFilterTest.java
-new file mode 100644
-index 0000000000000000000000000000000000000000..8a2a846761c0e6aefd432462d7ca84145ecb1f2e
---- /dev/null
-+++ b/projectx-backend/src/test/java/com/tamantaw/projectx/backend/common/exceptionHandlers/ErrorHandlerFilterTest.java
-@@ -0,0 +1,72 @@
-+package com.tamantaw.projectx.backend.common.exceptionHandlers;
-+
-+import jakarta.servlet.FilterChain;
-+import jakarta.servlet.ServletException;
-+import org.junit.jupiter.api.BeforeEach;
-+import org.junit.jupiter.api.Test;
-+import org.springframework.http.MediaType;
-+import org.springframework.http.ProblemDetail;
-+import org.springframework.mock.web.MockHttpServletRequest;
-+import org.springframework.mock.web.MockHttpServletResponse;
-+import tools.jackson.databind.ObjectMapper;
-+
-+import java.io.IOException;
-+import java.util.Map;
-+
-+import static org.assertj.core.api.Assertions.assertThat;
-+
-+class ErrorHandlerFilterTest {
-+
-+	private ErrorHandlerFilter filter;
-+	private ObjectMapper objectMapper;
-+
-+	@BeforeEach
-+	void setUp() {
-+		objectMapper = new ObjectMapper();
-+		filter = new ErrorHandlerFilter(objectMapper);
+ 		@SuppressWarnings("unchecked")
+ 		QCLAZZ resolved = (QCLAZZ) PATH_RESOLVER.createPath(domainClass);
+ 		path = resolved;
+
+ 		PathBuilder<ENTITY> builder =
+ 				new PathBuilder<>(path.getType(), path.getMetadata());
+
+ 		querydsl = new Querydsl(entityManager, builder);
+ 		queryFactory = new JPAQueryFactory(entityManager);
+
+ 		audit = resolveAuditPath(path);
+
+ 		IdentifiableType<ENTITY> identifiable =
+ 				(IdentifiableType<ENTITY>) entityManager
+ 						.getMetamodel()
+ 						.managedType(domainClass);
+
+ 		SingularAttribute<? super ENTITY, ID> idAttr =
+ 				identifiable.getId(idClass);
+
+ 		idExpr = Expressions.simplePath(
+ 				idClass,
+ 				path,
+ 				idAttr.getName()
+ 		);
+
+ 		if (!Comparable.class.isAssignableFrom(idClass)) {
+ 			throw new IllegalStateException(
+ 					"ID type must be Comparable for deterministic paging. idClass=" + idClass.getName()
+ 			);
+ 		}
+
+ 		idAscOrder = new OrderSpecifier<>(Order.ASC, (Expression<? extends Comparable<?>>) idExpr);
++		initialized = true;
+ 	}
+
+ 	// ----------------------------------------------------------------------
+ 	// READ OPERATIONS
+ 	// ----------------------------------------------------------------------
+
++	protected final void assertInitialized() {
++		Assert.state(initialized, "AbstractRepositoryImpl has not been initialized");
 +	}
 +
-+	@Test
-+	void whenApiRequestThrowsException_returnsProblemDetail500() throws ServletException, IOException {
-+		MockHttpServletRequest request = new MockHttpServletRequest();
-+		request.setRequestURI("/api/test");
-+		request.addHeader("X-Requested-With", "XMLHttpRequest");
-+		MockHttpServletResponse response = new MockHttpServletResponse();
-+
-+		FilterChain failingChain = (req, res) -> {
-+			throw new RuntimeException("boom");
-+		};
-+
-+		filter.doFilter(request, response, failingChain);
-+
-+		assertThat(response.getStatus()).isEqualTo(500);
-+		assertThat(response.getContentType()).isEqualTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
-+
-+		ProblemDetail problemDetail = objectMapper.readValue(response.getContentAsByteArray(), ProblemDetail.class);
-+		assertThat(problemDetail.getStatus()).isEqualTo(500);
-+		assertThat(problemDetail.getTitle()).isEqualTo("Internal Server Error");
-+		assertThat(problemDetail.getDetail()).isEqualTo("Unexpected server error occurred");
-+		assertThat(problemDetail.getInstance()).hasToString("/api/test");
-+
-+		Map<String, Object> properties = problemDetail.getProperties();
-+		assertThat(properties.get("path")).isEqualTo("/api/test");
-+		assertThat(properties.get("timestamp")).isNotNull();
-+	}
-+
-+	@Test
-+	void whenWebRequestThrowsException_forwardsTo500Page() throws ServletException, IOException {
-+		MockHttpServletRequest request = new MockHttpServletRequest();
-+		request.setRequestURI("/web/page");
-+		MockHttpServletResponse response = new MockHttpServletResponse();
-+
-+		FilterChain failingChain = (req, res) -> {
-+			throw new RuntimeException("boom");
-+		};
-+
-+		filter.doFilter(request, response, failingChain);
-+
-+		assertThat(response.getStatus()).isEqualTo(500);
-+		assertThat(response.getForwardedUrl()).isEqualTo("/web/pub/error/500");
-+		assertThat(response.getContentAsString()).isEmpty();
-+	}
-+}
+ 	private static <T> List<List<T>> chunk(List<T> src, int size) {
+
+ 		if (src == null || src.isEmpty()) {
+ 			return List.of();
+ 		}
+
+ 		List<List<T>> out =
+ 				new ArrayList<>((src.size() + size - 1) / size);
+
+ 		for (int i = 0; i < src.size(); i += size) {
+ 			out.add(src.subList(i, Math.min(src.size(), i + size)));
+ 		}
+
+ 		return out;
+ 	}
+
+ 	protected QueryHints getRelatedDataHints(String... hints) {
+
+ 		if (ArrayUtils.isEmpty(hints)) {
+ 			return null;
+ 		}
+
+ 		EntityGraph<?> graph = entityManager.createEntityGraph(path.getType());
+ 		ManagedType<?> rootType = entityManager.getMetamodel().managedType(path.getType());
+
+@@ -317,65 +332,67 @@ public abstract class AbstractRepositoryImpl<
+ 	protected ManagedType<?> resolveManagedType(Attribute<?, ?> attr) {
+
+ 		if (attr instanceof SingularAttribute<?, ?> sa) {
+ 			if (sa.getType() instanceof ManagedType<?> mt) {
+ 				return mt;
+ 			}
+ 		}
+
+ 		if (attr instanceof PluralAttribute<?, ?, ?> pa) {
+ 			if (pa.getElementType() instanceof ManagedType<?> mt) {
+ 				return mt;
+ 			}
+ 		}
+
+ 		throw new IllegalStateException(
+ 				"Attribute '" + attr.getName() + "' is not an entity path and cannot have nested graph hints"
+ 		);
+ 	}
+
+ 	/**
+ 	 * Simple primary-key lookup.
+ 	 */
+ 	@Override
+ 	@Nonnull
+ 	public Optional<ENTITY> findById(@Nonnull ID id) {
++		assertInitialized();
+ 		Assert.notNull(id, "Id must not be null");
+-		return super.findById(id);
++		return simpleJpaRepository.findById(id);
+ 	}
+
+ 	/**
+ 	 * Returns exactly one entity or empty.
+ 	 *
+ 	 * <p>
+ 	 * The criteria MUST be logically unique.
+ 	 * If more than one row matches, an exception is thrown.
+ 	 * </p>
+ 	 */
+ 	@Override
+ 	public Optional<ENTITY> findOne(CRITERIA criteria, String... hints) {
+
++		assertInitialized();
+ 		Assert.notNull(criteria, "Criteria must not be null");
+
+ 		Predicate filter = criteria.getFilter(path);
+
+ 		// ------------------------------------------------------------------
+ 		// STRICT decision: if fetch graph contains collections -> ID FIRST.
+ 		// No "magic". No recovery.
+ 		// ------------------------------------------------------------------
+ 		boolean requiresIdFirst =
+ 				fetchGraphContainsCollection(hints);
+
+ 		// ------------------------------------------------------------
+ 		// FAST PATH — to-one fetch only (still deterministic)
+ 		// ------------------------------------------------------------
+ 		if (!requiresIdFirst) {
+
+ 			JPQLQuery<ENTITY> query =
+ 					createQuery(filter, hints).select(path);
+
+ 			applySortOrDefaultById(query, criteria);
+
+ 			List<ENTITY> rows = query.limit(2).fetch();
+
+ 			if (rows.isEmpty()) {
+ 				return Optional.empty();
+@@ -403,50 +420,51 @@ public abstract class AbstractRepositoryImpl<
+ 			return Optional.empty();
+ 		}
+ 		if (ids.size() > 1) {
+ 			throw new IllegalStateException(
+ 					"findOne() returned more than one result"
+ 			);
+ 		}
+
+ 		JPQLQuery<ENTITY> entityQuery =
+ 				createQuery(idExpr.eq(ids.getFirst()), hints)
+ 						.select(path);
+
+ 		return Optional.ofNullable(entityQuery.fetchOne());
+ 	}
+
+ 	/**
+ 	 * Returns all matching entities without pagination.
+ 	 *
+ 	 * <p>
+ 	 * Paging is NOT allowed here to prevent unsafe joins + pagination bugs.
+ 	 * </p>
+ 	 */
+ 	@Override
+ 	public List<ENTITY> findAll(CRITERIA criteria, String... hints) {
+
++		assertInitialized();
+ 		Assert.notNull(criteria, "Criteria must not be null");
+
+ 		// Enforce correct API usage
+ 		if (criteria.toPageable() != null) {
+ 			throw new IllegalStateException(
+ 					"Paging is not supported in findAll(). Use findByPaging()."
+ 			);
+ 		}
+
+ 		Predicate filter = criteria.getFilter(path);
+
+ 		boolean requiresIdFirst =
+ 				fetchGraphContainsCollection(hints);
+
+ 		// ------------------------------------------------------------
+ 		// FAST PATH — to-one fetch only (deterministic, no duplication)
+ 		// ------------------------------------------------------------
+ 		if (!requiresIdFirst) {
+
+ 			JPQLQuery<ENTITY> query =
+ 					createQuery(filter, hints).select(path);
+
+ 			applySortOrDefaultById(query, criteria);
+
+ 			return query.fetch();
+@@ -481,50 +499,51 @@ public abstract class AbstractRepositoryImpl<
+ 		// ------------------------------------------------------------
+ 		// JPA may return duplicate roots when fetching collections.
+ 		// Dedup is REQUIRED here to preserve set semantics.
+ 		// This does NOT hide paging bugs because paging is forbidden.
+ 		Map<ID, ENTITY> unique = deduplicateById(rows);
+
+ 		return new ArrayList<>(unique.values());
+ 	}
+
+ 	/**
+ 	 * Safe pagination method.
+ 	 *
+ 	 * <p>
+ 	 * Guarantees:
+ 	 * <ul>
+ 	 *   <li>Correct offset + limit behavior</li>
+ 	 *   <li>No in-memory pagination</li>
+ 	 *   <li>No duplicate rows</li>
+ 	 *   <li>Stable ordering</li>
+ 	 * </ul>
+ 	 * </p>
+ 	 */
+ 	@Override
+ 	public Page<ENTITY> findByPaging(CRITERIA criteria, String... hints) {
+
++		assertInitialized();
+ 		Assert.notNull(criteria, "Criteria must not be null");
+
+ 		Pageable pageable = criteria.toPageable();
+ 		Assert.notNull(pageable, "Pageable must not be null");
+
+ 		Predicate filter = criteria.getFilter(path);
+
+ 		boolean requiresIdFirst =
+ 				fetchGraphContainsCollection(hints);
+
+ 		// ------------------------------------------------------------
+ 		// FAST PATH (to-one only)
+ 		// ------------------------------------------------------------
+ 		if (!requiresIdFirst) {
+
+ 			JPQLQuery<ENTITY> query =
+ 					createQuery(filter, hints).select(path);
+
+ 			applySortOrDefaultById(query, criteria);
+
+ 			query = query.offset(pageable.getOffset())
+ 					.limit(pageable.getPageSize());
+
+ 			List<ENTITY> content = query.fetch();
+ 			long total = count(criteria);
+@@ -565,210 +584,219 @@ public abstract class AbstractRepositoryImpl<
+
+ 		if (content.size() != ids.size()) {
+ 			throw new IllegalStateException(
+ 					"Phase-2 fetch returned " + content.size() +
+ 							" unique roots for " + ids.size() + " ids. " +
+ 							"FetchGraph likely produced join-multiplication or filtered rows."
+ 			);
+ 		}
+
+ 		long total = count(criteria);
+
+ 		return new PageImpl<>(content, pageable, total);
+ 	}
+
+ 	/**
+ 	 * Returns matching entity IDs.
+ 	 *
+ 	 * <p>
+ 	 * Used internally for bulk operations.
+ 	 * Ordering does NOT affect correctness here.
+ 	 * </p>
+ 	 */
+ 	@Override
+ 	public List<ID> findIds(CRITERIA criteria) {
+
++		assertInitialized();
+ 		Assert.notNull(criteria, "Criteria must not be null");
+
+ 		Predicate filter = criteria.getFilter(path);
+
+ 		JPQLQuery<ID> query =
+ 				createQuery(filter).select(idExpr);
+
+ 		applySortOrDefaultById(query, criteria);
+ 		assertNoAdditionalJoins((AbstractJPAQuery<?, ?>) query, "findIds");
+
+ 		return query.fetch();
+ 	}
+
+ 	// ----------------------------------------------------------------------
+ 	// ID / COUNT / EXISTS
+ 	// ----------------------------------------------------------------------
+
+ 	/**
+ 	 * Count query with identical filter but no joins or pagination.
+ 	 *
+ 	 * <p>
+ 	 * STRICT: COUNT must match the same filter used for paging decisions.
+ 	 * No COUNT DISTINCT. No recovery.
+ 	 * </p>
+ 	 */
+ 	@Override
+ 	public long count(CRITERIA criteria) {
+
++		assertInitialized();
+ 		Assert.notNull(criteria, "Criteria must not be null");
+
+ 		Predicate filter = criteria.getFilter(path);
+
+ 		AbstractJPAQuery<?, ?> query = createQuery(filter);
+ 		assertNoAdditionalJoins(query, "count");
+
+ 		Long count =
+ 				query.select(idExpr.count())
+ 						.fetchOne();
+
+ 		return count == null ? 0L : count;
+ 	}
+
+ 	/**
+ 	 * Existence check.
+ 	 */
+ 	@Override
+ 	public boolean exists(CRITERIA criteria) {
+
++		assertInitialized();
+ 		Assert.notNull(criteria, "Criteria must not be null");
+
+ 		Predicate filter = criteria.getFilter(path);
+
+ 		AbstractJPAQuery<?, ?> query = createQuery(filter);
+ 		assertNoAdditionalJoins(query, "exists");
+
+ 		return query
+ 				.select(idExpr)
+ 				.fetchFirst() != null;
+ 	}
+
+ 	// ----------------------------------------------------------------------
+ 	// WRITE OPERATIONS
+ 	// ----------------------------------------------------------------------
+
+ 	@Override
+ 	public ENTITY saveRecord(ENTITY entity) {
+-		return super.saveAndFlush(entity);
++		assertInitialized();
++		return simpleJpaRepository.saveAndFlush(entity);
+ 	}
+
+ 	@Override
+ 	public List<ENTITY> saveAllRecords(Iterable<ENTITY> entities) {
+-		return super.saveAllAndFlush(entities);
++		assertInitialized();
++		return simpleJpaRepository.saveAllAndFlush(entities);
+ 	}
+
+ 	@Override
+ 	public long updateById(
+ 			UpdateSpec<ENTITY> spec,
+ 			ID id,
+ 			long updatedBy) {
+
++		assertInitialized();
+ 		Assert.notNull(spec, "UpdateSpec must not be null");
+
+ 		JPAUpdateClause update = queryFactory.update(path);
+
+ 		applyAudit(update, updatedBy);
+
+ 		spec.apply(update, path);
+
+ 		long affected = update.where(idExpr.eq(id)).execute();
+
+ 		afterBulkDml();
+
+ 		return affected;
+ 	}
+
+ 	// ----------------------------------------------------------------------
+ 	// BULK OPERATIONS (ID-FIRST, SAFE)
+ 	// ----------------------------------------------------------------------
+
+ 	@Override
+ 	public <E extends ENTITY> long updateByCriteria(
+ 			UpdateSpec<E> spec,
+ 			CRITERIA criteria,
+ 			Long updatedBy) {
+
++		assertInitialized();
+ 		Assert.notNull(criteria, "Criteria must not be null");
+ 		Assert.notNull(spec, "UpdateSpec must not be null");
+
+ 		@SuppressWarnings("unchecked")
+ 		EntityPathBase<E> typedPath =
+ 				(EntityPathBase<E>) path;
+
+ 		// STRICT:
+ 		// Bulk DML must not depend on join-fetch graphs or unsafe ordering.
+ 		// This method updates by ID chunks derived from the same deterministic ID selection.
+ 		List<ID> ids = findIds(criteria);
+ 		if (ids.isEmpty()) {
+ 			return 0;
+ 		}
+
+ 		long affected = 0;
+
+ 		for (List<ID> chunk : chunk(ids, bulkInChunkSize())) {
+
+ 			JPAUpdateClause update =
+ 					queryFactory.update(typedPath);
+
+ 			applyAudit(update, updatedBy);
+ 			spec.apply(update, typedPath);
+
+ 			affected +=
+ 					update.where(idExpr.in(chunk)).execute();
+ 		}
+
+ 		afterBulkDml();
+
+ 		return affected;
+ 	}
+
+ 	@Override
+ 	public boolean deleteWithId(@Nonnull ID id) {
+
++		assertInitialized();
+ 		Assert.notNull(id, "Id must not be null");
+
+ 		long affected =
+ 				queryFactory
+ 						.delete(path)
+ 						.where(idExpr.eq(id))
+ 						.execute();
+
+ 		if (affected > 0) {
+ 			afterBulkDml();
+ 			return true;
+ 		}
+ 		return false;
+ 	}
+
+ 	@Override
+ 	public long deleteByCriteria(CRITERIA criteria) {
+
++		assertInitialized();
+ 		Assert.notNull(criteria, "Criteria must not be null");
+
+ 		// STRICT: ID-first delete avoids join side effects.
+ 		List<ID> ids = findIds(criteria);
+ 		if (ids.isEmpty()) {
+ 			return 0;
+ 		}
+
+ 		long affected = 0;
+
+ 		for (List<ID> chunk : chunk(ids, bulkInChunkSize())) {
+ 			affected += queryFactory
+ 					.delete(path)
+ 					.where(idExpr.in(chunk))
+ 					.execute();
+ 		}
+
+ 		afterBulkDml();
+
+ 		return affected;
+ 	}
+
+ 	protected AbstractJPAQuery<?, ?> createQuery(
+ 			Predicate predicate,
+ 			String... hints) {
