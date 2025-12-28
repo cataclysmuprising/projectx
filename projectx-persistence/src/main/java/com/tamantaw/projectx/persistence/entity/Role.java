@@ -12,8 +12,8 @@ import org.hibernate.validator.constraints.Length;
 
 import java.io.Serial;
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "mjr_role", uniqueConstraints = {@UniqueConstraint(name = "uq_mjr_role_app_name", columnNames = {"app_name", "name"})})
@@ -45,11 +45,11 @@ public class Role extends AbstractEntity implements Serializable {
 
 	@OneToMany(mappedBy = "role", cascade = CascadeType.ALL, orphanRemoval = true)
 	@ToString.Exclude
-	private List<RoleAction> roleActions = new ArrayList<>();
+	private Set<RoleAction> roleActions = new HashSet<>();
 
 	@OneToMany(mappedBy = "role", cascade = CascadeType.ALL, orphanRemoval = true)
 	@ToString.Exclude
-	private List<AdministratorRole> administratorRoles = new ArrayList<>();
+	private Set<AdministratorRole> administratorRoles = new HashSet<>();
 
 	public enum RoleType {
 		SUPERUSER("super-user"),// 0

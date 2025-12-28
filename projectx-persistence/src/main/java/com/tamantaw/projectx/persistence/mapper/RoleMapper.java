@@ -11,6 +11,7 @@ import org.hibernate.Hibernate;
 import org.mapstruct.*;
 
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Mapper(
 		config = MapStructConfig.class
@@ -59,7 +60,7 @@ public interface RoleMapper extends AbstractMapper<RoleDTO, Role> {
 							.filter(Objects::nonNull)
 							.filter(Hibernate::isInitialized)
 							.map(admin -> ctx.getAdministratorMapper().toDto(admin, ctx))
-							.toList()
+							.collect(Collectors.toSet())
 			);
 		}
 
@@ -74,7 +75,7 @@ public interface RoleMapper extends AbstractMapper<RoleDTO, Role> {
 							.filter(Hibernate::isInitialized)
 							.map(action -> ctx.getActionMapper().toDto(action, ctx))
 							.distinct()
-							.toList()
+							.collect(Collectors.toSet())
 			);
 		}
 	}

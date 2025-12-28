@@ -10,6 +10,7 @@ import org.hibernate.Hibernate;
 import org.mapstruct.*;
 
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Mapper(config = MapStructConfig.class)
 public abstract class ActionMapper
@@ -61,8 +62,7 @@ public abstract class ActionMapper
 							.filter(Hibernate::isInitialized)
 							// context-aware mapping
 							.map(role -> ctx.getRoleMapper().toDto(role, ctx))
-							.distinct()
-							.toList()
+							.collect(Collectors.toSet())
 			);
 		}
 	}

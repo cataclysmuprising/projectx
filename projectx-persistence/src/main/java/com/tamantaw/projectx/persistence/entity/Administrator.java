@@ -11,8 +11,8 @@ import org.hibernate.validator.constraints.Length;
 
 import java.io.Serial;
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "mjr_admin", uniqueConstraints = {@UniqueConstraint(name = "uq_mjr_admin_login", columnNames = "login_id")})
@@ -57,10 +57,10 @@ public class Administrator extends AbstractEntity implements Serializable {
 	// ------------------------------------------------------
 	@OneToMany(mappedBy = "administrator", cascade = CascadeType.ALL, orphanRemoval = true)
 	@ToString.Exclude
-	private List<AdministratorRole> administratorRoles = new ArrayList<>();
+	private Set<AdministratorRole> administratorRoles = new HashSet<>();
 	@OneToMany(mappedBy = "administrator", cascade = CascadeType.ALL, orphanRemoval = true)
 	@ToString.Exclude
-	private List<AdministratorLoginHistory> loginHistories = new ArrayList<>();
+	private Set<AdministratorLoginHistory> loginHistories = new HashSet<>();
 
 	/**
 	 * Administrator account status.

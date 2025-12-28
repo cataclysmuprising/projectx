@@ -10,6 +10,7 @@ import org.hibernate.Hibernate;
 import org.mapstruct.*;
 
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Mapper(
 		config = MapStructConfig.class
@@ -60,8 +61,7 @@ public interface AdministratorMapper
 							.filter(Hibernate::isInitialized)
 							// context-aware mapping (lambda, not method ref)
 							.map(role -> ctx.getRoleMapper().toDto(role, ctx))
-							.distinct()
-							.toList()
+							.collect(Collectors.toSet())
 			);
 		}
 	}

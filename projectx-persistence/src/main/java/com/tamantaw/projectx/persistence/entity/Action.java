@@ -11,8 +11,8 @@ import org.hibernate.validator.constraints.Length;
 
 import java.io.Serial;
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "mjr_action")
@@ -60,7 +60,7 @@ public class Action extends AbstractEntity implements Serializable {
 
 	@OneToMany(mappedBy = "action", cascade = CascadeType.ALL, orphanRemoval = true)
 	@ToString.Exclude
-	private List<RoleAction> roleActions = new ArrayList<>();
+	private Set<RoleAction> roleActions = new HashSet<>();
 
 	public enum ActionType {
 		MAIN, SUB

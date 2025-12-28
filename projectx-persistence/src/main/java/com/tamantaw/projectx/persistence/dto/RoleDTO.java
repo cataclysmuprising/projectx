@@ -7,7 +7,6 @@ import lombok.Setter;
 import lombok.ToString;
 import org.springframework.util.CollectionUtils;
 
-import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -23,9 +22,9 @@ public class RoleDTO extends AbstractDTO {
 
 	private String description;
 
-	private List<AdministratorDTO> administrators;
+	private Set<AdministratorDTO> administrators;
 
-	private List<ActionDTO> actions;
+	private Set<ActionDTO> actions;
 
 	private Set<Long> actionIds;
 

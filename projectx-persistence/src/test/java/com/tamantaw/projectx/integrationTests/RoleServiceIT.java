@@ -2,9 +2,11 @@ package com.tamantaw.projectx.integrationTests;
 
 import com.tamantaw.projectx.CommonTestBase;
 import com.tamantaw.projectx.persistence.criteria.ActionCriteria;
+import com.tamantaw.projectx.persistence.criteria.AdministratorRoleCriteria;
 import com.tamantaw.projectx.persistence.criteria.RoleActionCriteria;
 import com.tamantaw.projectx.persistence.criteria.RoleCriteria;
 import com.tamantaw.projectx.persistence.dto.ActionDTO;
+import com.tamantaw.projectx.persistence.dto.AdministratorRoleDTO;
 import com.tamantaw.projectx.persistence.dto.RoleActionDTO;
 import com.tamantaw.projectx.persistence.dto.RoleDTO;
 import com.tamantaw.projectx.persistence.dto.base.PaginatedResult;
@@ -13,6 +15,7 @@ import com.tamantaw.projectx.persistence.entity.Role;
 import com.tamantaw.projectx.persistence.exception.ConsistencyViolationException;
 import com.tamantaw.projectx.persistence.exception.PersistenceException;
 import com.tamantaw.projectx.persistence.repository.base.UpdateSpec;
+import com.tamantaw.projectx.persistence.service.AdministratorRoleService;
 import com.tamantaw.projectx.persistence.service.RoleActionService;
 import com.tamantaw.projectx.persistence.service.RoleService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,41 +39,46 @@ public class RoleServiceIT extends CommonTestBase {
 	@Autowired
 	private RoleActionService roleActionService;
 
+	@Autowired
+	private AdministratorRoleService administratorRoleService;
+
 	@Test
-	public void updateRoleAndActions_replacesActions() throws Exception {
+	public void updateRoleAndRelations() throws Exception {
 		// ------------------------------------------------------------
-		// Create Role with initial action
+		// Create Role with initial action + administrator
 		// ------------------------------------------------------------
 		RoleDTO dto = new RoleDTO();
 		dto.setAppName("projectx");
 		dto.setName("ROLE_FOR_UPDATE");
 		dto.setRoleType(Role.RoleType.CUSTOM);
 
-		Role saved = roleService.create(
+		RoleDTO saved = roleService.create(
 				dto,
-				Set.of(10021L),
+				Set.of(10021L),          // initial action
+				Set.of(1L),          // initial administrator
 				TEST_CREATE_USER_ID
 		);
 
 		dto.setId(saved.getId());
 
 		// ------------------------------------------------------------
-		// Update role with new action set
+		// Update role with new action + administrator set
 		// ------------------------------------------------------------
-		roleService.updateRoleAndActions(
+		roleService.updateRoleAndRelations(
 				dto,
-				Set.of(10021L, 10022L),
+				Set.of(10021L, 10022L),  // updated actions
+				Set.of(1L, 2L),  // updated administrators
 				TEST_UPDATE_USER_ID
 		);
 
 		// ------------------------------------------------------------
 		// Verify role-actions
 		// ------------------------------------------------------------
-		RoleActionCriteria criteria = new RoleActionCriteria();
-		criteria.setRoleId(saved.getId());
+		RoleActionCriteria actionCriteria = new RoleActionCriteria();
+		actionCriteria.setRoleId(saved.getId());
 
 		List<RoleActionDTO> roleActions =
-				roleActionService.findAll(criteria, "RoleAction(action)");
+				roleActionService.findAll(actionCriteria, "RoleAction(action)");
 
 		assertEquals(roleActions.size(), 2);
 
@@ -79,6 +87,26 @@ public class RoleServiceIT extends CommonTestBase {
 				.collect(Collectors.toSet());
 
 		assertTrue(actionIds.containsAll(Set.of(10021L, 10022L)));
+
+		// ------------------------------------------------------------
+		// Verify role-administrators
+		// ------------------------------------------------------------
+		AdministratorRoleCriteria adminCriteria = new AdministratorRoleCriteria();
+		adminCriteria.setRoleId(saved.getId());
+
+		List<AdministratorRoleDTO> administratorRoles =
+				administratorRoleService.findAll(
+						adminCriteria,
+						"AdministratorRole(administrator)"
+				);
+
+		assertEquals(administratorRoles.size(), 2);
+
+		Set<Long> administratorIds = administratorRoles.stream()
+				.map(ar -> ar.getAdministrator().getId())
+				.collect(Collectors.toSet());
+
+		assertTrue(administratorIds.containsAll(Set.of(1L, 2L)));
 	}
 
 	// ----------------------------------------------------------------------
@@ -170,37 +198,80 @@ public class RoleServiceIT extends CommonTestBase {
 	}
 
 	@Test
-	public void create_withActions_persistsRoleAndActions() throws Exception {
+	public void create_withRelations() throws Exception {
 		RoleDTO dto = new RoleDTO();
 		dto.setAppName("projectx");
 		dto.setName("ROLE_WITH_ACTIONS");
 		dto.setRoleType(Role.RoleType.CUSTOM);
 
-		// include duplicate action ID to verify unique handling
+		// initial relations
 		Set<Long> actionIds = Set.of(10021L, 10022L);
+		Set<Long> administratorIds = Set.of(1L, 2L);
 
-		Role saved = roleService.create(dto, actionIds, 123L);
+		RoleDTO saved = roleService.create(
+				dto,
+				actionIds,
+				administratorIds,
+				123L
+		);
 
-		RoleActionCriteria criteria = new RoleActionCriteria();
-		criteria.setRoleId(saved.getId());
+		// ------------------------------------------------------------
+		// Verify role-actions
+		// ------------------------------------------------------------
+		RoleActionCriteria actionCriteria = new RoleActionCriteria();
+		actionCriteria.setRoleId(saved.getId());
 
 		List<RoleActionDTO> roleActions =
-				roleActionService.findAll(criteria, "RoleAction(action)");
+				roleActionService.findAll(actionCriteria, "RoleAction(action)");
 
 		assertNotNull(saved.getId());
-		assertEquals(roleActions.size(), 2); // duplicate action id should be ignored
+		assertEquals(roleActions.size(), 2);
 		assertEquals(saved.getCreatedBy(), 123L);
 		assertEquals(saved.getUpdatedBy(), 123L);
+
 		assertTrue(
 				roleActions.stream()
 						.map(RoleActionDTO::getAction)
 						.map(ActionDTO::getId)
 						.collect(Collectors.toSet())
-						.containsAll(List.of(10021L, 10022L))
+						.containsAll(Set.of(10021L, 10022L))
 		);
+
 		assertTrue(
 				roleActions.stream()
-						.allMatch(ra -> ra.getCreatedBy() == 123L && ra.getUpdatedBy() == 123L)
+						.allMatch(
+								ra -> ra.getCreatedBy() == 123L
+										&& ra.getUpdatedBy() == 123L
+						)
+		);
+
+		// ------------------------------------------------------------
+		// Verify role-administrators
+		// ------------------------------------------------------------
+		AdministratorRoleCriteria adminCriteria = new AdministratorRoleCriteria();
+		adminCriteria.setRoleId(saved.getId());
+
+		List<AdministratorRoleDTO> administratorRoles =
+				administratorRoleService.findAll(
+						adminCriteria,
+						"AdministratorRole(administrator)"
+				);
+
+		assertEquals(administratorRoles.size(), 2);
+
+		assertTrue(
+				administratorRoles.stream()
+						.map(ar -> ar.getAdministrator().getId())
+						.collect(Collectors.toSet())
+						.containsAll(Set.of(1L, 2L))
+		);
+
+		assertTrue(
+				administratorRoles.stream()
+						.allMatch(
+								ar -> ar.getCreatedBy() == 123L
+										&& ar.getUpdatedBy() == 123L
+						)
 		);
 	}
 

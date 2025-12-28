@@ -6,7 +6,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 
-import java.util.List;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -26,5 +26,5 @@ public class ActionDTO extends AbstractDTO {
 
 	private String description;
 
-	private List<RoleDTO> roles;
+	private Set<RoleDTO> roles;
 }

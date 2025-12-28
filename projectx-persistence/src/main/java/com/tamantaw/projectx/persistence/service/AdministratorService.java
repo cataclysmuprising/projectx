@@ -21,7 +21,6 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
-import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -82,7 +81,7 @@ public class AdministratorService
 			entity.setUpdatedBy(createdBy);
 
 			// IMPORTANT: administratorRoles must already be initialized
-			List<AdministratorRole> roles = entity.getAdministratorRoles();
+			Set<AdministratorRole> roles = entity.getAdministratorRoles();
 
 			// --------------------------------------------------
 			// 2. ADD roles (do NOT replace collection)
@@ -165,7 +164,7 @@ public class AdministratorService
 											"Administrator not found id=" + adminId
 									));
 
-			List<AdministratorRole> existingRoles =
+			Set<AdministratorRole> existingRoles =
 					administrator.getAdministratorRoles();
 
 			// 🔥 Force init to avoid orphanRemoval issues
