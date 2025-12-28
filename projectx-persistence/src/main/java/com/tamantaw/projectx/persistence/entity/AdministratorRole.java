@@ -50,5 +50,23 @@ public class AdministratorRole extends AbstractEntity implements Serializable {
 
 	@Column(name = "role_id", nullable = false, insertable = false, updatable = false)
 	private Long roleId;
+
+	@Override
+	public final boolean equals(Object o) {
+		if (this == o) {
+			return true;
+		}
+		if (!(o instanceof AdministratorRole that)) {
+			return false;
+		}
+		return administrator == that.administrator
+				&& role == that.role;
+	}
+
+	@Override
+	public final int hashCode() {
+		return 31 * System.identityHashCode(administrator)
+				+ System.identityHashCode(role);
+	}
 }
 

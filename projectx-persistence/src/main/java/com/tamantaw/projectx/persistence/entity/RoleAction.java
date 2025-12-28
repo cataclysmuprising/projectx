@@ -61,5 +61,23 @@ public class RoleAction extends AbstractEntity implements Serializable {
 
 	@Column(name = "action_id", nullable = false, insertable = false, updatable = false)
 	private Long actionId;
+
+	@Override
+	public final boolean equals(Object o) {
+		if (this == o) {
+			return true;
+		}
+		if (!(o instanceof RoleAction that)) {
+			return false;
+		}
+		return role == that.role
+				&& action == that.action;
+	}
+
+	@Override
+	public final int hashCode() {
+		return 31 * System.identityHashCode(role)
+				+ System.identityHashCode(action);
+	}
 }
 
