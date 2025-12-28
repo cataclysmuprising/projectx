@@ -1,5 +1,6 @@
 package com.tamantaw.projectx.persistence.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.tamantaw.projectx.persistence.dto.base.AbstractDTO;
 import com.tamantaw.projectx.persistence.entity.Action;
 import lombok.Getter;
@@ -22,6 +23,7 @@ public class ActionDTO extends AbstractDTO {
 
 	private Action.ActionType actionType;
 
+	@JsonIgnore
 	private String url;
 
 	private String description;

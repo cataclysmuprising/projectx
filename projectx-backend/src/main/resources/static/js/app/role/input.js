@@ -68,13 +68,18 @@ function initAdministratorTable() {
             url: getApiResourcePath() + 'sec/administrator/search/paging',
             data: function (d) {
                 let criteria = {};
-                if (d.order.length > 0) {
-                    let index = $(d.order[0])[0].column;
-                    let dir = $(d.order[0])[0].dir;
-                    let head = $("#tblAdministrator").find("thead");
-                    let sortColumn = head.find("th:eq(" + index + ")");
-                    criteria.sortType = dir.toUpperCase();
-                    criteria.sortProperty = $(sortColumn).attr("data-sort-key");
+                if (d.order && d.order.length > 0) {
+                    const order = d.order[0];
+                    const index = order.column;
+                    const dir = order.dir;
+
+                    const sortColumn = $("#tblRole thead th").eq(index);
+                    const sortKey = sortColumn.data("sort-key");
+
+                    if (sortKey) {
+                        criteria.sortKeys = [sortKey];
+                        criteria.sortDirs = [dir.toUpperCase()];
+                    }
                 }
                 criteria.offset = d.start;
                 criteria.limit = d.length;
@@ -129,17 +134,18 @@ function initActionTable() {
             url: getApiResourcePath() + 'sec/action/search/paging',
             data: function (d) {
                 let criteria = {};
-                if (d.order.length > 0) {
-                    let index = $(d.order[0])[0].column;
-                    let dir = $(d.order[0])[0].dir;
-                    let head = $("#tblAction").find("thead");
-                    let sortColumn = head.find("th:eq(" + index + ")");
-                    criteria.sortType = dir.toUpperCase();
-                    criteria.sortProperty = $(sortColumn).attr("data-sort-key");
-                }
-                else {
-                    criteria.order = "ASC";
-                    criteria.orderBy = "id";
+                if (d.order && d.order.length > 0) {
+                    const order = d.order[0];
+                    const index = order.column;
+                    const dir = order.dir;
+
+                    const sortColumn = $("#tblRole thead th").eq(index);
+                    const sortKey = sortColumn.data("sort-key");
+
+                    if (sortKey) {
+                        criteria.sortKeys = [sortKey];
+                        criteria.sortDirs = [dir.toUpperCase()];
+                    }
                 }
                 criteria.offset = d.start;
                 criteria.limit = d.length;
