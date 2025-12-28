@@ -7,6 +7,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
+import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
+import org.springframework.security.web.savedrequest.SavedRequest;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -21,7 +23,15 @@ public class RememberMeAuthenticationSuccessHandler extends SimpleUrlAuthenticat
 	public void onAuthenticationSuccess(@Nonnull HttpServletRequest request, @Nonnull HttpServletResponse response, @Nonnull Authentication authentication) throws IOException, ServletException {
 		authenticationAuditService.recordSuccess(authentication, request);
 		super.setAlwaysUseDefaultTargetUrl(true);
-		super.setDefaultTargetUrl(request.getRequestURL().toString());
+		SavedRequest savedRequest =
+				new HttpSessionRequestCache().getRequest(request, response);
+
+		String target = (savedRequest != null)
+				? savedRequest.getRedirectUrl()
+				: "/";
+
+		setDefaultTargetUrl(target);
+
 		super.onAuthenticationSuccess(request, response, authentication);
 	}
 }

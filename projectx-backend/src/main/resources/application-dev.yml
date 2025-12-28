@@ -13,3 +13,9 @@ server:
     session:
       timeout:
         72000s
+
+security:
+  rememberme:
+    # export REMEMBER_ME_KEY=$(openssl rand -hex 32)
+    key: ${REMEMBER_ME_KEY:07490f81a5fcd9021d52e324963a901bc38a106df1de8ddb20aa7bcd04428f16}
+    validity: 14d
