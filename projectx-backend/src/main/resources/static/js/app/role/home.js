@@ -26,14 +26,14 @@ function initDataTable() {
         "bSortable": false,
         "sClass": "text-left"
     },];
-    if (hasAuthority("roleEdit") || hasAuthority("roleRemove")) {
+    if (hasAnyAuthority("roleEdit", "roleRemove")) {
         columns.push({
             "render": function (data, type, full, meta) {
                 let editButton = {
                     label: "Edit",
                     authorityName: "roleEdit",
                     showElementOnExpression: full.roleType === 'custom',
-                    url: getContextPath() + "/sec/role/" + full.id + '/edit',
+                    url: getContextPath() + "/web/sec/role/" + full.id + '/edit',
                     styleClass: "",
                     data_id: full.id
                 };
@@ -41,7 +41,7 @@ function initDataTable() {
                     label: "Remove",
                     authorityName: "roleRemove",
                     showElementOnExpression: full.roleType === 'custom',
-                    url: getContextPath() + "/sec/role/" + full.id + '/delete',
+                    url: getContextPath() + "/web/sec/role/" + full.id + '/delete',
                     styleClass: "remove",
                     data_id: full.id
                 };
@@ -57,16 +57,21 @@ function initDataTable() {
         columnDefs: [{}],
         ajax: {
             type: "POST",
-            url: getApiResourcePath() + 'sec/roles/search/paging',
+            url: getApiResourcePath() + 'sec/role/search/paging',
             data: function (d) {
                 let criteria = {};
-                if (d.order.length > 0) {
-                    let index = $(d.order[0])[0].column;
-                    let dir = $(d.order[0])[0].dir;
-                    let head = $("#tblRole").find("thead");
-                    let sortColumn = head.find("th:eq(" + index + ")");
-                    criteria.sortType = dir.toUpperCase();
-                    criteria.sortProperty = $(sortColumn).attr("data-sort-key");
+                if (d.order && d.order.length > 0) {
+                    const order = d.order[0];
+                    const index = order.column;
+                    const dir = order.dir;
+
+                    const sortColumn = $("#tblRole thead th").eq(index);
+                    const sortKey = sortColumn.data("sort-key");
+
+                    if (sortKey) {
+                        criteria.sortKeys = [sortKey];
+                        criteria.sortDirs = [dir.toUpperCase()];
+                    }
                 }
                 criteria.offset = d.start;
                 criteria.limit = d.length;

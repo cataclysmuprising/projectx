@@ -37,7 +37,7 @@
 						</li>
 						<li class="breadcrumb-item">
 							<i class="icon-medal-star mr-1"></i>
-							<a th:href="@{/sec/role}">Roles</a>
+							<a th:href="@{/web/sec/role}">Roles</a>
 						</li>
 						<li class="breadcrumb-item active" th:text="${pageMode.name == 'CREATE' ? 'Add New' : 'Edit'}">Add New</li>
 					</ol>
@@ -49,9 +49,9 @@
 	<section class="content">
 		<div class="card">
 			<div class="card-header">
-				<form id="roleForm" method="post" role="form" th:action="@{${pageMode.name == 'CREATE' ? '/sec/role/add' : '/sec/role/' + roleDto.id +'/edit' }}" th:object="${roleDto}">
+				<form id="roleForm" method="post" role="form" th:action="@{${pageMode.name == 'CREATE' ? '/web/sec/role/add' : '/web/sec/role/' + roleDto.id +'/edit' }}" th:object="${roleDto}">
 					<div class="col-md-6">
-						<input id="userIds" th:field="*{userIds}" type="hidden"/>
+						<input id="administratorIds" th:field="*{administratorIds}" type="hidden"/>
 						<input id="actionIds" th:field="*{actionIds}" type="hidden"/>
 
 						<div class="form-group row">
@@ -77,7 +77,7 @@
 						<div class="card-header p-0 border-bottom-0">
 							<ul class="nav nav-tabs" id="custom-tabs-three-tab" role="tablist">
 								<li class="nav-item">
-									<a class="nav-link active" data-toggle="pill" href="#staffListContent">Staff</a>
+									<a class="nav-link active" data-toggle="pill" href="#administratorListContent">Administrator</a>
 								</li>
 								<li class="nav-item">
 									<a class="nav-link" data-toggle="pill" href="#actionListContent">Action</a>
@@ -86,23 +86,23 @@
 						</div>
 						<div class="card-body">
 							<div class="tab-content">
-								<div class="tab-pane fade show active" id="staffListContent" role="tabpanel">
-									<form id="frm-user" method="post" role="form">
+								<div class="tab-pane fade show active" id="administratorListContent" role="tabpanel">
+									<form id="frm-administrator" method="post" role="form">
 										<div class="row">
 											<div class="col-md-4 col-sm-12 mb-1">
-												<input class="form-control rounded-0 form-control-sm" id="user-keyword" placeholder="keyword ..." type="text">
+												<input class="form-control rounded-0 form-control-sm" id="administrator-keyword" placeholder="keyword ..." type="text">
 											</div>
 											<div class="col-md-8 col-sm-12 mb-1">
-												<button class="btn btn-flat btn-primary" id="btnUserSearch" type="button">
+												<button class="btn btn-flat btn-primary" id="btnAdministratorSearch" type="button">
 													<i class="fas fa-search"></i> Search
 												</button>
-												<button class="btn btn-flat btn-warning" id="btnUserReset" type="button">
+												<button class="btn btn-flat btn-warning" id="btnAdministratorReset" type="button">
 													<i class="fas fa-recycle"></i> Reset
 												</button>
 											</div>
 										</div>
 									</form>
-									<table cellspacing="0" class="table table-bordered" id="tblUser" width="100%">
+									<table class="table table-bordered" id="tblAdministrator" width="100%">
 										<thead>
 										<tr>
 											<th>
@@ -113,9 +113,8 @@
 													</div>
 												</div>
 											</th>
-											<th class="text-left" data-sort-key="officerName">Name</th>
-											<th class="text-left" data-sort-key="officerRank">Rank</th>
-											<th class="text-left" data-sort-key="contactPhone">Phone</th>
+											<th class="text-left" data-sort-key="name">Name</th>
+											<th class="text-left" data-sort-key="loginId">Login ID</th>
 										</tr>
 										</thead>
 										<tbody>
@@ -142,7 +141,7 @@
 											</div>
 										</div>
 									</form>
-									<table cellspacing="0" class="table table-bordered" id="tblAction" width="100%">
+									<table class="table table-bordered" id="tblAction" width="100%">
 										<thead>
 										<tr>
 											<th>

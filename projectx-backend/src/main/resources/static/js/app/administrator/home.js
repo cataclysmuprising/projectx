@@ -40,8 +40,11 @@ function initDataTable() {
 
         },
         "sClass": "text-center",
+    }, {
+        "mData": "createdDate",
+        "sClass": "text-center"
     },];
-    if (hasAuthority("administratorDetail") || hasAuthority("administratorEdit") || hasAuthority("administratorRemove")) {
+    if (hasAnyAuthority("administratorDetail", "administratorEdit", "administratorRemove")) {
         columns.push({
             "render": function (data, type, full, meta) {
                 let detailButton = {
@@ -77,6 +80,9 @@ function initDataTable() {
         columnDefs: [{
             width: 150,
             targets: 1
+        }, {
+            width: 150,
+            targets: 2
         },],
         ajax: {
             type: "POST",

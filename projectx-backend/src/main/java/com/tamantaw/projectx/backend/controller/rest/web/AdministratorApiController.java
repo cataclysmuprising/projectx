@@ -61,7 +61,7 @@ public class AdministratorApiController extends BaseRESTController {
 			throw new RequestValidationException("SUPER_USER password cannot be reset");
 		}
 
-		administratorService.findById(administratorId).orElseThrow(() -> new ContentNotFoundException("Unknown Staff"));
+		administratorService.findById(administratorId).orElseThrow(() -> new ContentNotFoundException("Unknown Administrator"));
 
 		AdministratorCriteria updateCriteria = new AdministratorCriteria();
 		updateCriteria.setId(administratorId);

@@ -62,6 +62,10 @@ public class RoleAction extends AbstractEntity implements Serializable {
 	@Column(name = "action_id", nullable = false, insertable = false, updatable = false)
 	private Long actionId;
 
+/*	This change adds explicit reference-based equals/hashCode implementations
+	to join-table entities, ensuring stable identity before persistence and
+	preventing silent element loss in Set collections.*/
+
 	@Override
 	public final boolean equals(Object o) {
 		if (this == o) {

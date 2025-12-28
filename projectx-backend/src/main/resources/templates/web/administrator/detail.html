@@ -52,6 +52,11 @@
 						<span class="float-right text-muted" th:text="${#strings.toLowerCase(administratorDto.status)}"></span>
 					</li>
 					<li class="list-group-item">
+						<b>Registered Date</b>
+						<span class="float-right text-muted" th:text="${#temporals.format(administratorDto.createdDate, 'dd-MM-yyyy HH:mm:ss')}"></span>
+
+					</li>
+					<li class="list-group-item">
 						<b>Roles</b>
 						<span class="float-right text-muted" th:text="${roleNames}"></span>
 					</li>

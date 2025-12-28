@@ -58,7 +58,7 @@
 							<button class="btn btn-flat btn-warning" id="btnReset" type="button">
 								<i class="fas fa-recycle"></i> Reset
 							</button>
-							<a class="btn btn-secondary btn-flat float-right" role="button" th:href="@{/sec/role/add}" th:if="${roleAdd == true}">
+							<a class="btn btn-secondary btn-flat float-right" role="button" th:href="@{/web/sec/role/add}" th:if="${@perm.has(permissions, 'roleAdd')}">
 								<i class="fas fa-plus"></i> Add New
 							</a>
 						</div>
@@ -71,7 +71,7 @@
 					<tr>
 						<th class="text-left" data-sort-key="name">Name</th>
 						<th class="text-left">Description</th>
-						<th class="functionColumn" th:if="${roleEdit or roleRemove}">Function</th>
+						<th class="functionColumn" th:if="${@perm.hasAny(permissions, 'roleEdit', 'roleRemove')}">Function</th>
 					</tr>
 					</thead>
 					<tbody>

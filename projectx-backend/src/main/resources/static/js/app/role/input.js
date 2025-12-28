@@ -1,7 +1,7 @@
-let tblUser, tblAction;
+let tblAdministrator, tblAction;
 
 function init() {
-    initUserTable();
+    initAdministratorTable();
     initActionTable();
     initValidator();
     loadPageNames();
@@ -14,7 +14,7 @@ function bind() {
     });
 
     $("#btnSubmit").on("click", function (e) {
-        convertJSONValueToCommaSeparateString("#userIds");
+        convertJSONValueToCommaSeparateString("#administratorIds");
         convertJSONValueToCommaSeparateString("#actionIds");
         $("#roleForm").submit();
     });
@@ -23,12 +23,12 @@ function bind() {
         reloadCurrentPage();
     });
 
-    $("#btnUserReset").on("click", function (e) {
+    $("#btnAdministratorReset").on("click", function (e) {
         reloadCurrentPage();
     });
 
-    $("#btnUserSearch").on("click", function (e) {
-        tblUser.draw();
+    $("#btnAdministratorSearch").on("click", function (e) {
+        tblAdministrator.draw();
     });
 
     $("#btnActionReset").on("click", function (e) {
@@ -45,7 +45,7 @@ function bind() {
 
 }
 
-function initUserTable() {
+function initAdministratorTable() {
     let columns = [{
         "render": function (data, type, full, meta) {
             return '<div class="pretty p-default"><input data-id="' + full.id + '" type="checkbox"/><div class="state p-default-o"><label></label></div></div>';
@@ -53,35 +53,25 @@ function initUserTable() {
         "bSortable": false,
         "sClass": "text-center"
     }, {
-        "mData": "officerName",
+        "mData": "name",
         "sClass": "text-left"
     }, {
-        "mData": "officerRank",
+        "mData": "loginId",
         "sClass": "text-left"
-    }, {
-        "render": function (data, type, full, meta) {
-            if (full.contactPhone) {
-                return full.contactPhone;
-            }
-            else {
-                return '-';
-            }
-        },
-        "sClass": "text-left"
-    },];
-    tblUser = $('#tblUser').DataTable({
+    }];
+    tblAdministrator = $('#tblAdministrator').DataTable({
         aoColumns: columns,
         "aaSorting": [],
         "pageLength": SECONDARY_ROW_PER_PAGE,
         ajax: {
             type: "POST",
-            url: getApiResourcePath() + 'sec/staffs/search/paging',
+            url: getApiResourcePath() + 'sec/administrator/search/paging',
             data: function (d) {
                 let criteria = {};
                 if (d.order.length > 0) {
                     let index = $(d.order[0])[0].column;
                     let dir = $(d.order[0])[0].dir;
-                    let head = $("#tblUser").find("thead");
+                    let head = $("#tblAdministrator").find("thead");
                     let sortColumn = head.find("th:eq(" + index + ")");
                     criteria.sortType = dir.toUpperCase();
                     criteria.sortProperty = $(sortColumn).attr("data-sort-key");
@@ -89,7 +79,7 @@ function initUserTable() {
                 criteria.offset = d.start;
                 criteria.limit = d.length;
                 criteria.status = "ACTIVE";
-                let word = $("#user-keyword").val();
+                let word = $("#administrator-keyword").val();
                 if (isNotEmpty(word)) {
                     criteria.keyword = word;
                 }
@@ -98,14 +88,14 @@ function initUserTable() {
         },
         initComplete: function () {
             let api = this.api();
-            $('#user-keyword').off('.DT').on('keyup.DT', function (e) {
+            $('#administrator-keyword').off('.DT').on('keyup.DT', function (e) {
                 if (e.keyCode === 13) {
                     api.search(this.value).draw();
                 }
             });
         },
         drawCallback: function (settings) {
-            setSelectable("#tblUser", "#userIds", settings._iRecordsDisplay);
+            setSelectable("#tblAdministrator", "#administratorIds", settings._iRecordsDisplay);
         }
     });
 }

@@ -52,8 +52,8 @@ spring:
         # Query safety & diagnostics
         # -------------------------------
         query:
-          fail_on_pagination_over_collection_fetch: false
-          # Allows pagination even if a collection fetch join exists
+          fail_on_pagination_over_collection_fetch: true
+          # disable pagination if a collection fetch join exists
           # (You consciously manage joins via QueryDSL)
 
           in_clause_parameter_padding: true

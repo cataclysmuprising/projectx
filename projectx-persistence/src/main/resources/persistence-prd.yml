@@ -50,7 +50,7 @@ spring:
         # Query behavior (safe defaults)
         # -------------------------------
         query:
-          fail_on_pagination_over_collection_fetch: false
+          fail_on_pagination_over_collection_fetch: ture
           in_clause_parameter_padding: true
 
         # -------------------------------

@@ -23,10 +23,6 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.util.Set;
-
-import static com.tamantaw.projectx.backend.BackendApplication.SUPER_USER_ROLE_ID;
-
 @Controller
 @MVCLoggable(profile = "dev")
 @RequestMapping("/web/sec/role")
@@ -65,8 +61,14 @@ public class RoleController extends BaseMVCController {
 
 	@GetMapping("/add")
 	public String add(Model model) {
-		model.addAttribute("pageMode", PageMode.CREATE);
-		model.addAttribute("roleDto", new RoleDTO());
+		if (!model.containsAttribute("pageMode")) {
+			model.addAttribute("pageMode", PageMode.CREATE);
+		}
+
+		if (!model.containsAttribute("roleDto")) {
+			model.addAttribute("roleDto", new RoleDTO());
+		}
+
 		return "/role/input";
 	}
 
@@ -87,7 +89,7 @@ public class RoleController extends BaseMVCController {
 		roleDto.setAppName(BackendApplication.APP_NAME);
 
 		RoleDTO created =
-				roleService.create(roleDto, getSignInClientId());
+				roleService.create(roleDto, roleDto.getActionIds(), roleDto.getAdministratorIds(), getSignInClientId());
 
 		log.info(
 				"New role registered id={}",
@@ -117,25 +119,18 @@ public class RoleController extends BaseMVCController {
 	) throws PersistenceException {
 
 		model.addAttribute("pageMode", PageMode.EDIT);
+		RoleCriteria criteria = new RoleCriteria();
+		criteria.setId(id);
+		criteria.setRoleType(Role.RoleType.CUSTOM);
 
 		RoleDTO roleDto = roleService
-				.findOne(buildCriteria(id),
+				.findOne(criteria,
 						"Role(roleActions(action),administratorRoles(administrator))")
 				.orElseThrow(() ->
 						new ContentNotFoundException(
 								"No matching role found for ID <" + id + ">"
 						)
 				);
-
-		if (roleDto.getRoleType() == Role.RoleType.BUILT_IN) {
-			setPageMessage(
-					redirectAttributes,
-					"Access Denied!",
-					"Editing BUILD IN roles are not allowed!",
-					PageMessageStyle.ERROR
-			);
-			return "redirect:/web/sec/role";
-		}
 
 		model.addAttribute("roleDto", roleDto);
 		return "/role/input";
@@ -155,7 +150,11 @@ public class RoleController extends BaseMVCController {
 			RedirectAttributes redirectAttributes
 	) throws PersistenceException, ConsistencyViolationException {
 
-		if (!roleService.exists(buildCriteria(id))) {
+		RoleCriteria criteria = new RoleCriteria();
+		criteria.setId(id);
+		criteria.setRoleType(Role.RoleType.CUSTOM);
+
+		if (!roleService.exists(criteria)) {
 			throw new ContentNotFoundException(
 					"No matching role found for ID <" + id + ">"
 			);
@@ -163,9 +162,10 @@ public class RoleController extends BaseMVCController {
 
 		roleDto.setId(id);
 
-		roleService.updateRoleAndActions(
+		roleService.updateRoleAndRelations(
 				roleDto,
 				roleDto.getActionIds(),
+				roleDto.getAdministratorIds(),
 				getSignInClientId()
 		);
 
@@ -190,22 +190,14 @@ public class RoleController extends BaseMVCController {
 			RedirectAttributes redirectAttributes
 	) throws PersistenceException {
 
-		RoleDTO roleDto = roleService
-				.findOne(buildCriteria(id))
-				.orElseThrow(() ->
-						new ContentNotFoundException(
-								"No matching role found for ID <" + id + ">"
-						)
-				);
+		RoleCriteria criteria = new RoleCriteria();
+		criteria.setId(id);
+		criteria.setRoleType(Role.RoleType.CUSTOM);
 
-		if (roleDto.getRoleType() == Role.RoleType.BUILT_IN) {
-			setPageMessage(
-					redirectAttributes,
-					"Access Denied!",
-					"Deleting BUILD IN roles are not allowed!",
-					PageMessageStyle.ERROR
+		if (!roleService.exists(criteria)) {
+			throw new ContentNotFoundException(
+					"No matching role found for ID <" + id + ">"
 			);
-			return "redirect:/web/sec/role";
 		}
 
 		roleService.deleteById(id);
@@ -219,16 +211,5 @@ public class RoleController extends BaseMVCController {
 		);
 
 		return "redirect:/web/sec/role";
-	}
-
-	/* ============================================================
-	 * Helpers
-	 * ============================================================ */
-
-	private RoleCriteria buildCriteria(long id) {
-		RoleCriteria criteria = new RoleCriteria();
-		criteria.setId(id);
-		criteria.setExcludeIds(Set.of(SUPER_USER_ROLE_ID));
-		return criteria;
 	}
 }

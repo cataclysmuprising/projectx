@@ -368,6 +368,8 @@ public class RoleServiceIT extends CommonTestBase {
 		RoleCriteria roleCriteria = new RoleCriteria();
 		roleCriteria.setAppName("projectx");
 		roleCriteria.setAction(actionCriteria);
+		roleCriteria.addSort(QRole.role.roleType, Sort.Direction.DESC);
+		roleCriteria.addSort(QRole.role.name, Sort.Direction.ASC);
 
 		// when
 		List<RoleDTO> roles = roleService.findAll(roleCriteria, "Role(roleActions(action))");
