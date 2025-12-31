@@ -52,15 +52,9 @@ public class Administrator extends AbstractEntity implements Serializable {
 	@Column(name = "status", nullable = false, length = 20)
 	private Status status = Status.ACTIVE;
 
-	// ------------------------------------------------------
-	// Enum
-	// ------------------------------------------------------
 	@OneToMany(mappedBy = "administrator", cascade = CascadeType.ALL, orphanRemoval = true)
 	@ToString.Exclude
 	private Set<AdministratorRole> administratorRoles = new HashSet<>();
-	@OneToMany(mappedBy = "administrator", cascade = CascadeType.ALL, orphanRemoval = true)
-	@ToString.Exclude
-	private Set<AdministratorLoginHistory> loginHistories = new HashSet<>();
 
 	/**
 	 * Administrator account status.

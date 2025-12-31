@@ -76,33 +76,29 @@ This repository **does not rely on JOIN-based pagination**, which is known to ca
 
 ---
 
-#### 2. EXISTS-Based Nested Filtering (No JOIN Filters)
+#### 2. Cardinality-Safe Nested Filtering (EXISTS only for to-many)
 
-All nested criteria are implemented using **`EXISTS` subqueries**, never JOINs.
+Nested criteria **must be implemented according to relationship cardinality**.
 
-✅ Correct
+- **To-many relationships** (`@OneToMany`, `@ManyToMany`)  
+  → **MUST use `EXISTS` subqueries**
+- **To-one relationships** (`@ManyToOne`, `@OneToOne`)  
+  → **MUST use direct path predicates**  
+  → **`EXISTS` is forbidden**
+
+---
+
+##### ✅ Correct — filtering across a *to-many* association
 
 ```sql
 WHERE EXISTS (
-  SELECT 1 FROM role_action ra
+  SELECT 1
+  FROM role_action ra
   JOIN action a ON a.id = ra.action_id
   WHERE ra.role_id = role.id
     AND a.page = 'Administrator'
 )
 ```
-
-❌ Forbidden
-
-```sql
-LEFT JOIN role_action ra ...
-WHERE a.page = 'Administrator'
-```
-
-This guarantees:
-
-- Correct counts
-- Stable paging
-- No accidental row multiplication
 
 ---
 

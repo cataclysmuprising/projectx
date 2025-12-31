@@ -257,75 +257,93 @@ public abstract class AbstractRepositoryImpl<
 
 	protected String normalizeGraphSpec(String graph, String rootName) {
 
-		if (graph == null) {
+		if (graph == null || graph.isBlank()) {
 			return "";
 		}
 
 		graph = graph.trim();
-		if (graph.isEmpty()) {
-			return "";
+
+		// Must be either:
+		//  - Root(...)
+		//  - attr1,attr2(...)
+		if (graph.startsWith(rootName + "(")) {
+			int end = graph.lastIndexOf(')');
+			if (end < 0) {
+				throw new IllegalArgumentException("Unbalanced parentheses in graph: " + graph);
+			}
+			return graph.substring(rootName.length() + 1, end).trim();
 		}
 
-		// Strip optional root prefix "Role(...)" to reuse the inner specification.
-		int start = graph.indexOf('(');
-		int end = graph.lastIndexOf(')');
-		if (start >= 0 && end > start) {
-			return graph.substring(start + 1, end);
-		}
-
-		// If the graph is just the root name, treat it as empty.
+		// Root alone = no-op
 		if (graph.equals(rootName)) {
 			return "";
 		}
 
+		// No root prefix → assume already inner spec
 		return graph;
 	}
 
-	protected void applyGraphSpec(GraphContainer graph, ManagedType<?> rootType, String graphSpec) {
+	protected void applyGraphSpec(
+			GraphContainer graph,
+			ManagedType<?> rootType,
+			String graphSpec) {
 
 		if (graphSpec == null || graphSpec.isBlank()) {
 			return;
 		}
 
-		int idx = 0;
-		while (idx < graphSpec.length()) {
+		for (String token : splitTopLevel(graphSpec)) {
 
-			int nextParen = graphSpec.indexOf('(', idx);
-			int nextComma = graphSpec.indexOf(',', idx);
-
-			int end = minPositive(nextParen, nextComma, graphSpec.length());
-			if (end < 0) {
-				end = graphSpec.length();
+			if (token.isEmpty()) {
+				continue;
 			}
 
-			String attrName = graphSpec.substring(idx, end).trim();
+			int paren = token.indexOf('(');
 
-			if (!attrName.isEmpty()) {
-				try {
-					Attribute<?, ?> attr = rootType.getAttribute(attrName);
-
-					if (nextParen >= 0 && nextParen == end) {
-						int close = findMatchingParen(graphSpec, nextParen);
-						String nested = graphSpec.substring(nextParen + 1, close);
-
-						ManagedType<?> nestedType = resolveManagedType(attr);
-						Subgraph<?> subgraph = graph.addSubgraph(attr, nestedType);
-						applyGraphSpec(new SubgraphContainer(subgraph), nestedType, nested);
-						idx = close + 1;
-						continue;
-					}
-					graph.addAttribute(attrName);
-				}
-				catch (IllegalArgumentException e) {
-					throw new IllegalStateException(
-							"Invalid fetch graph attribute '" + attrName +
-									"' for entity " + rootType.getJavaType().getSimpleName(),
-							e
-					);
-				}
+			// --------------------------------------------------
+			// SIMPLE ATTRIBUTE (root-level only)
+			// --------------------------------------------------
+			if (paren < 0) {
+				validateAttribute(rootType, token);
+				graph.addAttribute(token);
+				continue;
 			}
 
-			idx = end + 1;
+			// --------------------------------------------------
+			// NESTED ATTRIBUTE
+			// --------------------------------------------------
+			String attrName = token.substring(0, paren).trim();
+			String nestedSpec = token.substring(paren + 1, token.length() - 1).trim();
+
+			Attribute<?, ?> attr = validateAttribute(rootType, attrName);
+			ManagedType<?> nestedType = resolveManagedType(attr);
+
+			Subgraph<?> subgraph =
+					graph.addSubgraph(attr, nestedType);
+
+			// 🔒 IMPORTANT:
+			// Nested parsing is scoped ONLY to nestedType
+			applyGraphSpec(
+					new SubgraphContainer(subgraph),
+					nestedType,
+					nestedSpec
+			);
+		}
+	}
+
+	private Attribute<?, ?> validateAttribute(
+			ManagedType<?> type,
+			String attrName) {
+
+		try {
+			return type.getAttribute(attrName);
+		}
+		catch (IllegalArgumentException e) {
+			throw new IllegalStateException(
+					"Invalid fetch graph attribute '" + attrName +
+							"' for entity " + type.getJavaType().getSimpleName(),
+					e
+			);
 		}
 	}
 
@@ -1117,11 +1135,54 @@ public abstract class AbstractRepositoryImpl<
 			return false;
 		}
 
-		Metamodel metamodel = entityManager.getMetamodel();
-		EntityType<?> entityType = metamodel.entity(path.getType());
+		EntityType<?> rootType =
+				entityManager.getMetamodel().entity(path.getType());
 
 		for (String hint : hints) {
-			if (containsCollectionAttribute(entityType, hint)) {
+			String spec = normalizeGraphSpec(hint, rootType.getJavaType().getSimpleName());
+			if (containsCollection(rootType, spec)) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private boolean containsCollection(
+			ManagedType<?> type,
+			String spec) {
+
+		if (spec == null || spec.isBlank()) {
+			return false;
+		}
+
+		for (String token : splitTopLevel(spec)) {
+
+			if (token.isEmpty()) {
+				continue;
+			}
+
+			int paren = token.indexOf('(');
+
+			if (paren < 0) {
+				Attribute<?, ?> attr = validateAttribute(type, token);
+				if (attr.isCollection()) {
+					return true;
+				}
+				continue;
+			}
+
+			String attrName = token.substring(0, paren).trim();
+			String nested = token.substring(paren + 1, token.length() - 1).trim();
+
+			Attribute<?, ?> attr = validateAttribute(type, attrName);
+
+			if (attr.isCollection()) {
+				return true;
+			}
+
+			ManagedType<?> nestedType = resolveManagedType(attr);
+			if (containsCollection(nestedType, nested)) {
 				return true;
 			}
 		}
@@ -1193,6 +1254,34 @@ public abstract class AbstractRepositoryImpl<
 		}
 
 		return false;
+	}
+
+	private List<String> splitTopLevel(String spec) {
+
+		List<String> result = new ArrayList<>();
+		int depth = 0;
+		int start = 0;
+
+		for (int i = 0; i < spec.length(); i++) {
+			char c = spec.charAt(i);
+
+			if (c == '(') {
+				depth++;
+			}
+			else if (c == ')') {
+				depth--;
+			}
+			else if (c == ',' && depth == 0) {
+				result.add(spec.substring(start, i).trim());
+				start = i + 1;
+			}
+		}
+
+		if (start < spec.length()) {
+			result.add(spec.substring(start).trim());
+		}
+
+		return result;
 	}
 
 	// ----------------------------------------------------------------------

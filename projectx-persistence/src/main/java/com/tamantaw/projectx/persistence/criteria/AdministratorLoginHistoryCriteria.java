@@ -2,10 +2,8 @@ package com.tamantaw.projectx.persistence.criteria;
 
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Predicate;
-import com.querydsl.jpa.JPAExpressions;
 import com.tamantaw.projectx.persistence.criteria.base.AbstractCriteria;
 import com.tamantaw.projectx.persistence.entity.AdministratorLoginHistory;
-import com.tamantaw.projectx.persistence.entity.QAdministrator;
 import com.tamantaw.projectx.persistence.entity.QAdministratorLoginHistory;
 import lombok.Getter;
 import lombok.Setter;
@@ -71,19 +69,12 @@ public class AdministratorLoginHistoryCriteria extends AbstractCriteria<QAdminis
 		}
 
 		if (administrator != null) {
-			QAdministrator a = QAdministrator.administrator;
 
-			BooleanBuilder adminFilter =
-					(BooleanBuilder) administrator.getFilter(a);
+			Predicate adminFilter =
+					administrator.getFilter(h.administrator);
 
-			if (adminFilter.hasValue()) {
-				predicate.and(
-						JPAExpressions
-								.selectOne()
-								.from(a)
-								.where(a.eq(h.administrator).and(adminFilter))
-								.exists()
-				);
+			if (adminFilter != null) {
+				predicate.and(adminFilter);
 			}
 		}
 
