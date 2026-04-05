@@ -2,18 +2,18 @@
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <!-- Page Styles -->
 <div th:fragment="styles" th:remove="tag">
-	<link rel="stylesheet" th:href="@{'/web/static/css/common/bootstrap-select.min.css?v='+${buildNumber}}">
-	<link rel="stylesheet" th:href="@{'/web/static/css/common/datatables.min.css?v='+${buildNumber}}">
-	<link rel="stylesheet" th:href="@{'/web/static/css/app/role/home'+ ${isProduction == true ? '.min.css' : '.css'}+'?v='+${buildNumber}}">
+	<link rel="stylesheet" th:href="@{'/web/static/css/common/bootstrap-select.min.css'}">
+	<link rel="stylesheet" th:href="@{'/web/static/css/common/datatables.min.css'}">
+	<link rel="stylesheet" th:href="@{'/web/static/css/app/role/role-home'+ ${isProduction ? '.min.css' : '.css'}}">
 </div>
 <!-- /Page Styles -->
 
 <!-- Page Scripts -->
 <div th:fragment="scripts" th:remove="tag">
-	<script th:src="@{'/web/static/js/common/bootstrap-select.min.js?v='+${buildNumber}}"></script>
-	<script th:src="@{'/web/static/js/common/datatables.min.js?v='+${buildNumber}}"></script>
-	<script th:src="@{'/web/static/js/common/datatables-util'+ ${isProduction == true ? '.min.js' : '.js'}+'?v='+${buildNumber}}"></script>
-	<script th:src="@{'/web/static/js/app/role/home'+ ${isProduction == true ? '.min.js' : '.js'}+'?v='+${buildNumber}}"></script>
+	<script th:src="@{'/web/static/js/common/bootstrap-select.min.js'}"></script>
+	<script th:src="@{'/web/static/js/common/datatables.min.js'}"></script>
+	<script th:src="@{'/web/static/js/common/datatables-util'+ ${isProduction ? '.min.js' : '.js'}}"></script>
+	<script th:src="@{'/web/static/js/app/role/role-home'+ ${isProduction ? '.min.js' : '.js'}}"></script>
 </div>
 <!-- /Page Scripts -->
 
@@ -66,12 +66,12 @@
 				</form>
 			</div>
 			<div class="card-body">
-				<table class="table table-bordered" id="tblRole">
+				<table class="table table-bordered table-hover" id="tblRole">
 					<thead>
 					<tr>
 						<th class="text-left" data-sort-key="name">Name</th>
 						<th class="text-left">Description</th>
-						<th class="functionColumn" th:if="${@perm.hasAny(permissions, 'roleEdit', 'roleRemove')}">Function</th>
+						<th class="functionColumn text-center" th:if="${@perm.hasAny(permissions, 'roleEdit', 'roleRemove')}">Function</th>
 					</tr>
 					</thead>
 					<tbody>

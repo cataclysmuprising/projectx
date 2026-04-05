@@ -2,14 +2,8 @@
 <project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
 		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<parent>
-		<groupId>org.springframework.boot</groupId>
-		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>4.0.0</version>
-		<relativePath/> <!-- lookup parent from repository -->
-	</parent>
 
-	<groupId>com.tamantaw</groupId>
+	<groupId>com.github</groupId>
 	<artifactId>projectx</artifactId>
 	<version>1.0.0-SNAPSHOT</version>
 	<packaging>pom</packaging>
@@ -23,14 +17,45 @@
 	</modules>
 
 	<properties>
+		<java.version>25</java.version>
+		<spring.boot.version>4.0.5</spring.boot.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<java.version>23</java.version>
 		<maven.compiler.source>${java.version}</maven.compiler.source>
 		<maven.compiler.target>${java.version}</maven.compiler.target>
 		<maven.compiler.version>3.14.1</maven.compiler.version>
 		<maven.warplugin.version>3.5.0</maven.warplugin.version>
+		<maven.surefire.version>3.2.5</maven.surefire.version>
+		<mockito.version>5.21.0</mockito.version>
+		<assertj.version>3.27.7</assertj.version>
+		<spring.retry.version>2.0.12</spring.retry.version>
+		<testcontainers.version>1.20.6</testcontainers.version>
+		<spring.boot.maven.plugin.version>${spring.boot.version}</spring.boot.maven.plugin.version>
 		<testng.version>7.11.0</testng.version>
 	</properties>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-dependencies</artifactId>
+				<version>${spring.boot.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			<dependency>
+				<groupId>software.amazon.awssdk</groupId>
+				<artifactId>bom</artifactId>
+				<version>2.41.27</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			<dependency>
+				<groupId>org.assertj</groupId>
+				<artifactId>assertj-core</artifactId>
+				<version>${assertj.version}</version>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
 
 	<dependencies>
 		<!-- Apache common libs -->
@@ -130,11 +155,13 @@
 					<source>${java.version}</source>
 					<target>${java.version}</target>
 					<release>${java.version}</release>
+					<compilerArgs>
+						<arg>-parameters</arg>
+					</compilerArgs>
 					<annotationProcessorPaths>
 						<path>
 							<groupId>org.projectlombok</groupId>
 							<artifactId>lombok</artifactId>
-							<version>${lombok.version}</version>
 						</path>
 					</annotationProcessorPaths>
 				</configuration>

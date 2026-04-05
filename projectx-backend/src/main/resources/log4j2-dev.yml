@@ -45,10 +45,16 @@ Configuration:
           Pattern: "%style{%-5p}{bold,yellow} %style{%c{10}}{bold,cyan}%highlight{:%L %m%n}{FATAL=red blink, ERROR=red, WARN=red bold, INFO=red bold, DEBUG=red, TRACE=red}"
           disableAnsi: false
 
+      - name: console_apitests_logger
+        target: SYSTEM_OUT
+        PatternLayout:
+          Pattern: "%style{%-5p}{bold,yellow} %style{%c{10}}{bold,cyan}%highlight{:%L %m%n}{FATAL=red blink, ERROR=red, WARN=green bold, INFO=green bold, DEBUG=green, TRACE=green}"
+          disableAnsi: false
+
   ##### Define loggers #####
   Loggers:
     Root: # This is root logger. Every logs with catch up.
-      level: DEBUG
+      level: INFO
       AppenderRef:
         - ref: root_logger
 
@@ -56,7 +62,7 @@ Configuration:
 
       - name: applicationLogs   # application Logger
         additivity: false # don't conflicts with root logger
-        level: DEBUG
+        level: INFO
         AppenderRef:
           - ref: console_app_logger
 
@@ -68,21 +74,27 @@ Configuration:
 
       - name: serviceLogs  # service Logger
         additivity: false
-        level: DEBUG
+        level: INFO
         AppenderRef:
           - ref: console_service_logger
 
       - name: repositoryLogs  # repository Logger
         additivity: false
-        level: DEBUG
+        level: INFO
         AppenderRef:
           - ref: console_repository_logger
 
+      - name: apiTestLogs  # api Test Logs
+        additivity: false
+        level: DEBUG
+        AppenderRef:
+          - ref: console_apitests_logger
+
       ### Spring framework ###
       - name: org.springframework
-        level: DEBUG
+        level: INFO
       - name: org.springframework.security
-        level: TRACE
+        level: INFO
       - name: org.springframework.boot.actuate
         level: ERROR
       - name: org.springframework.boot.autoconfigure
@@ -104,8 +116,15 @@ Configuration:
       - name: org.springframework.test.context.cache
         level: WARN
       - name: org.springframework.web
-        level: DEBUG
+        level: INFO
       - name: org.springframework.data
+        level: INFO
+        ### Caching ###
+      - name: org.springframework.cache
+        level: INFO
+      - name: org.springframework.data.redis
+        level: INFO
+      - name: io.lettuce.core
         level: INFO
         ### JPA ###
       - name: org.springframework.orm.jpa.SharedEntityManagerCreator$SharedEntityManagerInvocationHandler
@@ -117,21 +136,32 @@ Configuration:
         level: INFO
       - name: org.hibernate.type.BasicTypeRegistry
         level: ERROR
-        # SQL statements and parameters
+      # SQL statements and parameters
       - name: org.hibernate.orm.jdbc.bind
-        level: TRACE
+        level: INFO
       - name: org.hibernate.type.descriptor.sql.BasicBinder
-        level: TRACE
+        level: INFO
       # Statistics and slow queries
       - name: org.hibernate.stat
-        level: DEBUG
+        level: INFO
       - name: org.hibernate.SQL
-        level: DEBUG
+        level: WARN
       - name: org.hibernate.SQL_SLOW
         level: INFO
+      - name: org.hibernate.sql
+        level: WARN
+      - name: org.hibernate.engine.jdbc.spi.SqlStatementLogger
+        level: WARN
       # 2nd Level Cache
       - name: org.hibernate.cache
-        level: DEBUG
+        level: INFO
+      ### Apache Http Client ###
+      - name: org.apache.hc
+        level: WARN
+      - name: org.apache.hc.client5.http.headers
+        level: ERROR
+      - name: org.apache.hc.client5.http.wire
+        level: ERROR
         ### Embedded Tomcat Logs ###
       - name: org.apache.catalina
         level: INFO
@@ -140,7 +170,7 @@ Configuration:
       - name: org.apache.tomcat.util
         level: INFO
         ### Others ###
-      - name: com.tamantaw.projectx.persistence
+      - name: com.github.projectx.persistence
         level: DEBUG
       - name: com.zaxxer # change below to DEBUG if you want to see connection pool properties
         level: WARN
@@ -151,4 +181,6 @@ Configuration:
       - name: sun.rmi
         level: WARN
       - name: javax.management.remote
+        level: WARN
+      - name: jdk.event.security
         level: WARN

@@ -1,21 +1,23 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
-	  xmlns:th="http://www.thymeleaf.org">
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
 <!-- Page Styles -->
 <div th:fragment="styles" th:remove="tag">
-	<link rel="stylesheet" th:href="@{'/web/static/css/app/dashboard/page'+ ${isProduction == true ? '.min.css' : '.css'}+'?v='+${buildNumber}}">
+	<link rel="stylesheet" th:href="@{'/web/static/css/common/bootstrap-datetimepicker.min.css'}">
+	<link rel="stylesheet" th:href="@{'/web/static/css/app/dashboard/dashboard'+ ${isProduction ? '.min.css' : '.css'}}">
 </div>
 <!-- /Page Styles -->
 
 <!-- Page Scripts -->
 <div th:fragment="scripts" th:remove="tag">
-	<script th:src="@{'/web/static/js/app/dashboard/page'+ ${isProduction == true ? '.min.js' : '.js'}+'?v='+${buildNumber}}"></script>
+	<script th:src="@{'/web/static/js/common/moment'+ ${isProduction ? '.min.js' : '.js'}}"></script>
+	<script th:src="@{'/web/static/js/common/bootstrap-datetimepicker.min.js'}"></script>
+	<script th:src="@{'/web/static/js/common/chart.umd.min.js'}"></script>
+	<script th:src="@{'/web/static/js/app/dashboard/dashboard'+ ${isProduction ? '.min.js' : '.js'}}"></script>
 </div>
 <!-- /Page Scripts -->
 
 <div class="content-wrapper" th:fragment="content">
 
-	<!-- Content Header (Page header) -->
 	<section class="content-header">
 		<div class="container-fluid">
 			<div class="row mb-2">
@@ -23,27 +25,50 @@
 					<h1>Dashboard</h1>
 				</div>
 				<div class="col-sm-6">
-					<ol class="breadcrumb float-sm-right">
+					<div class="dashboard-toolbar float-sm-right">
+						<label class="mb-0 text-muted" for="targetMonth">Month</label>
+						<div class="input-group input-group-sm dashboard-month-picker" data-target-input="nearest" id="targetMonthPicker">
+							<input class="form-control datetimepicker-input datepickerinput" data-target="#targetMonthPicker" id="targetMonth" readonly type="text">
+							<div class="input-group-append datepickerbutton" data-target="#targetMonthPicker" data-toggle="datetimepicker">
+								<div class="input-group-text">
+									<i class="far fa-calendar-alt"></i>
+								</div>
+							</div>
+						</div>
+						<button class="btn btn-flat btn-primary btn-sm" id="btnRefreshDashboard" type="button">
+							<i class="fas fa-sync-alt mr-1"></i> Refresh
+						</button>
+					</div>
+				</div>
+			</div>
+
+			<div class="row">
+				<div class="col-sm-12">
+					<ol class="breadcrumb float-sm-right float-none-sm">
 						<li class="breadcrumb-item">
 							<i class="fa fa-home mr-1"></i>
 							<a th:href="@{/}">Home</a>
 						</li>
-						<li class="breadcrumb-item active"><i class="nav-icon icon-display mr-1"></i> Dashboard</li>
+						<li class="breadcrumb-item active">
+							<i class="nav-icon icon-display mr-1"></i> Dashboard
+						</li>
 					</ol>
 				</div>
 			</div>
 		</div>
 	</section>
-	<!-- /Content Header (Page header) -->
 
-	<!-- Main content -->
 	<section class="content">
-		<div class="callout callout-info">
-			<h5><i class="fas fa-info"></i> Note:</h5>
-			This is our awesome dashboard screen.
+		<div class="dashboard-meta">
+			<div>
+				<div class="dashboard-meta__eyebrow">System Overview</div>
+				<h5 class="dashboard-meta__title mb-1" id="dashboardTargetLabel">Loading dashboard...</h5>
+				<div class="dashboard-meta__subtext" id="dashboardGeneratedAt">Preparing latest summary...</div>
+			</div>
+			<div class="dashboard-meta__badge">
+				Settled revenue, live wallet exposure, and open admin attention queues
+			</div>
 		</div>
 	</section>
-	<!-- /Main content -->
-
 </div>
 </html>

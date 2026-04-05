@@ -3,8 +3,30 @@ logging:
   config: classpath:log4j2-dev.yml
 spring:
   config:
-    import:
-      - classpath:persistence-dev.yml
+    # Keep module imports overridable while preserving default persistence wiring.
+    import: ${PROJECTX_PERSISTENCE_IMPORT_DEV:optional:classpath:persistence-dev.yml}
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      client-type: lettuce
+      timeout: 2s
+      connect-timeout: 2s
+      username: ${REDIS_USERNAME:}
+      password: ${REDIS_PASSWORD:}
+      ssl:
+        enabled: ${REDIS_SSL:false}
+      lettuce:
+        pool:
+          max-active: 150
+          max-idle: 75
+          min-idle: 25
+          time-between-eviction-runs: 15s
+  cache:
+    type: redis
+    redis:
+      cache-null-values: false
+      use-key-prefix: true
 ### embedded Tomcat server settings ###
 server:
   port: 8282
@@ -19,3 +41,27 @@ security:
     # export REMEMBER_ME_KEY=$(openssl rand -hex 32)
     key: ${REMEMBER_ME_KEY:07490f81a5fcd9021d52e324963a901bc38a106df1de8ddb20aa7bcd04428f16}
     validity: 14d
+
+management:
+  endpoint:
+    health:
+      show-components: always
+      # Full details in development to speed up diagnostics.
+      show-details: always
+  info:
+    env:
+      # Helpful for local troubleshooting only.
+      enabled: true
+  tracing:
+    sampling:
+      # 100% sampling in dev to simplify trace debugging.
+      probability: 1.0
+
+cache:
+  compression:
+    enabled: true
+    min-size: 2048
+  warmup:
+    enabled: false
+  ttl:
+    mycache: 12h

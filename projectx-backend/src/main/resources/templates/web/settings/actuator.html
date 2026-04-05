@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<!-- Page Styles -->
+<div th:fragment="styles" th:remove="tag">
+	<link rel="stylesheet" th:href="@{'/web/static/css/common/bootstrap-select.min.css'}">
+	<link rel="stylesheet" th:href="@{'/web/static/css/common/pretty-checkbox.min.css'}">
+	<link rel="stylesheet" th:href="@{'/web/static/css/common/jquery.json-viewer.min.css'}">
+	<link rel="stylesheet" th:href="@{'/web/static/css/common/atom-one-dark.min.css'}">
+	<link rel="stylesheet" th:href="@{'/web/static/css/app/settings/actuator-home'+ ${isProduction ? '.min.css' : '.css'}}">
+</div>
+<!-- /Page Styles -->
+
+<!-- Page Scripts -->
+<div th:fragment="scripts" th:remove="tag">
+	<script th:src="@{'/web/static/js/common/bootstrap-select.min.js'}"></script>
+	<script th:src="@{'/web/static/js/common/jquery.json-viewer.min.js'}"></script>
+	<script th:src="@{'/web/static/js/common/highlight.min.js'}"></script>
+	<script th:src="@{'/web/static/js/app/settings/actuator-home'+ ${isProduction ? '.min.js' : '.js'}}"></script>
+</div>
+<!-- /Page Scripts -->
+
+<div class="content-wrapper" th:fragment="content">
+
+	<section class="content-header">
+		<div class="container-fluid">
+			<div class="row mb-2">
+				<div class="col-sm-6">
+					<h1>Actuator Endpoints</h1>
+				</div>
+				<div class="col-sm-6">
+					<ol class="breadcrumb float-sm-right">
+						<li class="breadcrumb-item">
+							<i class="fa fa-home mr-1"></i>
+							<a th:href="@{/}">Home</a>
+						</li>
+						<li class="breadcrumb-item active">
+							<i class="icon-cog3 mr-1"></i> Settings
+						</li>
+						<li class="breadcrumb-item active">
+							Actuator
+						</li>
+					</ol>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<section class="content">
+		<div class="col-12">
+			<div class="card card-primary card-outline card-outline-tabs">
+				<div class="card-header p-0 border-bottom-0">
+					<ul class="nav nav-tabs" role="tablist">
+						<li class="nav-item">
+							<a class="nav-link active"
+							   data-toggle="pill"
+							   href="#actuator-endpoints-tab-content"
+							   id="actuator-endpoints-tab"
+							   role="tab">
+								Endpoints + Response Viewer
+							</a>
+						</li>
+						<li class="nav-item">
+							<a class="nav-link"
+							   data-toggle="pill"
+							   href="#actuator-operations-tab-content"
+							   id="actuator-operations-tab"
+							   role="tab">
+								Operational Snapshot + Redis Inspector
+							</a>
+						</li>
+					</ul>
+				</div>
+				<div class="card-body">
+					<div class="tab-content">
+						<div class="tab-pane show active" id="actuator-endpoints-tab-content" role="tabpanel">
+							<div class="row">
+								<div class="col-lg-4">
+									<div class="card card-outline card-primary h-100" id="actuator-endpoints-card">
+										<div class="card-header">
+											<h3 class="card-title">
+												<i class="fas fa-link mr-1"></i> Endpoints
+											</h3>
+										</div>
+										<div class="card-body p-0">
+											<div class="list-group list-group-flush" id="actuator-endpoint-list">
+												<button class="list-group-item list-group-item-action js-actuator-endpoint"
+														th:attr="data-endpoint=@{/actuator},data-endpoint-path='/actuator'"
+														th:if="${@perm.has(permissions, 'actuatorIndex')}"
+														type="button">
+													<div class="endpoint-title">
+														<span class="endpoint-path">/actuator</span>
+														<span class="badge badge-secondary">JSON</span>
+													</div>
+													<div class="endpoint-description">Actuator endpoint index and available links.</div>
+												</button>
+
+												<button class="list-group-item list-group-item-action js-actuator-endpoint"
+														th:attr="data-endpoint=@{/actuator/health},data-endpoint-path='/actuator/health'"
+														th:if="${@perm.has(permissions, 'actuatorHealth')}"
+														type="button">
+													<div class="endpoint-title">
+														<span class="endpoint-path">/actuator/health</span>
+														<span class="badge badge-success">JSON</span>
+													</div>
+													<div class="endpoint-description">Overall health status.</div>
+												</button>
+
+												<button class="list-group-item list-group-item-action js-actuator-endpoint"
+														th:attr="data-endpoint=@{/actuator/health/readiness},data-endpoint-path='/actuator/health/readiness'"
+														th:if="${@perm.has(permissions, 'actuatorHealthProbe')}"
+														type="button">
+													<div class="endpoint-title">
+														<span class="endpoint-path">/actuator/health/readiness</span>
+														<span class="badge badge-success">JSON</span>
+													</div>
+													<div class="endpoint-description">Readiness probe status.</div>
+												</button>
+
+												<button class="list-group-item list-group-item-action js-actuator-endpoint"
+														th:attr="data-endpoint=@{/actuator/health/liveness},data-endpoint-path='/actuator/health/liveness'"
+														th:if="${@perm.has(permissions, 'actuatorHealthProbe')}"
+														type="button">
+													<div class="endpoint-title">
+														<span class="endpoint-path">/actuator/health/liveness</span>
+														<span class="badge badge-success">JSON</span>
+													</div>
+													<div class="endpoint-description">Liveness probe status.</div>
+												</button>
+
+												<button class="list-group-item list-group-item-action js-actuator-endpoint"
+														th:attr="data-endpoint=@{/actuator/info},data-endpoint-path='/actuator/info'"
+														th:if="${@perm.has(permissions, 'actuatorInfo')}"
+														type="button">
+													<div class="endpoint-title">
+														<span class="endpoint-path">/actuator/info</span>
+														<span class="badge badge-success">JSON</span>
+													</div>
+													<div class="endpoint-description">Application build and runtime info.</div>
+												</button>
+
+												<button class="list-group-item list-group-item-action js-actuator-endpoint"
+														th:attr="data-endpoint=@{/actuator/prometheus},data-endpoint-path='/actuator/prometheus'"
+														th:if="${@perm.has(permissions, 'actuatorPrometheus')}"
+														type="button">
+													<div class="endpoint-title">
+														<span class="endpoint-path">/actuator/prometheus</span>
+														<span class="badge badge-warning">TEXT</span>
+													</div>
+													<div class="endpoint-description">Prometheus/OpenMetrics metrics output.</div>
+												</button>
+
+												<button class="list-group-item list-group-item-action js-actuator-endpoint"
+														th:attr="data-endpoint=@{/actuator/metrics},data-endpoint-path='/actuator/metrics'"
+														th:if="${@perm.has(permissions, 'actuatorMetrics')}"
+														type="button">
+													<div class="endpoint-title">
+														<span class="endpoint-path">/actuator/metrics</span>
+														<span class="badge badge-success">JSON</span>
+													</div>
+													<div class="endpoint-description">Metrics catalog and available tags.</div>
+												</button>
+												<button class="list-group-item list-group-item-action js-actuator-endpoint"
+														th:attr="data-endpoint=@{/actuator/metrics/http.server.requests},data-endpoint-path='/actuator/metrics/http.server.requests'"
+														th:if="${@perm.has(permissions, 'actuatorMetricDetails')}"
+														type="button">
+													<div class="endpoint-title">
+														<span class="endpoint-path">/actuator/metrics/http.server.requests</span>
+														<span class="badge badge-success">JSON</span>
+													</div>
+													<div class="endpoint-description">API request count/latency/error breakdown.</div>
+												</button>
+												<button class="list-group-item list-group-item-action js-actuator-endpoint"
+														th:attr="data-endpoint=@{/actuator/metrics/hikaricp},data-endpoint-path='/actuator/metrics/hikaricp'"
+														th:if="${@perm.has(permissions, 'actuatorMetricDetails')}"
+														type="button">
+													<div class="endpoint-title">
+														<span class="endpoint-path">/actuator/metrics/hikaricp</span>
+														<span class="badge badge-success">JSON</span>
+													</div>
+													<div class="endpoint-description">HikariCP compatibility metric (use component tags).</div>
+												</button>
+												<button class="list-group-item list-group-item-action js-actuator-endpoint"
+														th:attr="data-endpoint=@{/actuator/metrics/hikaricp/summary},data-endpoint-path='/actuator/metrics/hikaricp/summary'"
+														th:if="${@perm.has(permissions, 'actuatorMetricDetails')}"
+														type="button">
+													<div class="endpoint-title">
+														<span class="endpoint-path">/actuator/metrics/hikaricp/summary</span>
+														<span class="badge badge-success">JSON</span>
+													</div>
+													<div class="endpoint-description">HikariCP full pool summary (active/idle/pending/max/min).</div>
+												</button>
+												<button class="list-group-item list-group-item-action js-actuator-endpoint"
+														th:attr="data-endpoint=@{/actuator/metrics/redis.command},data-endpoint-path='/actuator/metrics/redis.command'"
+														th:if="${@perm.has(permissions, 'actuatorMetricDetails')}"
+														type="button">
+													<div class="endpoint-title">
+														<span class="endpoint-path">/actuator/metrics/redis.command</span>
+														<span class="badge badge-success">JSON</span>
+													</div>
+													<div class="endpoint-description">Redis probe command latency and volume.</div>
+												</button>
+												<button class="list-group-item list-group-item-action js-actuator-endpoint"
+														th:attr="data-endpoint=@{/actuator/metrics/projectx.wallet.transactions.per_minute},data-endpoint-path='/actuator/metrics/projectx.wallet.transactions.per_minute'"
+														th:if="${@perm.has(permissions, 'actuatorMetricDetails')}"
+														type="button">
+													<div class="endpoint-title">
+														<span class="endpoint-path">/actuator/metrics/projectx.wallet.transactions.per_minute</span>
+														<span class="badge badge-success">JSON</span>
+													</div>
+													<div class="endpoint-description">Wallet throughput per completed minute.</div>
+												</button>
+
+												<button class="list-group-item list-group-item-action js-actuator-endpoint"
+														th:attr="data-endpoint=@{/actuator/threaddump},data-endpoint-path='/actuator/threaddump'"
+														th:if="${@perm.has(permissions, 'actuatorThreadDump')}"
+														type="button">
+													<div class="endpoint-title">
+														<span class="endpoint-path">/actuator/threaddump</span>
+														<span class="badge badge-success">JSON</span>
+													</div>
+													<div class="endpoint-description">Thread dump for deadlock and blocking analysis.</div>
+												</button>
+
+												<button class="list-group-item list-group-item-action js-actuator-endpoint"
+														th:attr="data-endpoint=@{/actuator/loggers},data-endpoint-path='/actuator/loggers'"
+														th:if="${@perm.has(permissions, 'actuatorLoggers')}"
+														type="button">
+													<div class="endpoint-title">
+														<span class="endpoint-path">/actuator/loggers</span>
+														<span class="badge badge-success">JSON</span>
+													</div>
+													<div class="endpoint-description">Effective logger levels by package/class.</div>
+												</button>
+
+												<button class="list-group-item list-group-item-action js-actuator-endpoint"
+														th:attr="data-endpoint=@{/actuator/caches},data-endpoint-path='/actuator/caches'"
+														th:if="${@perm.has(permissions, 'actuatorCaches')}"
+														type="button">
+													<div class="endpoint-title">
+														<span class="endpoint-path">/actuator/caches</span>
+														<span class="badge badge-success">JSON</span>
+													</div>
+													<div class="endpoint-description">Cache managers and cache names.</div>
+												</button>
+
+												<button class="list-group-item list-group-item-action js-actuator-endpoint"
+														th:attr="data-endpoint=@{/actuator/scheduledtasks},data-endpoint-path='/actuator/scheduledtasks'"
+														th:if="${@perm.has(permissions, 'actuatorScheduledTasks')}"
+														type="button">
+													<div class="endpoint-title">
+														<span class="endpoint-path">/actuator/scheduledtasks</span>
+														<span class="badge badge-success">JSON</span>
+													</div>
+													<div class="endpoint-description">Registered scheduled jobs and cron/fixed rates.</div>
+												</button>
+
+												<button class="list-group-item list-group-item-action js-actuator-endpoint"
+														th:attr="data-endpoint=@{/actuator/mappings},data-endpoint-path='/actuator/mappings'"
+														th:if="${@perm.has(permissions, 'actuatorMappings')}"
+														type="button">
+													<div class="endpoint-title">
+														<span class="endpoint-path">/actuator/mappings</span>
+														<span class="badge badge-success">JSON</span>
+													</div>
+													<div class="endpoint-description">All mapped MVC/API routes and handler methods.</div>
+												</button>
+
+												<button class="list-group-item list-group-item-action js-actuator-endpoint"
+														th:attr="data-endpoint=@{/actuator/beans},data-endpoint-path='/actuator/beans'"
+														th:if="${@perm.has(permissions, 'actuatorBeans')}"
+														type="button">
+													<div class="endpoint-title">
+														<span class="endpoint-path">/actuator/beans</span>
+														<span class="badge badge-success">JSON</span>
+													</div>
+													<div class="endpoint-description">Spring bean graph by context.</div>
+												</button>
+
+												<button class="list-group-item list-group-item-action js-actuator-endpoint"
+														th:attr="data-endpoint=@{/actuator/conditions},data-endpoint-path='/actuator/conditions'"
+														th:if="${@perm.has(permissions, 'actuatorConditions')}"
+														type="button">
+													<div class="endpoint-title">
+														<span class="endpoint-path">/actuator/conditions</span>
+														<span class="badge badge-success">JSON</span>
+													</div>
+													<div class="endpoint-description">Auto-configuration matched/unmatched conditions.</div>
+												</button>
+
+												<button class="list-group-item list-group-item-action js-actuator-endpoint"
+														th:attr="data-endpoint=@{/actuator/configprops},data-endpoint-path='/actuator/configprops'"
+														th:if="${@perm.has(permissions, 'actuatorConfigProps')}"
+														type="button">
+													<div class="endpoint-title">
+														<span class="endpoint-path">/actuator/configprops</span>
+														<span class="badge badge-success">JSON</span>
+													</div>
+													<div class="endpoint-description">Resolved configuration properties.</div>
+												</button>
+
+												<button class="list-group-item list-group-item-action js-actuator-endpoint"
+														th:attr="data-endpoint=@{/actuator/env},data-endpoint-path='/actuator/env'"
+														th:if="${@perm.has(permissions, 'actuatorEnv')}"
+														type="button">
+													<div class="endpoint-title">
+														<span class="endpoint-path">/actuator/env</span>
+														<span class="badge badge-success">JSON</span>
+													</div>
+													<div class="endpoint-description">Sanitized environment and property sources.</div>
+												</button>
+
+												<button class="list-group-item list-group-item-action js-actuator-endpoint"
+														th:attr="data-endpoint=@{/actuator/projectx},data-endpoint-path='/actuator/projectx'"
+														th:if="${@perm.has(permissions, 'actuatorProjectX')}"
+														type="button">
+													<div class="endpoint-title">
+														<span class="endpoint-path">/actuator/projectx</span>
+														<span class="badge badge-success">JSON</span>
+													</div>
+													<div class="endpoint-description">Project-level operational summary and KPIs.</div>
+												</button>
+											</div>
+											<div class="alert alert-info rounded-0 border-0 m-0 d-none" id="actuator-no-endpoint">
+												No endpoint permission assigned to your current role.
+											</div>
+										</div>
+									</div>
+								</div>
+
+								<div class="col-lg-8">
+									<div class="card card-outline card-info" id="actuator-viewer-card">
+										<div class="card-header">
+											<div class="viewer-header-row">
+												<h3 class="card-title mb-0">
+													<i class="fas fa-terminal mr-1"></i> Response Viewer
+												</h3>
+												<div class="btn-group btn-group-sm">
+													<button class="btn btn-primary" id="btn-actuator-refresh" type="button">
+														<i class="fas fa-sync-alt mr-1"></i> Refresh
+													</button>
+													<a class="btn btn-outline-secondary"
+													   href="#"
+													   id="btn-actuator-open-raw"
+													   rel="noopener"
+													   target="_blank">
+														<i class="fas fa-external-link-alt mr-1"></i> Raw
+													</a>
+													<button class="btn btn-outline-secondary" id="btn-actuator-copy" type="button">
+														<i class="far fa-copy mr-1"></i> Copy
+													</button>
+												</div>
+											</div>
+											<div class="viewer-endpoint-label" id="viewer-endpoint-label">Select an endpoint from the left panel.</div>
+										</div>
+
+										<div class="viewer-meta p-3 border-bottom">
+											<span class="badge badge-secondary mr-2" id="viewer-status-badge">Not Loaded</span>
+											<span class="viewer-meta-item" id="viewer-content-type">Content-Type: -</span>
+											<span class="viewer-meta-item" id="viewer-format">Format: -</span>
+											<span class="viewer-meta-item" id="viewer-payload-size">Payload: -</span>
+											<span class="viewer-meta-item" id="viewer-line-count">Lines: -</span>
+											<span class="viewer-meta-item" id="viewer-response-time">Response Time: -</span>
+											<span class="viewer-meta-item" id="viewer-fetched-at">Fetched At: -</span>
+										</div>
+										<div class="viewer-insight d-none" id="viewer-insight"></div>
+										<div class="metrics-catalog d-none" id="metrics-catalog-panel">
+											<div class="metrics-catalog-header">
+												<input class="form-control form-control-sm"
+													   id="metrics-catalog-filter"
+													   placeholder="Filter metric names (e.g. hikaricp, http.server, redis)"
+													   type="text">
+											</div>
+											<div class="table-responsive">
+												<table class="table table-sm table-striped mb-0">
+													<thead>
+													<tr>
+														<th style="width: 80px;">#</th>
+														<th>Metric Name</th>
+														<th style="width: 130px;">Action</th>
+													</tr>
+													</thead>
+													<tbody id="metrics-catalog-body"></tbody>
+												</table>
+											</div>
+										</div>
+										<div class="metric-inspector d-none" id="metric-inspector">
+											<div class="metric-inspector-header">
+												<div class="metric-name" id="metric-inspector-name">-</div>
+												<div class="metric-base-unit" id="metric-inspector-base-unit">Base Unit: -</div>
+											</div>
+											<div class="table-responsive">
+												<table class="table table-sm table-hover mb-0">
+													<thead>
+													<tr>
+														<th>Statistic</th>
+														<th class="text-right">Value</th>
+													</tr>
+													</thead>
+													<tbody id="metric-inspector-measurements"></tbody>
+												</table>
+											</div>
+											<div class="metric-tags" id="metric-inspector-tags"></div>
+											<div class="metric-shortcuts" id="metric-inspector-shortcuts"></div>
+										</div>
+
+										<div class="card-body p-0">
+											<div class="actuator-json-viewer d-none" id="actuator-json-viewer"></div>
+											<pre class="actuator-response mb-0" id="actuator-text-viewer"><code class="language-plaintext response-text" id="actuator-response">Select an endpoint from the left panel to load response.</code></pre>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<div class="tab-pane fade" id="actuator-operations-tab-content" role="tabpanel">
+							<div class="row">
+								<div class="col-lg-12">
+									<div class="card card-outline card-secondary mb-3" id="actuator-snapshot-card">
+										<div class="card-header">
+											<div class="viewer-header-row">
+												<h3 class="card-title mb-0">
+													<i class="fas fa-chart-line mr-1"></i> Operational Snapshot
+												</h3>
+												<button class="btn btn-outline-secondary btn-sm"
+														id="btn-actuator-snapshot-refresh"
+														th:disabled="${!@perm.has(permissions, 'actuatorMetricDetails')}"
+														type="button">
+													<i class="fas fa-sync-alt mr-1"></i> Refresh Snapshot
+												</button>
+											</div>
+										</div>
+										<div class="card-body">
+											<div class="row">
+												<div class="col-md-6 col-xl-3">
+													<div class="snapshot-item">
+														<div class="snapshot-header">
+															<div class="snapshot-label">Wallet Tx/Min</div>
+															<span class="badge badge-secondary snapshot-state" id="snapshot-wallet-state">N/A</span>
+														</div>
+														<div class="snapshot-value" id="snapshot-wallet-tpm">-</div>
+														<div class="snapshot-subtext" id="snapshot-wallet-tpm-sub">Waiting for data</div>
+														<div class="snapshot-threshold" id="snapshot-wallet-threshold">Threshold: -</div>
+														<div class="snapshot-trend" id="snapshot-wallet-trend"></div>
+														<div class="snapshot-actions">
+															<button class="btn btn-link btn-xs p-0 js-open-endpoint"
+																	data-endpoint-path="/actuator/metrics/projectx.wallet.transactions.per_minute"
+																	type="button">
+																Open Metric
+															</button>
+														</div>
+													</div>
+												</div>
+												<div class="col-md-6 col-xl-3">
+													<div class="snapshot-item">
+														<div class="snapshot-header">
+															<div class="snapshot-label">API Avg Latency</div>
+															<span class="badge badge-secondary snapshot-state" id="snapshot-api-state">N/A</span>
+														</div>
+														<div class="snapshot-value" id="snapshot-api-latency">-</div>
+														<div class="snapshot-subtext" id="snapshot-api-latency-sub">http.server.requests</div>
+														<div class="snapshot-threshold" id="snapshot-api-threshold">Threshold: -</div>
+														<div class="snapshot-trend" id="snapshot-api-trend"></div>
+														<div class="snapshot-actions">
+															<button class="btn btn-link btn-xs p-0 js-open-endpoint"
+																	data-endpoint-path="/actuator/metrics/http.server.requests"
+																	type="button">
+																Open Metric
+															</button>
+														</div>
+													</div>
+												</div>
+												<div class="col-md-6 col-xl-3">
+													<div class="snapshot-item">
+														<div class="snapshot-header">
+															<div class="snapshot-label">DB Pool Usage</div>
+															<span class="badge badge-secondary snapshot-state" id="snapshot-db-state">N/A</span>
+														</div>
+														<div class="snapshot-value" id="snapshot-db-pool">-</div>
+														<div class="snapshot-subtext" id="snapshot-db-pool-sub">hikaricp.connections.*</div>
+														<div class="snapshot-threshold" id="snapshot-db-threshold">Threshold: -</div>
+														<div class="snapshot-trend" id="snapshot-db-trend"></div>
+														<div class="snapshot-actions">
+															<button class="btn btn-link btn-xs p-0 js-open-endpoint"
+																	data-endpoint-path="/actuator/metrics/hikaricp/summary"
+																	type="button">
+																Open Summary
+															</button>
+														</div>
+													</div>
+												</div>
+												<div class="col-md-6 col-xl-3">
+													<div class="snapshot-item">
+														<div class="snapshot-header">
+															<div class="snapshot-label">Redis Performance</div>
+															<span class="badge badge-secondary snapshot-state" id="snapshot-redis-state">N/A</span>
+														</div>
+														<div class="snapshot-value" id="snapshot-redis-latency">-</div>
+														<div class="snapshot-subtext" id="snapshot-redis-latency-sub">redis.command</div>
+														<div class="snapshot-threshold" id="snapshot-redis-threshold">Threshold: -</div>
+														<div class="snapshot-trend" id="snapshot-redis-trend"></div>
+														<div class="snapshot-actions">
+															<button class="btn btn-link btn-xs p-0 js-open-endpoint"
+																	data-endpoint-path="/actuator/metrics/redis.command"
+																	type="button">
+																Open Metric
+															</button>
+														</div>
+													</div>
+												</div>
+											</div>
+											<div class="snapshot-footer-row mt-2">
+												<div class="small text-muted" id="snapshot-fetched-at">Last snapshot: -</div>
+												<span class="badge badge-secondary" id="snapshot-overall-state">OVERALL: N/A</span>
+											</div>
+										</div>
+									</div>
+
+									<div class="card card-outline card-warning mb-3"
+										 id="redis-inspector-card"
+										 th:attr="data-summary-url=@{/api/web/sec/settings/actuator/redis/summary},
+					 		  data-keys-url=@{/api/web/sec/settings/actuator/redis/keys},
+					 		  data-delete-url=@{/api/web/sec/settings/actuator/redis/delete},
+					 		  data-can-summary=${@perm.has(permissions, 'actuatorRedisSummary')},
+					 		  data-can-search=${@perm.has(permissions, 'actuatorRedisSearch')},
+					 		  data-can-delete=${@perm.has(permissions, 'actuatorRedisDelete')}"
+										 th:if="${@perm.has(permissions, 'actuatorRedisSummary') or @perm.has(permissions, 'actuatorRedisSearch') or @perm.has(permissions, 'actuatorRedisDelete')}">
+										<div class="card-header">
+											<div class="viewer-header-row">
+												<h3 class="card-title mb-0">
+													<i class="fas fa-database mr-1"></i> Redis Inspector
+												</h3>
+												<div class="btn-group btn-group-sm">
+													<button class="btn btn-outline-secondary"
+															id="btn-redis-summary-refresh"
+															th:disabled="${!@perm.has(permissions, 'actuatorRedisSummary')}"
+															type="button">
+														<i class="fas fa-sync-alt mr-1"></i> Refresh Summary
+													</button>
+												</div>
+											</div>
+										</div>
+										<div class="card-body">
+											<div class="row">
+												<div class="col-md-6 col-xl-3">
+													<div class="snapshot-item redis-snapshot-item">
+														<div class="snapshot-label">Used Memory</div>
+														<div class="snapshot-value" id="redis-summary-used-memory">-</div>
+														<div class="snapshot-subtext" id="redis-summary-used-memory-sub">-</div>
+														<div class="snapshot-trend redis-trend" id="redis-summary-used-memory-trend"></div>
+													</div>
+												</div>
+												<div class="col-md-6 col-xl-3">
+													<div class="snapshot-item redis-snapshot-item">
+														<div class="snapshot-label">Max Memory</div>
+														<div class="snapshot-value" id="redis-summary-max-memory">-</div>
+														<div class="snapshot-subtext" id="redis-summary-max-memory-sub">-</div>
+													</div>
+												</div>
+												<div class="col-md-6 col-xl-3">
+													<div class="snapshot-item redis-snapshot-item">
+														<div class="snapshot-label">Remaining Memory</div>
+														<div class="snapshot-value" id="redis-summary-remaining-memory">-</div>
+														<div class="snapshot-subtext" id="redis-summary-remaining-memory-sub">-</div>
+													</div>
+												</div>
+												<div class="col-md-6 col-xl-3">
+													<div class="snapshot-item redis-snapshot-item">
+														<div class="snapshot-label">Total Keys</div>
+														<div class="snapshot-value" id="redis-summary-total-keys">-</div>
+														<div class="snapshot-subtext" id="redis-summary-total-keys-sub">-</div>
+														<div class="snapshot-trend redis-trend" id="redis-summary-total-keys-trend"></div>
+													</div>
+												</div>
+											</div>
+
+											<div class="redis-meta mb-2">
+												<span class="badge badge-secondary" id="redis-summary-status">Not Loaded</span>
+												<span class="ml-2 text-muted" id="redis-summary-fetched-at">Last summary: -</span>
+											</div>
+
+											<div class="row align-items-end">
+												<div class="col-md-5 col-lg-5">
+													<label class="small text-muted mb-1" for="redis-key-pattern">Key Search Pattern</label>
+													<input class="form-control form-control-sm"
+														   id="redis-key-pattern"
+														   placeholder="Use wildcard pattern (e.g. self_cashin*, *token*)"
+														   th:disabled="${!@perm.has(permissions, 'actuatorRedisSearch')}"
+														   type="text">
+												</div>
+												<div class="col-6 col-md-2 col-lg-2">
+													<label class="small text-muted mb-1" for="redis-key-limit">Limit</label>
+													<select class="form-control form-control-sm selectpicker show-tick"
+															data-size="5"
+															id="redis-key-limit"
+															th:disabled="${!@perm.has(permissions, 'actuatorRedisSearch')}">
+														<option value="50">50</option>
+														<option selected value="100">100</option>
+														<option value="200">200</option>
+														<option value="500">500</option>
+													</select>
+												</div>
+												<div class="col-12 col-md-5 col-lg-5 mt-2 mt-md-0">
+													<div class="btn-group btn-group-sm d-flex">
+														<button class="btn btn-outline-primary flex-fill"
+																id="btn-redis-search"
+																th:disabled="${!@perm.has(permissions, 'actuatorRedisSearch')}"
+																type="button">
+															<i class="fas fa-search mr-1"></i> Search
+														</button>
+														<button class="btn btn-outline-secondary flex-fill"
+																id="btn-redis-clear"
+																th:disabled="${!@perm.has(permissions, 'actuatorRedisSearch')}"
+																type="button">
+															Clear
+														</button>
+														<button class="btn btn-outline-danger flex-fill"
+																id="btn-redis-delete-selected"
+																th:disabled="${!@perm.has(permissions, 'actuatorRedisDelete')}"
+																type="button">
+															<i class="far fa-trash-alt mr-1"></i> Delete Selected
+														</button>
+													</div>
+												</div>
+											</div>
+
+											<div class="redis-key-table-wrap mt-3">
+												<div class="table-responsive">
+													<table class="table table-sm table-hover mb-0" id="redis-key-table">
+														<thead>
+														<tr>
+															<th class="redis-select-col text-center" style="width: 50px;">
+																<div class="pretty p-default p-pulse m-0">
+																	<input id="redis-select-all" type="checkbox">
+																	<div class="state p-default-o">
+																		<label></label>
+																	</div>
+																</div>
+															</th>
+															<th class="wrap-white-space">Key</th>
+															<th style="width: 110px;">Type</th>
+															<th style="width: 120px;">TTL</th>
+															<th style="width: 230px;">Expire At</th>
+															<th class="redis-delete-col" style="width: 120px;">Action</th>
+														</tr>
+														</thead>
+														<tbody id="redis-key-table-body">
+														<tr>
+															<td class="text-muted" colspan="6">Use key search to load Redis keys.</td>
+														</tr>
+														</tbody>
+													</table>
+												</div>
+											</div>
+											<div class="small text-muted mt-2" id="redis-key-table-meta">Keys: -</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</section>
+</div>
+</html>

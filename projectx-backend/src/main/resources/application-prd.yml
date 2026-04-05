@@ -3,11 +3,53 @@ logging:
   config: classpath:log4j2-prd.yml
 spring:
   config:
-    import:
-      - classpath:persistence-prd.yml
+    # Keep module imports overridable while preserving default persistence wiring.
+    import: ${PROJECTX_PERSISTENCE_IMPORT_PRD:optional:classpath:persistence-prd.yml}
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      client-type: lettuce
+      timeout: 2s
+      connect-timeout: 2s
+      username: ${REDIS_USERNAME:}
+      password: ${REDIS_PASSWORD:}
+      ssl:
+        enabled: ${REDIS_SSL:false}
+      lettuce:
+        pool:
+          max-active: 150
+          max-idle: 75
+          min-idle: 25
+          time-between-eviction-runs: 15s
+  cache:
+    type: redis
+    redis:
+      cache-null-values: false
+      use-key-prefix: true
 
 security:
   rememberme:
     # export REMEMBER_ME_KEY=$(openssl rand -hex 32)
     key: ${REMEMBER_ME_KEY:07490f81a5fcd9021d52e324963a901bc38a106df1de8ddb20aa7bcd04428f16}
     validity: 14d
+
+management:
+  endpoint:
+    health:
+      show-components: never
+      # Keep health payload minimal in production by default.
+      show-details: never
+  tracing:
+    sampling:
+      # Adjustable via env without code changes.
+      probability: ${TRACING_SAMPLING_PROBABILITY:0.10}
+
+cache:
+  compression:
+    enabled: true
+    min-size: 2048
+  warmup:
+    enabled: false
+  ttl:
+    mycache: 12h

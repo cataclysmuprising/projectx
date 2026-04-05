@@ -101,7 +101,7 @@ Configuration:
         level: ERROR
       - name: org.springframework.data.repository.config # Spring data configurations
         level: WARN
-      - name: org.springframework.orm.jpa.EntityManagerFactoryUtils # JPA EntityManager Status
+      - name: org.springframework.orm.jpa.EntityManagerFactoryUtils # JPA EntityManager ActiveState
         level: WARN
         ### JPA ###
       - name: org.springframework.orm.jpa.SharedEntityManagerCreator$SharedEntityManagerInvocationHandler
@@ -127,7 +127,7 @@ Configuration:
       - name: org.hibernate.cache
         level: DEBUG
         ### Others ###
-      - name: com.tamantaw.projectx.persistence
+      - name: com.github.projectx.persistence
         level: DEBUG
       - name: org.springframework.data.convert
         level: WARN

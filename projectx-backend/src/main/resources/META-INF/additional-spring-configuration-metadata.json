@@ -1,0 +1,15 @@
+{
+  "properties": [
+    {
+      "name": "enc.key-id-header",
+      "type": "java.lang.String",
+      "description": "Header name used to transport encryption key id.",
+      "defaultValue": "X-Enc-Key-Id"
+    },
+    {
+      "name": "management.tracing.sampling.probability",
+      "type": "java.lang.Double",
+      "description": "Fraction of traces to sample in the current environment."
+    }
+  ]
+}

@@ -2,22 +2,22 @@
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <!-- Page Styles -->
 <div th:fragment="styles" th:remove="tag">
-	<link rel="stylesheet" th:href="@{'/web/static/css/common/pretty-checkbox.min.css?v='+${buildNumber}}">
-	<link rel="stylesheet" th:href="@{'/web/static/css/common/bootstrap-select.min.css?v='+${buildNumber}}">
-	<link rel="stylesheet" th:href="@{'/web/static/css/common/icheck-bootstrap.min.css?v='+${buildNumber}}">
-	<link rel="stylesheet" th:href="@{'/web/static/css/common/datatables.min.css?v='+${buildNumber}}">
-	<link rel="stylesheet" th:href="@{'/web/static/css/app/role/input'+ ${isProduction == true ? '.min.css' : '.css'}+'?v='+${buildNumber}}">
+	<link rel="stylesheet" th:href="@{'/web/static/css/common/pretty-checkbox.min.css'}">
+	<link rel="stylesheet" th:href="@{'/web/static/css/common/bootstrap-select.min.css'}">
+	<link rel="stylesheet" th:href="@{'/web/static/css/common/icheck-bootstrap.min.css'}">
+	<link rel="stylesheet" th:href="@{'/web/static/css/common/datatables.min.css'}">
+	<link rel="stylesheet" th:href="@{'/web/static/css/app/role/role-input'+ ${isProduction ? '.min.css' : '.css'}}">
 </div>
 <!-- /Page Styles -->
 
 <!-- Page Scripts -->
 <div th:fragment="scripts" th:remove="tag">
-	<script th:src="@{'/web/static/js/common/bootstrap-select.min.js?v='+${buildNumber}}"></script>
-	<script th:src="@{'/web/static/js/common/jquery.validate.min.js?v='+${buildNumber}}"></script>
-	<script th:src="@{'/web/static/js/common/datatables.min.js?v='+${buildNumber}}"></script>
-	<script th:src="@{'/web/static/js/common/datatables-util'+ ${isProduction == true ? '.min.js' : '.js'}+'?v='+${buildNumber}}"></script>
-	<script th:src="@{'/web/static/js/common/datatables-select'+ ${isProduction == true ? '.min.js' : '.js'}+'?v='+${buildNumber}}"></script>
-	<script th:src="@{'/web/static/js/app/role/input'+ ${isProduction == true ? '.min.js' : '.js'}+'?v='+${buildNumber}}"></script>
+	<script th:src="@{'/web/static/js/common/bootstrap-select.min.js'}"></script>
+	<script th:src="@{'/web/static/js/common/jquery.validate.min.js'}"></script>
+	<script th:src="@{'/web/static/js/common/datatables.min.js'}"></script>
+	<script th:src="@{'/web/static/js/common/datatables-util'+ ${isProduction ? '.min.js' : '.js'}}"></script>
+	<script th:src="@{'/web/static/js/common/datatables-select'+ ${isProduction ? '.min.js' : '.js'}}"></script>
+	<script th:src="@{'/web/static/js/app/role/role-input'+ ${isProduction ? '.min.js' : '.js'}}"></script>
 </div>
 <!-- /Page Scripts -->
 
@@ -55,14 +55,14 @@
 						<input id="actionIds" th:field="*{actionIds}" type="hidden"/>
 
 						<div class="form-group row">
-							<label class="col-sm-3 col-form-label text-right required" for="name">Name : </label>
+							<label class="col-sm-3 col-form-label text-right required-right" for="name">Name : </label>
 							<div class="col-sm-9">
-								<input class="form-control" id="name" name="name" placeholder="Name" th:field="*{name}" type="text"/>
+								<input class="form-control" id="name" placeholder="Name" th:field="*{name}" type="text"/>
 							</div>
 						</div>
 
 						<div class="form-group row">
-							<label class="col-sm-3 col-form-label text-right required" for="description">Description : </label>
+							<label class="col-sm-3 col-form-label text-right required-right" for="description">Description : </label>
 							<div class="col-sm-9">
 								<textarea class="form-control" id="description" placeholder="Description" rows="5" th:field="*{description}" type="text"></textarea>
 							</div>
@@ -102,7 +102,7 @@
 											</div>
 										</div>
 									</form>
-									<table class="table table-bordered" id="tblAdministrator" width="100%">
+									<table class="table table-bordered table-hover" id="tblAdministrator" width="100%">
 										<thead>
 										<tr>
 											<th>
@@ -123,15 +123,23 @@
 								</div>
 								<div class="tab-pane fade" id="actionListContent" role="tabpanel">
 									<form id="frm-action" method="post" role="form">
+										<div class="alert alert-light border role-route-note" role="alert">
+											<div class="font-weight-bold mb-1">Permission Surface</div>
+											<div class="mb-0">Roles assign business actions only. Use <strong>Module</strong> and <strong>Access</strong> to keep the setup understandable, while route coverage stays read-only for helper APIs and shared lookups.</div>
+										</div>
 										<div class="row">
 											<div class="col-md-4 col-sm-12 mb-1">
 												<input class="form-control rounded-0 form-control-sm" id="action-keyword" placeholder="keyword ..." type="text">
 											</div>
-											<div class="col-md-4 col-sm-12 mb-1">
-												<select class="form-control selectpicker show-tick" data-live-search="true" data-selected-text-format="count > 3" data-size="5" id="pageName" title="Page (All)">
+											<div class="col-md-3 col-sm-12 mb-1">
+												<select class="form-control selectpicker show-tick" data-live-search="true" data-selected-text-format="count > 3" data-size="5" id="pageName" title="Module (All)">
 												</select>
 											</div>
-											<div class="col-md-4 col-sm-12 mb-1">
+											<div class="col-md-3 col-sm-12 mb-1">
+												<select class="form-control selectpicker show-tick" data-size="5" id="accessLevel" title="Access (All)">
+												</select>
+											</div>
+											<div class="col-md-2 col-sm-12 mb-1">
 												<button class="btn btn-flat btn-primary" id="btnActionSearch" type="button">
 													<i class="fas fa-search"></i> Search
 												</button>
@@ -141,7 +149,7 @@
 											</div>
 										</div>
 									</form>
-									<table class="table table-bordered" id="tblAction" width="100%">
+									<table class="table table-bordered table-hover" id="tblAction" width="100%">
 										<thead>
 										<tr>
 											<th>
@@ -152,8 +160,10 @@
 													</div>
 												</div>
 											</th>
-											<th class="text-left" data-sort-key="page">Page</th>
+											<th class="text-left" data-sort-key="page">Module</th>
 											<th class="text-left" data-sort-key="displayName">Name</th>
+											<th class="text-left" data-sort-key="accessLevel">Access</th>
+											<th class="text-left">Route Coverage</th>
 											<th class="text-left" data-sort-key="description">Description</th>
 										</tr>
 										</thead>

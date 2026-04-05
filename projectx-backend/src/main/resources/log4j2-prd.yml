@@ -84,7 +84,7 @@ Configuration:
   ##### Define loggers #####
   Loggers:
     Root: # This is root logger. Every logs with catch up.
-      level: DEBUG
+      level: INFO
       AppenderRef:
         - ref: root_logger
 
@@ -134,6 +134,12 @@ Configuration:
       ### Apache loggings ###
       - name: org.apache.http # DEBUG to see full REST service requests info
         level: INFO
+      - name: org.apache.hc
+        level: WARN
+      - name: org.apache.hc.client5.http.headers
+        level: ERROR
+      - name: org.apache.hc.client5.http.wire
+        level: ERROR
       - name: org.apache.commons
         level: ERROR
       - name: org.apache.tiles
@@ -159,6 +165,8 @@ Configuration:
       - name: org.hibernate.SQL_SLOW
         level: INFO
       ### Others ###
+      - name: io.lettuce.core
+        level: WARN
       - name: javax.servlet.http.HttpServletRequestWrapper
         level: WARN
       - name: com.zaxxer # change below to DEBUG if you want to see transaction processes and connection pool properties

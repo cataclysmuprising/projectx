@@ -25,21 +25,25 @@ $.ajaxSetup({
     contentType: "application/json; charset=utf-8",
     timeout: 100000,
 });
-$(document).ajaxSend((e, xhr, options) => {
-    let $csrf_token = $("meta[name='_csrf']").attr("content");
-    let $csrf_header = $("meta[name='_csrf_header']").attr("content");
-    if ($csrf_token && $csrf_header) {
-        xhr.setRequestHeader($csrf_header, $csrf_token);
-    }
-    xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-    xhr.setRequestHeader('Accept', 'application/json');
-}).ajaxComplete((event, xhr, settings) => {
+$.ajaxPrefilter((options, originalOptions, jqXHR) => {
+    const existingBeforeSend = options.beforeSend;
+    options.beforeSend = function (xhr, settings) {
+        applyDefaultAjaxHeaders(xhr, settings);
+        if (typeof existingBeforeSend === "function") {
+            return existingBeforeSend.call(this, xhr, settings);
+        }
+        return undefined;
+    };
+});
+$(document).ajaxComplete((event, xhr, settings) => {
     // if (xhr.status === 208 || xhr.status === 226) {
     //     document.write(xhr.responseText);
     // }
-}).ajaxError((event, xhr, settings, thrownError) => {
+}).ajaxError((event, xhr, settings) => {
+    if (handleUnauthorizedApiResponse(xhr, true)) {
+        return;
+    }
     notify("Error !", "Something went wrong with requesting data to server.", "error");
-    console.log(xhr, thrownError);
 });
 
 /**
@@ -109,6 +113,31 @@ function baseBind() {
         }
     });
 
+    // Wallet integrity validation (admin-only action in header).
+    $('#btnWalletValidateHeader').on('click', function (e) {
+        e.preventDefault();
+        $.ajax({
+            url: getApiResourcePath() + 'sec/wallet_admin/monitoring/validate',
+            type: 'POST',
+            data: JSON.stringify({}),
+            success: function (response) {
+                const chainViolation = Number(response?.chainViolation || 0);
+                if (chainViolation > 0) {
+                    notify(
+                        "Warning !",
+                        "Wallet constraints validated, but chain violations remain: " + chainViolation + ".",
+                        "warning"
+                    );
+                    return;
+                }
+                notify("Success !", "Wallet constraints + chain validated.", "success");
+            },
+            error: function () {
+                notify("Error !", "Wallet constraint validation failed.", "error");
+            }
+        });
+    });
+
     disableFormSubmitEvent();
 }
 
@@ -125,30 +154,169 @@ function initPageMessage() {
 
 function initJQueryDataTable() {
     if ($.fn.DataTable) {
-        Object.assign(DataTable.defaults, {
-            "lengthChange": false,
-            "searching": false,
-            pagingType: "first_last_numbers",
-            "pageLength": ROW_PER_PAGE,
-            processing: true,
+        Object.assign($.fn.dataTable.defaults, {
+
             serverSide: true,
-            autoWidth: false,
+            processing: true,
+            lengthChange: false,
+            searching: false,
+            pagingType: "first_last_numbers",
+            pageLength: ROW_PER_PAGE,
             aaSorting: [],
-            "language": {
-                "sProcessing": "&nbsp;",
-                "sZeroRecords": "No matching records found.",
-                "sEmptyTable": "No matching records found.",
-                "sLoadingRecords": "&nbsp;",
-            },
-            infoCallback: function (roles, start, end, max, total, pre) {
-                if (total > 0) {
-                    return "Showing " + start + " to " + end + " of " + total + " records";
+            /*scrollX: true,*/
+            ajax: {
+
+                // 1️⃣ Capture draw per table (SAFE)
+                data: function (d) {
+                    // `this` is the DataTables settings object
+                    this._lastDraw = d.draw;
+                    const reqLength = Number(d.length);
+                    const reqStart = Number(d.start);
+                    this._requestedPageIndex =
+                        Number.isFinite(reqLength) && reqLength > 0
+                        && Number.isFinite(reqStart) && reqStart >= 0
+                            ? Math.floor(reqStart / reqLength)
+                            : 0;
+                    return JSON.stringify(d);
+                },
+
+                // 2️⃣ Fix response BEFORE DT parses it
+                dataFilter: function (data) {
+
+                    let json = JSON.parse(data);
+
+                    const total = Number(json.totalElements ?? 0);
+                    const rawPageNumber = Number(json.pageNumber);
+                    const requestedPageIndex = Number(this._requestedPageIndex);
+
+                    // Normalize mixed page-number contracts:
+                    // - persistence now returns 0-based pageNumber
+                    // - legacy consumers may still emit 1-based
+                    let normalizedPageIndex =
+                        Number.isInteger(requestedPageIndex) && requestedPageIndex >= 0
+                            ? requestedPageIndex
+                            : 0;
+
+                    if (Number.isInteger(rawPageNumber)) {
+                        if (rawPageNumber === normalizedPageIndex + 1) {
+                            normalizedPageIndex = Math.max(0, rawPageNumber - 1);
+                        }
+                        else if (rawPageNumber >= 0) {
+                            normalizedPageIndex = rawPageNumber;
+                        }
+                    }
+
+                    // UI stays 1-based, technical index remains 0-based.
+                    json.pageIndex = normalizedPageIndex;
+                    json.pageNumber = normalizedPageIndex + 1;
+
+                    // Required DT fields
+                    json.recordsTotal = total;
+                    json.recordsFiltered = total;
+
+                    // 🔥 Echo back the CORRECT draw for THIS table
+                    json.draw = this._lastDraw;
+
+                    // Ensure data array
+                    if (!Array.isArray(json.data)) {
+                        json.data = [];
+                    }
+
+                    return JSON.stringify(json);
+                },
+
+                // 3️⃣ Extract rows only
+                dataSrc: function (json) {
+                    return json.data;
                 }
-                else {
+            },
+
+            infoCallback: function (settings, start, end, max, total) {
+
+                if (total === 0) {
                     return "Empty records";
                 }
+
+                const pageSize = Number(settings?._iDisplayLength || ROW_PER_PAGE);
+                const resolvedPageSize = Number.isFinite(pageSize) && pageSize > 0 ? pageSize : total;
+
+                let safeStart = start;
+                let safeEnd = end;
+
+                // Guard against out-of-range client page state, e.g. URL asks page=999.
+                if (safeStart > total) {
+                    safeStart = Math.floor((total - 1) / resolvedPageSize) * resolvedPageSize + 1;
+                    safeEnd = total;
+                }
+                else {
+                    safeStart = Math.max(1, safeStart);
+                    safeEnd = Math.min(total, Math.max(safeStart, safeEnd));
+                }
+
+                if (total !== max) {
+                    return "Showing " + safeStart + " to " + safeEnd +
+                        " of " + total + " records (filtered from " + max + ")";
+                }
+
+                return "Showing " + safeStart + " to " + safeEnd + " of " + total + " records";
+            },
+
+            language: {
+                sProcessing: "&nbsp;",
+                sZeroRecords: "No matching records found.",
+                sEmptyTable: "No matching records found.",
+                sLoadingRecords: "&nbsp;"
             }
         });
+
+        // Read initial page from URL once before each server-side table first draw.
+        $(document)
+            .off('preInit.dt.pageQuery')
+            .on('preInit.dt.pageQuery', function (e, settings) {
+                if (!settings?.oFeatures?.bServerSide) {
+                    return;
+                }
+
+                const pageNumber = getDataTablePageNumberFromUrl();
+                if (pageNumber <= 1) {
+                    return;
+                }
+
+                const pageSize = Number(settings._iDisplayLength || settings.oInit?.pageLength || ROW_PER_PAGE);
+                if (!Number.isFinite(pageSize) || pageSize <= 0) {
+                    return;
+                }
+
+                const displayStart = (pageNumber - 1) * pageSize;
+                settings._iDisplayStart = displayStart;
+                settings.iInitDisplayStart = displayStart;
+            });
+
+        // Keep URL query in sync with current DataTable page.
+        $(document)
+            .off('draw.dt.pageQuery')
+            .on('draw.dt.pageQuery', function (e, settings) {
+                if (!settings?.oFeatures?.bServerSide) {
+                    return;
+                }
+
+                const api = new $.fn.dataTable.Api(settings);
+                const pageInfo = api.page.info();
+                if (!pageInfo) {
+                    return;
+                }
+
+                // Auto-clamp invalid page (e.g. URL page beyond total pages).
+                if (pageInfo.recordsDisplay > 0 && pageInfo.length > 0) {
+                    const maxPageIndex = Math.max(0, Math.ceil(pageInfo.recordsDisplay / pageInfo.length) - 1);
+                    if (pageInfo.page > maxPageIndex) {
+                        api.page(maxPageIndex).draw('page');
+                        return;
+                    }
+                }
+
+                syncDataTablePageQueryParam(pageInfo.page + 1);
+            });
 
         $(window).resize(function () {
             if (this.resizeTO) {
@@ -163,58 +331,120 @@ function initJQueryDataTable() {
             $(".datatable_scrollArea").scroll();
         });
     }
+
+    // $('a[data-bs-toggle="tab"],a[data-toggle="pill"]').on('shown.bs.tab', function () {
+    //     $.fn.dataTable.tables({visible: true, api: true})
+    //         .columns.adjust()
+    //         .draw(false);
+    // });
 }
 
-function initSelectPickers() {
+function initSelectPickers(scope = null) {
 
-    $('.selectpicker').each(function () {
-        const $select = $(this);
-        if (!$select.data('bs.select')) {
-            $select.selectpicker();
-        }
-    });
+    let $selects;
 
-    // 🔑 Skip async selects here
-    applySelectPickerSelections(null, {skipAsync: true});
-}
-
-function applySelectPickerSelections(scope, options = {}) {
-
-    const skipAsync = options.skipAsync === true;
-
-    // 🔑 FIX: include the root itself if it is a selectpicker
-    const $selects = scope
-        ? $(scope).is('.selectpicker')
+    // ----------------------------------------
+    // 1️⃣ Determine targets
+    // ----------------------------------------
+    if (!scope) {
+        // Global init → ONLY selectpicker
+        $selects = $('select.selectpicker');
+    }
+    else {
+        // Manual init → selector OR element
+        $selects = $(scope).is('select')
             ? $(scope)
-            : $(scope).find('.selectpicker')
-        : $('.selectpicker');
+            : $(scope).filter('select').add($(scope).find('select'));
+    }
 
+    // ----------------------------------------
+    // 2️⃣ Init each select safely
+    // ----------------------------------------
     $selects.each(function () {
 
         const $select = $(this);
 
-        // Skip async selects only if options are NOT ready
-        if (
-            skipAsync &&
-            $select.data('async') &&
-            $select.find('option').length === 0
-        ) {
-            return;
-        }
+        // Prevent double init
+        if ($select.data('__selectpicker_inited__')) return;
 
-        const selected = $select.attr('data-selected');
-        if (!selected) return;
+        // Normalize
+        $select
+            .addClass('selectpicker')
+            .data('__selectpicker_inited__', true);
 
-        const values = selected
-            .replace(/[\[\]\s]/g, '')
-            .split(',')
-            .filter(v => v.length > 0)
-            .map(String); // ensure string values
+        // Init plugin
+        $select.selectpicker();
 
-        if (!values.length) return;
+        // ----------------------------------------
+        // 3️⃣ One-time selection resolver
+        // ----------------------------------------
+        const resolveSelection = () => {
 
-        $select.selectpicker('val', values);
-        $select.selectpicker('refresh');
+            if ($select.data('__selection_resolved__')) return;
+
+            // Async guard
+            if (
+                $select.data('async') &&
+                $select.find('option').length === 0
+            ) {
+                return;
+            }
+
+            // Native value wins
+            const currentVal = $select.val();
+            if (
+                currentVal !== null &&
+                currentVal !== '' &&
+                !(Array.isArray(currentVal) && currentVal.length === 0)
+            ) {
+                finalize();
+                return;
+            }
+
+            // Fallback → data-selected
+            const dataSelected = $select.attr('data-selected');
+            if (!dataSelected) {
+                finalize();
+                return;
+            }
+
+            const values = String(dataSelected)
+                .split(',')
+                .map(v => v.trim())
+                .filter(Boolean);
+
+            if (!values.length) {
+                finalize();
+                return;
+            }
+
+            finalize();
+
+            // Apply safely (escape recursion)
+            setTimeout(() => {
+                $select.selectpicker('val', values);
+                $select.selectpicker('refresh');
+                $select.trigger('change');
+            }, 0);
+        };
+
+        const finalize = () => {
+            $select
+                .data('__selection_resolved__', true)
+                // .removeAttr('data-selected')
+                .off(
+                    'loaded.bs.select rendered.bs.select refreshed.bs.select',
+                    resolveSelection
+                );
+        };
+
+        // ----------------------------------------
+        // 4️⃣ Listen once (init + async refresh)
+        // ----------------------------------------
+        $select.on(
+            'loaded.bs.select rendered.bs.select refreshed.bs.select',
+            resolveSelection
+        );
     });
 }
 
@@ -339,7 +569,7 @@ function bindRemoveButtonEvent(selector) {
         selector = ".remove";
     }
 
-    $(selector).on("click", function (e) {
+    $(document).off('click.bindRemove', selector).on('click.bindRemove', selector, function (e) {
         e.preventDefault();
         let url = $(this).attr("href");
         $("#modal-confirm-delete").modal({
@@ -348,7 +578,7 @@ function bindRemoveButtonEvent(selector) {
         });
         $("#btn-confirm-delete").off('click').on('click', function (e) {
             $("#modal-confirm-delete").modal("hide");
-            window.location.href = url;
+            post_to_url(url, {}, '_self', 'post');
         });
     });
 }
@@ -378,21 +608,23 @@ function loadValidationErrors() {
 
     $.each(errors, function (field, message) {
 
-        let elementId = field.replace(/\./g, '_');
-        let errorElem = $("#" + elementId);
+        // Select element by name attribute
+        let $element = $('[name="' + field + '"]');
 
-        if (!errorElem.length) {
+        if (!$element.length) {
             return;
         }
 
-        let container = errorElem;
+        let $container = $element;
 
-        if (errorElem.hasClass('selectpicker') || errorElem.hasClass('dropdown-select')) {
-            container = errorElem.closest('.bootstrap-select');
+        // Handle Bootstrap select / custom dropdowns
+        if ($element.hasClass('selectpicker') || $element.hasClass('dropdown-select')) {
+            $container = $element.closest('.bootstrap-select');
         }
 
-        container.addClass('is-invalid');
-        container.after(
+        $element.addClass('is-invalid');
+
+        $container.after(
             '<div class="invalid-feedback">' + message + '</div>'
         );
     });
@@ -485,15 +717,117 @@ function reloadCurrentPage() {
  * Get the context path (exclude "/").
  */
 function getContextPath() {
-    return window.location.pathname.substring(0, window.location.pathname.indexOf("/", 2));
+    const contextPathMeta = $("meta[name='_ctx']").attr("content");
+    if (contextPathMeta !== undefined && contextPathMeta !== null) {
+        const normalizedContextPath = String(contextPathMeta).trim();
+        if (normalizedContextPath === "" || normalizedContextPath === "/") {
+            return "";
+        }
+        return normalizedContextPath.replace(/\/+$/, "");
+    }
+    return "";
 }
 
 function getApiResourcePath() {
     return getContextPath() + "/api/web/";
 }
 
-function getStaticResourcePath() {
-    return $("#baseStaticRssDir").val();
+function sanitizeClientRequestToken(value) {
+    const token = String(value == null ? '' : value).trim().toLowerCase();
+    if (token === '') {
+        return 'na';
+    }
+    return token.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'na';
+}
+
+function buildTimeBucketedIdempotencyKey(prefix, keyParts = [], windowSeconds = 120) {
+    const normalizedPrefix = sanitizeClientRequestToken(prefix);
+    const bucketSeconds = Number.isInteger(windowSeconds) && windowSeconds > 0 ? windowSeconds : 120;
+    const bucket = Math.floor(Date.now() / (bucketSeconds * 1000));
+    const normalizedParts = Array.isArray(keyParts)
+        ? keyParts.map(part => sanitizeClientRequestToken(part))
+        : [];
+    return [normalizedPrefix].concat(normalizedParts).concat(String(bucket)).join(':');
+}
+
+function resolveApiErrorTitle(xhr, fallbackTitle = 'Error') {
+    if (handleUnauthorizedApiResponse(xhr, false)) {
+        return "Session Expired";
+    }
+    if (xhr && xhr.responseJSON) {
+        if (isNotEmpty(xhr.responseJSON.title)) {
+            return xhr.responseJSON.title;
+        }
+        if (isNotEmpty(xhr.responseJSON.error)) {
+            return xhr.responseJSON.error;
+        }
+    }
+    return fallbackTitle;
+}
+
+function resolveApiErrorMessage(xhr, fallbackMessage = 'Something went wrong with requesting data to server.') {
+    if (handleUnauthorizedApiResponse(xhr, false)) {
+        return "Your session has expired. Redirecting to sign in.";
+    }
+    if (xhr && xhr.responseJSON) {
+        if (isNotEmpty(xhr.responseJSON.message)) {
+            return xhr.responseJSON.message;
+        }
+        if (isNotEmpty(xhr.responseJSON.detail)) {
+            return xhr.responseJSON.detail;
+        }
+    }
+    if (xhr && isNotEmpty(xhr.responseText)) {
+        return xhr.responseText;
+    }
+    return fallbackMessage;
+}
+
+function handleUnauthorizedApiResponse(xhr, notifyUser = false) {
+    if (!isUnauthorizedApiResponse(xhr)) {
+        return false;
+    }
+
+    if (notifyUser) {
+        notify("Session Expired", "Your session has expired. Redirecting to sign in.", "warning");
+    }
+
+    redirectToLoginIfNeeded();
+    return true;
+}
+
+function applyDefaultAjaxHeaders(xhr, settings) {
+    const csrfToken = $("meta[name='_csrf']").attr("content");
+    const csrfHeader = $("meta[name='_csrf_header']").attr("content");
+    const requestHeaders = settings && settings.headers ? settings.headers : {};
+    const hasExplicitAcceptHeader = Object.keys(requestHeaders).some(function (name) {
+        return String(name || "").toLowerCase() === "accept";
+    });
+
+    if (csrfToken && csrfHeader) {
+        xhr.setRequestHeader(csrfHeader, csrfToken);
+    }
+
+    xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+    if (!hasExplicitAcceptHeader) {
+        xhr.setRequestHeader("Accept", "application/json");
+    }
+}
+
+function isUnauthorizedApiResponse(xhr) {
+    const statusCode = Number(xhr && xhr.status ? xhr.status : 0);
+    return statusCode === 401;
+}
+
+function redirectToLoginIfNeeded() {
+    if (window.PROJECTX_AUTH_REDIRECT_IN_PROGRESS === true) {
+        return;
+    }
+
+    window.PROJECTX_AUTH_REDIRECT_IN_PROGRESS = true;
+    window.setTimeout(function () {
+        window.location.href = getContextPath() + "/web/pub/login";
+    }, 250);
 }
 
 function getPageMode() {
@@ -501,21 +835,59 @@ function getPageMode() {
 }
 
 function hasAuthority(actionName) {
-    return window.APP_PERMISSIONS.includes(actionName);
+    const permissions = Array.isArray(window.APP_PERMISSIONS) ? window.APP_PERMISSIONS : [];
+    if (permissions.length === 0 || !isNotEmpty(actionName)) {
+        return false;
+    }
+
+    const normalizedAction = String(actionName).trim();
+    if (normalizedAction.length === 0) {
+        return false;
+    }
+
+    // Super-admin and broad grants from backend.
+    if (permissions.includes("*")) {
+        return true;
+    }
+
+    if (permissions.includes(normalizedAction)) {
+        return true;
+    }
+
+    // Support wildcard-style permission tokens, e.g. "topup.*".
+    return permissions.some(permission => {
+        if (!isNotEmpty(permission) || permission === "*") {
+            return false;
+        }
+        const token = String(permission).trim();
+        if (!token.endsWith(".*")) {
+            return false;
+        }
+        const prefix = token.slice(0, -1);
+        return normalizedAction.startsWith(prefix);
+    });
 }
 
 function hasAnyAuthority(...actions) {
-    return actions.some(a => window.APP_PERMISSIONS.includes(a));
+    return actions.some(hasAuthority);
 }
 
 function hasAllAuthorities(...actions) {
-    return actions.every(a => window.APP_PERMISSIONS.includes(a));
+    return actions.every(hasAuthority);
 }
 
 function convertJSONValueToCommaSeparateString(acceptanceElemSelector) {
     try {
         let json = JSON.parse($(acceptanceElemSelector).val());
         $(acceptanceElemSelector).val(json);
+    }
+    catch (exception) {
+    }
+}
+
+function getArrayValue(acceptanceElemSelector) {
+    try {
+        return JSON.parse($(acceptanceElemSelector).val());
     }
     catch (exception) {
     }
@@ -531,11 +903,20 @@ function removeElementByIndex(arr, x) {
     return newArr;
 }
 
-function formatNumber(x) {
+function formatNumber(x, maximumFractionDigits = 2) {
     if (x !== null && x !== undefined) {
-        return x.toLocaleString(undefined, {maximumFractionDigits: 2});
+        return x.toLocaleString(undefined, {maximumFractionDigits});
     }
     return "-";
+}
+
+function escapeHtml(value) {
+    return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 function readCookie(name) {
@@ -561,6 +942,36 @@ function isNotEmpty(obj) {
         return true;
     }
     return false;
+}
+
+function getDataTablePageNumberFromUrl() {
+    const pageParam = new URLSearchParams(window.location.search).get('page');
+    const pageNumber = Number(pageParam);
+
+    if (!Number.isInteger(pageNumber) || pageNumber < 1) {
+        return 1;
+    }
+    return pageNumber;
+}
+
+function syncDataTablePageQueryParam(pageNumber) {
+    if (!window.history || !window.history.replaceState) {
+        return;
+    }
+
+    const parsedPageNumber = Number(pageNumber);
+    if (!Number.isInteger(parsedPageNumber) || parsedPageNumber < 1) {
+        return;
+    }
+
+    const url = new URL(window.location.href);
+    url.searchParams.set('page', String(parsedPageNumber));
+
+    const nextUrl = url.pathname + url.search + url.hash;
+    const currentUrl = window.location.pathname + window.location.search + window.location.hash;
+    if (nextUrl !== currentUrl) {
+        window.history.replaceState({}, '', nextUrl);
+    }
 }
 
 function isValidNRC(regionCode, townshipCode, nrcType, nrcNo) {
@@ -632,27 +1043,6 @@ String.prototype.replaceSome = function () {
     return r;
 };
 
-/**
- * Format the NRC including passport number.
- * @return The formatted NRC or the Passport number.
- */
-function formatNRC(data) {
-    return data.passportNo ? data.passportNo : data.nrcRegionCode + "/" + data.nrcTownshipCode + "(" + data.nrcType + ")" + data.nrcNo;
-}
-
-function setOptionsInSelect(targetElems, options, selectedValue) {
-    $(targetElems).each(function (index, elem) {
-        let oldSelectValue = $(elem).val();
-        $(elem).html(options).selectpicker('refresh');
-        // အကယ်၍ အရင်ကတစ်ခုခုရွေးထားပြီးသားရှိနေရင် dropdown item list ကို update လုပ်ပြီး အရင်ရွေးထားတဲ့ဟာကို select ပြန်လုပ်ပေးထားမယ်။
-        if (isNotEmpty(oldSelectValue)) {
-            $(elem).selectpicker('val', oldSelectValue);
-        }
-    });
-    // အသစ်ထည့်လိုက်တဲ့ item ကို select လုပ်ပေးမယ်။
-    if (selectedValue) $(targetElems).selectpicker('val', selectedValue);
-}
-
 const generateUUID = () => {
     let
         d = new Date().getTime(),
@@ -670,6 +1060,54 @@ const generateUUID = () => {
         return (c === 'x' ? r : (r & 0x7 | 0x8)).toString(16);
     });
 };
+
+/* =========================================================
+ *  Bootstrap-select SAFE helpers
+ * ========================================================= */
+
+function applySelectPickerValue($select, value) {
+    if (!value) return;
+
+    setTimeout(() => {
+
+        // Remove bootstrap placeholder option if exists
+        $select.find('option.bs-title-option').remove();
+
+        // Set value via bootstrap-select ONLY
+        $select.selectpicker('val', value);
+
+        // Force UI sync
+        $select.selectpicker('refresh');
+
+        // Notify listeners correctly
+        $select.trigger('changed.bs.select');
+
+    }, 0);
+}
+
+function resetSelectPicker($select, disabled = true) {
+    $select
+        .selectpicker('val', '')
+        .prop('disabled', disabled)
+        .selectpicker('refresh');
+}
+
+function disableSelectPicker($select) {
+    $select.prop('disabled', true).selectpicker('refresh');
+}
+
+function enableSelectPicker($select) {
+    $select.prop('disabled', false).selectpicker('refresh');
+}
+
+function buildOptions(list, builderFn, includeEmpty = true) {
+    const options = [];
+    if (includeEmpty) {
+        options.push('<option value="">Not selected</option>');
+    }
+    $.each(list, (_, item) => options.push(builderFn(item)));
+    return options;
+}
 
 /* ----------------------------------------------------------------------------
     CSS: create CSS-Defintions dynamically
@@ -691,4 +1129,29 @@ function CSS(s) {
             rule = ""
         }
     })
+}
+
+function isCommonApiResponseSuccess(response) {
+    if (!response) {
+        return false;
+    }
+
+    if (response.statusCode !== undefined && response.statusCode !== null) {
+        return Number(response.statusCode) >= 200 && Number(response.statusCode) < 300;
+    }
+
+    if (response.status !== undefined && response.status !== null) {
+        const status = String(response.status).toUpperCase();
+        return status === "OK" || status === "SUCCESS" || status === "VALIDATED";
+    }
+
+    return true;
+}
+
+function notifyCommonApiResponse(response, defaultSuccessMessage = "Request finished.", defaultErrorMessage = "Request failed.") {
+    const ok = isCommonApiResponseSuccess(response);
+    const title = response?.title || (ok ? "Success !" : "Error !");
+    const message = response?.message || (ok ? defaultSuccessMessage : defaultErrorMessage);
+    notify(title, message, ok ? "success" : "error");
+    return ok;
 }

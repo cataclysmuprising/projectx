@@ -3,7 +3,8 @@
 		<b>Version</b>
 		<span class="text-muted text-xs" th:text="${projectVersion} + ' [build-'+${buildNumber}+']'"></span>
 	</div>
-	<strong>Copyright &copy; 2020-2026
-		<a href="/projectx/sec/dashboard" target="blank">ProjectX</a>
-			.</strong> All rights reserved.
+	<strong> Copyright &copy; 2020-
+		<span th:text="${T(java.time.Year).now().value}">2026</span>
+		<a href="/sec/dashboard" th:href="@{/sec/dashboard}" th:text="${appShortName}">ProjectX</a>
+			 . </strong> All rights reserved.
 </footer>

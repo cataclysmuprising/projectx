@@ -1,0 +1,71 @@
+.pretty {
+    margin-right: 0 !important;
+}
+
+.role-route-note {
+    background: #f8fbff;
+    border-color: #d4e3f2 !important;
+    color: #35506b;
+}
+
+.role-route-column {
+    min-width: 320px;
+}
+
+.role-access-column {
+    min-width: 120px;
+}
+
+.role-description-column {
+    min-width: 220px;
+    white-space: normal;
+}
+
+.role-route-coverage {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.role-route-coverage__primary {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 0.78rem;
+    color: #1f3650;
+    line-height: 1.35;
+    word-break: break-all;
+}
+
+.role-route-coverage__empty {
+    font-size: 0.82rem;
+    color: #6c757d;
+}
+
+.role-route-coverage__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.role-route-badge {
+    font-weight: 600;
+}
+
+.role-access-badge {
+    min-width: 82px;
+    font-weight: 700;
+}
+
+.role-access-badge--read {
+    background: #e8f3ff;
+    color: #24527a;
+}
+
+.role-access-badge--write {
+    background: #e8fff4;
+    color: #18794e;
+}
+
+.role-access-badge--sensitive {
+    background: #fff2e5;
+    color: #9a4d00;
+}

@@ -1,0 +1,449 @@
+:root {
+    --act-border: #e9ecef;
+    --act-card-shadow: 0 8px 24px rgba(31, 45, 61, 0.06);
+    --act-panel-bg: #0f1724;
+    --act-panel-text: #d6e6ff;
+}
+
+#actuator-endpoint-list .list-group-item {
+    border-left: 3px solid transparent;
+    border-right: 0;
+    border-top: 0;
+    border-bottom: 1px solid #f1f3f5;
+    padding: 0.95rem 1rem;
+    transition: background-color 0.2s ease, border-left-color 0.2s ease;
+}
+
+#actuator-endpoint-list {
+    max-height: calc(100vh - 260px);
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+#actuator-endpoint-list .list-group-item:last-child {
+    border-bottom: 0;
+}
+
+#actuator-endpoint-list .list-group-item:hover {
+    background-color: #f8f9fa;
+}
+
+#actuator-endpoint-list .list-group-item.active {
+    background-color: #f3f9ff;
+    border-left-color: #17a2b8;
+    color: #1f2d3d;
+}
+
+.endpoint-title {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.2rem;
+}
+
+.endpoint-path {
+    color: #1f2d3d;
+    font-family: "Courier New", monospace;
+    font-size: 0.86rem;
+    font-weight: 700;
+}
+
+.endpoint-description {
+    color: #6c757d;
+    font-size: 0.78rem;
+}
+
+#actuator-snapshot-card {
+    border-color: var(--act-border);
+    box-shadow: var(--act-card-shadow);
+}
+
+#redis-inspector-card {
+    border-color: var(--act-border);
+    box-shadow: var(--act-card-shadow);
+}
+
+.snapshot-item {
+    background: linear-gradient(145deg, #f7fbff 0%, #ffffff 100%);
+    border: 1px solid #edf2f7;
+    border-radius: 0.45rem;
+    margin-bottom: 0.75rem;
+    min-height: 164px;
+    padding: 0.85rem 0.9rem;
+}
+
+.snapshot-header {
+    align-items: center;
+    display: flex;
+    gap: 0.45rem;
+    justify-content: space-between;
+}
+
+.snapshot-label {
+    color: #6c757d;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.snapshot-state {
+    font-size: 0.67rem;
+    letter-spacing: 0.01em;
+}
+
+.snapshot-state.snapshot-state-healthy {
+    background-color: #28a745;
+    color: #fff;
+}
+
+.snapshot-state.snapshot-state-warn {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.snapshot-state.snapshot-state-critical {
+    background-color: #dc3545;
+    color: #fff;
+}
+
+.snapshot-state.snapshot-state-idle,
+.snapshot-state.snapshot-state-unknown {
+    background-color: #6c757d;
+    color: #fff;
+}
+
+.snapshot-value {
+    color: #1f2d3d;
+    font-size: 1.42rem;
+    font-weight: 700;
+    line-height: 1.2;
+    margin-top: 0.45rem;
+}
+
+.snapshot-subtext {
+    color: #6c757d;
+    font-size: 0.74rem;
+    margin-top: 0.35rem;
+}
+
+.snapshot-threshold {
+    color: #8896a7;
+    font-size: 0.71rem;
+    margin-top: 0.25rem;
+}
+
+.snapshot-trend {
+    height: 32px;
+    margin-top: 0.32rem;
+}
+
+.snapshot-actions {
+    margin-top: 0.2rem;
+}
+
+.snapshot-actions .btn-link {
+    font-size: 0.72rem;
+}
+
+.snapshot-footer-row {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: space-between;
+}
+
+.redis-snapshot-item {
+    min-height: 118px;
+}
+
+.redis-trend {
+    height: 28px;
+}
+
+.redis-meta {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.redis-key-table-wrap {
+    border: 1px solid #edf2f7;
+    border-radius: 0.35rem;
+    max-height: 410px;
+    overflow-y: auto;
+}
+
+#redis-inspector-card .bootstrap-select,
+#redis-inspector-card .bootstrap-select > .dropdown-toggle {
+    width: 100% !important;
+}
+
+#redis-key-table thead th {
+    background: #f8fafc;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+#redis-key-table td,
+#redis-key-table th {
+    font-size: 0.79rem;
+    vertical-align: middle;
+}
+
+#redis-key-table code {
+    color: #274c77;
+    font-size: 0.75rem;
+}
+
+#redis-key-table .redis-select-col {
+    text-align: center;
+}
+
+#redis-key-table .redis-select-col .pretty {
+    margin: 0;
+}
+
+#redis-key-table .redis-select-col .pretty .state label {
+    margin-bottom: 0;
+}
+
+#redis-key-table .redis-key-cell code {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    word-break: break-word;
+}
+
+#actuator-viewer-card,
+.card.card-outline.card-primary {
+    border-color: var(--act-border);
+    box-shadow: var(--act-card-shadow);
+}
+
+.viewer-header-row {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    justify-content: space-between;
+}
+
+.viewer-endpoint-label {
+    color: #6c757d;
+    font-family: "Courier New", monospace;
+    font-size: 0.81rem;
+    margin-top: 0.45rem;
+}
+
+.viewer-meta {
+    align-items: center;
+    background: linear-gradient(90deg, #f8f9fa 0%, #ffffff 100%);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1rem;
+}
+
+.viewer-meta-item {
+    color: #6c757d;
+    font-size: 0.79rem;
+}
+
+.viewer-insight {
+    align-items: center;
+    background: #f4f8fd;
+    border-bottom: 1px solid #e9edf3;
+    color: #4e5d6c;
+    display: flex;
+    flex-wrap: wrap;
+    font-size: 0.78rem;
+    gap: 0.5rem;
+    padding: 0.65rem 0.95rem;
+}
+
+.viewer-insight .badge {
+    font-size: 0.72rem;
+    padding: 0.28rem 0.45rem;
+}
+
+.metrics-catalog {
+    border-bottom: 1px solid #edf2f7;
+}
+
+.metrics-catalog-header {
+    background: #f9fbfe;
+    border-bottom: 1px solid #edf2f7;
+    padding: 0.75rem;
+}
+
+.metrics-catalog .table td,
+.metrics-catalog .table th {
+    font-size: 0.78rem;
+    vertical-align: middle;
+}
+
+.metric-inspector {
+    border-bottom: 1px solid #edf2f7;
+}
+
+.metric-inspector-header {
+    background: linear-gradient(90deg, #f7fbff 0%, #ffffff 100%);
+    border-bottom: 1px solid #edf2f7;
+    padding: 0.75rem 0.95rem;
+}
+
+.metric-name {
+    color: #1f2d3d;
+    font-family: "Courier New", monospace;
+    font-size: 0.86rem;
+    font-weight: 700;
+}
+
+.metric-base-unit {
+    color: #6c757d;
+    font-size: 0.74rem;
+    margin-top: 0.2rem;
+}
+
+.metric-inspector table td,
+.metric-inspector table th {
+    font-size: 0.78rem;
+}
+
+.metric-tags {
+    background: #fafcff;
+    border-top: 1px solid #edf2f7;
+    color: #59667a;
+    font-size: 0.76rem;
+    padding: 0.65rem 0.9rem;
+}
+
+.metric-shortcuts {
+    background: #f8fbff;
+    border-top: 1px solid #edf2f7;
+    padding: 0.55rem 0.9rem;
+}
+
+.metric-shortcuts .btn {
+    font-size: 0.72rem;
+    margin-right: 0.35rem;
+    margin-top: 0.25rem;
+}
+
+.metric-tag-chip {
+    background: #edf4ff;
+    border: 1px solid #d7e7ff;
+    border-radius: 999px;
+    color: #305a8d;
+    display: inline-block;
+    font-size: 0.72rem;
+    margin: 0.15rem 0.25rem 0.15rem 0;
+    padding: 0.1rem 0.45rem;
+}
+
+.actuator-json-viewer,
+.actuator-response {
+    background: var(--act-panel-bg);
+    color: var(--act-panel-text);
+    font-family: "Courier New", monospace;
+    font-size: 12.5px;
+    line-height: 1.5;
+    margin: 0;
+    max-height: 68vh;
+    min-height: 430px;
+    overflow: auto;
+    padding: 1rem;
+    white-space: pre;
+}
+
+.actuator-json-viewer .json-document {
+    color: #cfe9ff;
+}
+
+.actuator-json-viewer .json-key {
+    color: #8dc1ff;
+}
+
+.actuator-json-viewer .json-string {
+    color: #a8f6c4;
+}
+
+.actuator-json-viewer .json-literal {
+    color: #ffe38f;
+}
+
+.actuator-json-viewer a.json-toggle {
+    color: #6ec4ff;
+}
+
+.actuator-response code {
+    display: block;
+    min-height: inherit;
+    white-space: inherit;
+}
+
+.actuator-response code.response-text {
+    color: #d4e0f5;
+}
+
+.actuator-response code.response-json {
+    color: #cfe9ff;
+}
+
+.actuator-response code.hljs {
+    background: transparent !important;
+    padding: 0;
+}
+
+#actuator-viewer-card.is-loading .actuator-response,
+#actuator-viewer-card.is-loading .actuator-json-viewer {
+    opacity: 0.86;
+}
+
+.sparkline-svg {
+    display: block;
+    height: 100%;
+    width: 100%;
+}
+
+.sparkline-area {
+    fill: rgba(23, 162, 184, 0.16);
+    stroke: none;
+}
+
+.sparkline-line {
+    fill: none;
+    stroke: #17a2b8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2;
+}
+
+.sparkline-empty {
+    color: #adb5bd;
+    font-size: 0.69rem;
+    line-height: 32px;
+}
+
+@media (max-width: 767.98px) {
+    #actuator-endpoint-list {
+        max-height: 52vh;
+    }
+
+    .actuator-json-viewer,
+    .actuator-response {
+        max-height: 58vh;
+        min-height: 320px;
+    }
+
+    .viewer-meta-item {
+        display: block;
+        width: 100%;
+    }
+
+    .snapshot-item {
+        min-height: 148px;
+    }
+}

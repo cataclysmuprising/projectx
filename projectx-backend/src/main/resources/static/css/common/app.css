@@ -58,8 +58,14 @@ body {
  1.2 Misc
  *******************/
 
-div:has(> table.dataTable) {
-    min-height: 100px;
+/*[class*="sidebar-dark-"] .nav-sidebar > .nav-item > .nav-treeview {
+    background: rgba(0, 0, 0, 0.15);
+    padding: .4rem;
+    margin-bottom: .2rem;
+}*/
+
+.text-sm, .text-sm .form-control, .text-sm table, .text-sm .dropdown-menu {
+    font-size: .75rem !important;
 }
 
 .form-control-sm {
@@ -84,10 +90,45 @@ input {
     font-size: 1rem !important;
 }
 
-.dataTables_wrapper .col-sm-12 {
+.wrap-white-space {
+    white-space: wrap !important;
+}
+
+.dataTables_wrapper .col-sm-12, .dt-container .dt-layout-table {
+    display: block;
+    overflow-x: auto;
+    min-height: 150px;
+}
+
+/*.dataTables_wrapper .col-sm-12 {
     display: block;
     width: 100%;
     overflow-x: auto;
+}
+
+.dt-scroll-body {
+    min-height: 150px;
+}
+
+.dt-layout-full.col-12, .dt-layout-full.col-md, .dt-layout-end.col-md-auto {
+    padding-right: 0 !important;
+}
+
+.dt-scroll-body .row {
+    margin-right: 0 !important;
+    margin-left: 0 !important;
+}
+
+div.dt-container div.dt-scroll-body table {
+    border-bottom: 1px solid #dee2e6 !important;
+}*/
+.dt-processing {
+    box-shadow: none !important;
+    background: transparent;
+}
+
+table.dataTable.table.table-hover > tbody > tr:hover > * {
+    box-shadow: inset 0 0 0 9999px rgba(134, 134, 134, 0.08) !important;
 }
 
 /* If using icomoon icons*/
@@ -122,10 +163,6 @@ input {
 .text-sm .form-control {
     border-radius: 0;
     line-height: 1.5;
-}
-
-.text-sm table {
-    font-size: .65rem;
 }
 
 .text-sm table td .dropdown-menu.show {
@@ -417,13 +454,13 @@ table.dataTable.selectable tbody td:first-child, table.dataTable.selectable thea
 table.dataTable.selectable thead td:first-child {
     width: 30px;
     min-width: 30px;
-    max-width: 30px;
     text-align: center;
 }
 
-table.dataTable.selectable tr {
+table.dataTable.selectable.row-click-selectable tbody tr {
     cursor: pointer;
 }
+
 
 table.dataTable.selectable .pretty {
     margin-right: 0;
@@ -432,21 +469,29 @@ table.dataTable.selectable .pretty {
 .itemCountWrapper {
     opacity: 0;
     position: fixed;
-    top: 10px !important;
+    top: 5px !important;
     width: 100%;
     z-index: 999999999;
     left: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
-.itemCountWrapper a {
-    padding: 0.575rem;
-    background-color: #c6c6c6;
+.itemCountWrapper .selectedLabel {
+    padding: 0.32rem 1rem;
     border: 1px solid #f4f4f4;
     font-size: 0.875rem;
+    color: #fff;
 }
 
 .itemCountWrapper .count {
-    color: #dd4b39;
+    color: #ff0000;
+    font-weight: bold;
+}
+
+.itemCountWrapper .btn {
+    padding: .35rem .75rem !important;
 }
 
 
@@ -470,10 +515,10 @@ tbody {
 }
 
 .table thead th {
-    border-top-width: 0;
-    border-bottom: none;
+    border-bottom: 1px solid #e3e3e3;
     background-color: #f9f9f9;
 }
+
 
 /**********************
  4.2 Bootstrap Select
@@ -553,8 +598,25 @@ tbody {
     cursor: pointer;
 }
 
+/**************************
+ 4.4 Pretty CheckBox style
+ **************************/
+.text-sm .pretty .state label:after,
+.text-sm .pretty .state label:before {
+    width: calc(1.23em + 1px) !important;
+    height: calc(1.23em + 1px) !important;
+}
+
+.text-sm .pretty.p-switch .state::before {
+    top: calc((0% - (100% - 1em)) - 5.5%) !important;
+}
+
+.text-sm .pretty.p-switch.p-fill input:checked ~ .state label::after {
+    left: .9em;
+}
+
 /******************************
- 4.4 Custom Radio Top placement
+ 4.5 Custom Radio Top placement
  ******************************/
 
 .custom-control-label::before {

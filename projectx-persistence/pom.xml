@@ -4,18 +4,18 @@
 		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
-		<groupId>com.tamantaw</groupId>
+		<groupId>com.github</groupId>
 		<artifactId>projectx</artifactId>
 		<version>1.0.0-SNAPSHOT</version>
 		<relativePath>../pom.xml</relativePath>
 	</parent>
 
 	<artifactId>projectx-persistence</artifactId>
-	<version>1.0.0-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
 	<properties>
-		<querydsl.version>5.1.0</querydsl.version>
+		<querydsl.group-id>io.github.openfeign.querydsl</querydsl.group-id>
+		<querydsl.version>5.6.1</querydsl.version>
 		<org.mapstruct.version>1.6.3</org.mapstruct.version>
 		<apache.poi.version>5.5.1</apache.poi.version>
 		<lombok-mapstruct-binding.version>0.2.0</lombok-mapstruct-binding.version>
@@ -28,7 +28,15 @@
 			<artifactId>spring-boot-starter-data-jpa</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.querydsl</groupId>
+			<groupId>org.hibernate.orm</groupId>
+			<artifactId>hibernate-micrometer</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>io.micrometer</groupId>
+			<artifactId>micrometer-core</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>${querydsl.group-id}</groupId>
 			<artifactId>querydsl-jpa</artifactId>
 			<classifier>jakarta</classifier>
 			<version>${querydsl.version}</version>
@@ -40,14 +48,14 @@
 			<scope>runtime</scope>
 		</dependency>
 		<!-- Flyway Migration -->
-		<!--		<dependency>
-					<groupId>org.flywaydb</groupId>
-					<artifactId>flyway-core</artifactId>
-				</dependency>
-				<dependency>
-					<groupId>org.flywaydb</groupId>
-					<artifactId>flyway-database-postgresql</artifactId>
-				</dependency>-->
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-core</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-database-postgresql</artifactId>
+		</dependency>
 		<!-- mapstruct Object Mapper -->
 		<dependency>
 			<groupId>org.mapstruct</groupId>
@@ -65,10 +73,23 @@
 			<artifactId>poi-ooxml</artifactId>
 			<version>${apache.poi.version}</version>
 		</dependency>
-		<!-- Redis L2 cache -->
+		<!-- Integration testing -->
 		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-data-redis</artifactId>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>testcontainers</artifactId>
+			<version>${testcontainers.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>postgresql</artifactId>
+			<version>${testcontainers.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.awaitility</groupId>
+			<artifactId>awaitility</artifactId>
+			<scope>test</scope>
 		</dependency>
 	</dependencies>
 
@@ -81,35 +102,60 @@
 						<directory>src/main/resources</directory>
 						<excludes>
 							<exclude>migration/**</exclude>
+							<exclude>others/**</exclude>
 							<exclude>persistence-dev.yml</exclude>
 						</excludes>
 					</resource>
 				</resources>
 			</build>
 		</profile>
+		<profile>
+			<id>_default-test-suite</id>
+			<activation>
+				<property>
+					<name>!test</name>
+				</property>
+			</activation>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-surefire-plugin</artifactId>
+						<configuration>
+							<groups>fetch,insert,update,delete</groups>
+							<suiteXmlFiles>
+								<suiteXmlFile>${basedir}/src/test/resources/test_suits.xml</suiteXmlFile>
+							</suiteXmlFiles>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
 	</profiles>
 
 	<build>
 		<plugins>
-
 			<!-- TestNG TestSuit Config -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-surefire-plugin</artifactId>
+				<version>${maven.surefire.version}</version>
 				<configuration>
-					<argLine>
-						-javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar
-					</argLine>
-					<reportsDirectory>D:\test-output</reportsDirectory>
-					<groups>fetch_test,insert_test,update_test,delete_test</groups>
+					<failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
+					<reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
+					<testNGArtifactName>org.testng:testng</testNGArtifactName>
 					<properties>
 						<property>
 							<name>surefire.testng.verbose</name>
 							<value>2</value>
 						</property>
 						<property>
+							<name>usedefaultlisteners</name>
+							<value>false</value>
+						</property>
+						<property>
 							<name>parallel</name>
-							<value>methods</value>
+							<value>none</value>
 						</property>
 						<property>
 							<name>dataproviderthreadcount</name>
@@ -117,9 +163,77 @@
 						</property>
 					</properties>
 					<workingDirectory>${basedir}/target/surefire-reports/html/</workingDirectory>
-					<suiteXmlFiles>
-						<suiteXmlFile>${basedir}/src/test/resources/test_suits.xml</suiteXmlFile>
-					</suiteXmlFiles>
+				</configuration>
+				<dependencies>
+					<dependency>
+						<groupId>org.apache.maven.surefire</groupId>
+						<artifactId>surefire-testng</artifactId>
+						<version>${maven.surefire.version}</version>
+					</dependency>
+				</dependencies>
+			</plugin>
+
+			<!--
+			====================================================================
+			 Flyway Database Migration (ON-DEMAND ONLY)
+			====================================================================
+
+			 This Flyway Maven plugin is intentionally NOT bound to any
+			 Maven lifecycle phase.
+
+			 Purpose:
+			   - Run database migrations manually when needed
+			   - Allow full schema reset (clean + migrate) in DEV / TEST
+			   - Prevent accidental schema changes on application startup
+
+			 How to run (from project root):
+			   mvn -pl projectx-persistence flyway:clean flyway:migrate
+
+			 How to run (from module directory):
+			   cd projectx-persistence
+			   mvn flyway:clean flyway:migrate
+
+			 Common commands:
+			   mvn flyway:clean flyway:migrate     -> DROP schema and run all sql files as fresh
+			   mvn flyway:migrate     -> Apply pending migrations
+			   mvn flyway:clean       -> DROP schema (DANGEROUS)
+			   mvn flyway:info        -> Show migration status
+			   mvn flyway:validate    -> Validate migration checksums & naming
+
+			 IMPORTANT:
+			   - NEVER run flyway:clean against production database
+			   - Production should use flyway:migrate only
+			   - Migration files must follow naming:
+				   V<version>__<description>.sql
+
+			 Migration locations:
+			   - src/main/resources/migration
+			   - src/test/resources/migration
+
+			====================================================================
+			-->
+			<plugin>
+				<groupId>org.flywaydb</groupId>
+				<artifactId>flyway-maven-plugin</artifactId>
+				<version>11.20.0</version>
+				<configuration>
+					<!-- FIXED typo: jdbc -->
+					<url>jdbc:postgresql://localhost:5432/projectx?currentSchema=projectx</url>
+					<user>postgres</user>
+					<password>postgres</password>
+
+					<!-- Allow clean -->
+					<cleanDisabled>false</cleanDisabled>
+
+					<!-- Migration SQL path -->
+					<locations>
+						<location>filesystem:src/main/resources/migration</location>
+						<location>filesystem:src/test/resources/migration</location>
+					</locations>
+
+					<!-- Optional but good -->
+					<baselineOnMigrate>true</baselineOnMigrate>
+					<validateOnMigrate>true</validateOnMigrate>
 				</configuration>
 			</plugin>
 
@@ -127,8 +241,23 @@
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
 				<version>${maven.compiler.version}</version>
+				<executions>
+					<execution>
+						<id>default-testCompile</id>
+						<phase>test-compile</phase>
+						<goals>
+							<goal>testCompile</goal>
+						</goals>
+					</execution>
+				</executions>
 				<configuration>
+					<source>${java.version}</source>
+					<target>${java.version}</target>
 					<release>${java.version}</release>
+
+					<compilerArgs>
+						<arg>-parameters</arg>
+					</compilerArgs>
 
 					<annotationProcessorPaths>
 
@@ -141,7 +270,7 @@
 
 						<!-- QueryDSL -->
 						<path>
-							<groupId>com.querydsl</groupId>
+							<groupId>${querydsl.group-id}</groupId>
 							<artifactId>querydsl-apt</artifactId>
 							<version>${querydsl.version}</version>
 							<classifier>jakarta</classifier>
@@ -158,7 +287,6 @@
 						<path>
 							<groupId>org.projectlombok</groupId>
 							<artifactId>lombok</artifactId>
-							<version>${lombok.version}</version>
 						</path>
 
 						<path>

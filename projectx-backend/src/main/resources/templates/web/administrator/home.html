@@ -2,18 +2,18 @@
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <!-- Page Styles -->
 <div th:fragment="styles" th:remove="tag">
-	<link rel="stylesheet" th:href="@{'/web/static/css/common/bootstrap-select.min.css?v='+${buildNumber}}">
-	<link rel="stylesheet" th:href="@{'/web/static/css/common/datatables.min.css?v='+${buildNumber}}">
-	<link rel="stylesheet" th:href="@{'/web/static/css/app/administrator/home'+ ${isProduction == true ? '.min.css' : '.css'}+'?v='+${buildNumber}}">
+	<link rel="stylesheet" th:href="@{'/web/static/css/common/bootstrap-select.min.css'}">
+	<link rel="stylesheet" th:href="@{'/web/static/css/common/datatables.min.css'}">
+	<link rel="stylesheet" th:href="@{'/web/static/css/app/administrator/administrator-home'+ ${isProduction ? '.min.css' : '.css'}}">
 </div>
 <!-- /Page Styles -->
 
 <!-- Page Scripts -->
 <div th:fragment="scripts" th:remove="tag">
-	<script th:src="@{'/web/static/js/common/bootstrap-select.min.js?v='+${buildNumber}}"></script>
-	<script th:src="@{'/web/static/js/common/datatables.min.js?v='+${buildNumber}}"></script>
-	<script th:src="@{'/web/static/js/common/datatables-util'+ ${isProduction == true ? '.min.js' : '.js'}+'?v='+${buildNumber}}"></script>
-	<script th:src="@{'/web/static/js/app/administrator/home'+ ${isProduction == true ? '.min.js' : '.js'}+'?v='+${buildNumber}}"></script>
+	<script th:src="@{'/web/static/js/common/bootstrap-select.min.js'}"></script>
+	<script th:src="@{'/web/static/js/common/datatables.min.js'}"></script>
+	<script th:src="@{'/web/static/js/common/datatables-util'+ ${isProduction ? '.min.js' : '.js'}}"></script>
+	<script th:src="@{'/web/static/js/app/administrator/administrator-home'+ ${isProduction ? '.min.js' : '.js'}}"></script>
 </div>
 <!-- /Page Scripts -->
 
@@ -52,10 +52,12 @@
 							<input class="form-control rounded-0 form-control-sm" id="keyword" placeholder="keyword ..." type="text">
 						</div>
 						<div class="col-md-3 col-sm-12 mb-1">
-							<select class="form-control input-sm selectpicker show-tick" id="lstStatus" title="Administrator Status (All)">
+							<select class="form-control input-sm selectpicker show-tick" data-size="5" id="lstStatus" title="Administrator Status (All)">
 								<option selected="selected" value="">Administrator Status (All)</option>
-								<option value="ACTIVE">Active</option>
-								<option value="SUSPENDED">Suspended</option>
+								<option th:each="status : ${T(com.github.projectx.persistence.entity.rba.Administrator.Status).values()}"
+										th:text="${status.name()}"
+										th:value="${status.name()}">
+								</option>
 							</select>
 						</div>
 					</div>
@@ -77,13 +79,13 @@
 				</form>
 			</div>
 			<div class="card-body">
-				<table class="table table-bordered" id="tblAdministrator">
+				<table class="table table-bordered table-hover" id="tblAdministrator">
 					<thead>
 					<tr>
 						<th class="text-left" data-sort-key="name">Name</th>
 						<th class="text-center" data-sort-key="status">Status</th>
 						<th class="text-center" data-sort-key="createdDate">Registered Date</th>
-						<th class="functionColumn" th:if="${@perm.hasAny(permissions, 'administratorDetail', 'administratorEdit','administratorRemove')}">Function</th>
+						<th class="functionColumn text-center" th:if="${@perm.hasAny(permissions, 'administratorDetail', 'administratorEdit','administratorRemove')}">Function</th>
 					</tr>
 					</thead>
 					<tbody>

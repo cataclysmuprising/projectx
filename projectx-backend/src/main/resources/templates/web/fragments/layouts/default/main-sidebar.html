@@ -40,11 +40,230 @@
 				</li>
 
 				<!-- ===================== -->
+				<!-- User -->
+				<!-- ===================== -->
+				<li class="nav-item"
+					th:if="${@perm.has(permissions, 'userList')}">
+
+					<a class="nav-link"
+					   th:classappend="${pageName == 'User'} ? 'active' : ''"
+					   th:href="@{/web/sec/user}">
+						<i class="nav-icon icon-users"></i>
+						<p>Users</p>
+					</a>
+				</li>
+
+				<!-- ===================== -->
+				<!-- Balance Transfer -->
+				<!-- ===================== -->
+				<li class="nav-item"
+					th:if="${@perm.has(permissions, 'balanceTransferList')}">
+
+					<a class="nav-link"
+					   th:classappend="${pageName == 'BalanceTransfer'} ? 'active' : ''"
+					   th:href="@{/web/sec/balance_transfer}">
+						<i class="nav-icon fas fa-exchange-alt"></i>
+						<p>Balance Transfer</p>
+					</a>
+				</li>
+
+				<!-- ===================== -->
+				<!-- Orders -->
+				<!-- ===================== -->
+				<li class="nav-item treeview"
+					th:classappend="${pageName == 'Product' or pageName == 'ProductVariant' or pageName == 'OrderAuto' or pageName == 'OrderManual' or pageName == 'CouponCode'} ? 'menu-open' : ''"
+					th:if="${@perm.hasAny(permissions, 'productList', 'orderAutoList' , 'orderManualList', 'couponCodeList')}">
+
+					<a class="nav-link" href="#">
+						<i class="nav-icon fas fa-cart-plus"></i>
+						<p>
+							Orders <i class="fas fa-angle-left right"></i>
+						</p>
+					</a>
+
+					<ul class="nav nav-treeview">
+
+						<!-- ===================== -->
+						<!-- Products -->
+						<!-- ===================== -->
+						<li class="nav-item"
+							th:if="${@perm.hasAny(permissions, 'productList','productVariantList')}">
+
+							<a class="nav-link"
+							   th:classappend="${pageName == 'Product' or pageName == 'ProductVariant'} ? 'active' : ''"
+							   th:href="@{/web/sec/product}">
+								<i class="nav-icon fas fa-tags"></i>
+								<p>Products</p>
+							</a>
+						</li>
+
+						<!-- ===================== -->
+						<!-- Auto Orders -->
+						<!-- ===================== -->
+						<li class="nav-item"
+							th:if="${@perm.has(permissions, 'orderAutoList')}">
+
+							<a class="nav-link"
+							   th:classappend="${pageName == 'OrderAuto'} ? 'active' : ''"
+							   th:href="@{/web/sec/order_auto}">
+								<i class="nav-icon fas fa-clipboard-list"></i>
+								<p>Auto Orders</p>
+							</a>
+						</li>
+
+						<!-- ===================== -->
+						<!-- Manual Orders -->
+						<!-- ===================== -->
+						<li class="nav-item"
+							th:if="${@perm.has(permissions, 'orderManualList')}">
+
+							<a class="nav-link"
+							   th:classappend="${pageName == 'OrderManual'} ? 'active' : ''"
+							   th:href="@{/web/sec/order_manual}">
+								<i class="nav-icon fas fa-tasks"></i>
+								<p>Manual Orders</p>
+							</a>
+						</li>
+
+						<!-- ===================== -->
+						<!-- Coupon Codes -->
+						<!-- ===================== -->
+						<li class="nav-item"
+							th:if="${@perm.has(permissions, 'couponCodeList')}">
+
+							<a class="nav-link"
+							   th:classappend="${pageName == 'CouponCode'} ? 'active' : ''"
+							   th:href="@{/web/sec/coupon_code}">
+								<i class="nav-icon fas fa-credit-card"></i>
+								<p>Coupon Codes</p>
+							</a>
+						</li>
+
+					</ul>
+				</li>
+
+				<!-- ===================== -->
+				<!-- Topup -->
+				<!-- ===================== -->
+				<li class="nav-item"
+					th:if="${@perm.has(permissions, 'topupList')}">
+
+					<a class="nav-link"
+					   th:classappend="${pageName == 'TopUp'} ? 'active' : ''"
+					   th:href="@{/web/sec/topup}">
+						<i class="nav-icon fas fa-bolt"></i>
+						<p>Topup</p>
+					</a>
+				</li>
+
+				<!-- ===================== -->
+				<!-- CashIn -->
+				<!-- ===================== -->
+				<li class="nav-item treeview"
+					th:classappend="${pageName == 'AgentCashIn' or pageName == 'CustomerCashIn' or pageName == 'SelfCashIn'} ? 'menu-open' : ''"
+					th:if="${@perm.hasAny(permissions, 'agentCashInList', 'customerCashInList' , 'selfCashInList')}">
+
+					<a class="nav-link" href="#">
+						<i class="nav-icon icon-cash3"></i>
+						<p>
+							Cash In <i class="fas fa-angle-left right"></i>
+						</p>
+					</a>
+
+					<ul class="nav nav-treeview">
+
+						<li class="nav-item"
+							th:if="${@perm.has(permissions, 'agentCashInList')}">
+
+							<a class="nav-link"
+							   th:classappend="${pageName == 'AgentCashIn'} ? 'active' : ''"
+							   th:href="@{/web/sec/agent_cashin}">
+								<i class="nav-icon text-purple fas fa-user-friends"></i>
+								<p>Agent Cash In</p>
+							</a>
+						</li>
+
+						<li class="nav-item"
+							th:if="${@perm.has(permissions, 'customerCashInList')}">
+
+							<a class="nav-link"
+							   th:classappend="${pageName == 'CustomerCashIn'} ? 'active' : ''"
+							   th:href="@{/web/sec/customer_cashin}">
+								<i class="nav-icon text-orange fas fa-user"></i>
+								<p>Customer Cash In</p>
+							</a>
+						</li>
+
+						<li class="nav-item"
+							th:if="${@perm.has(permissions, 'selfCashInList')}">
+
+							<a class="nav-link"
+							   th:classappend="${pageName == 'SelfCashIn'} ? 'active' : ''"
+							   th:href="@{/web/sec/self_cashin}">
+								<i class="nav-icon text-info fas fa-user-check"></i>
+								<p>Self Cash In</p>
+							</a>
+						</li>
+
+					</ul>
+				</li>
+
+				<!-- ===================== -->
+				<!-- Wallet Admin -->
+				<!-- ===================== -->
+				<li class="nav-item"
+					th:if="${@perm.has(permissions, 'walletAdminList')}">
+
+					<a class="nav-link"
+					   th:classappend="${pageName == 'WalletAdmin'} ? 'active' : ''"
+					   th:href="@{/web/sec/wallet_admin}">
+						<i class="nav-icon fas fa-wallet"></i>
+						<p>Wallet Operation</p>
+					</a>
+				</li>
+
+				<!-- ===================== -->
+				<!-- SMS & Email -->
+				<!-- ===================== -->
+				<li class="nav-item treeview"
+					th:classappend="${pageName == 'SMS' or pageName == 'Email'} ? 'menu-open' : ''"
+					th:if="${@perm.hasAny(permissions, 'smsList', 'emailList')}">
+
+					<a class="nav-link" href="#">
+						<i class="nav-icon fas fa-envelope-open-text"></i>
+						<p>
+							SMS &amp; Email <i class="fas fa-angle-left right"></i>
+						</p>
+					</a>
+
+					<ul class="nav nav-treeview">
+						<li class="nav-item"
+							th:if="${@perm.has(permissions, 'smsList')}">
+							<a class="nav-link"
+							   th:classappend="${pageName == 'SMS'} ? 'active' : ''"
+							   th:href="@{/web/sec/sms}">
+								<i class="nav-icon fas fa-sms"></i>
+								<p>SMS</p>
+							</a>
+						</li>
+						<li class="nav-item"
+							th:if="${@perm.has(permissions, 'emailList')}">
+							<a class="nav-link"
+							   th:classappend="${pageName == 'Email'} ? 'active' : ''"
+							   th:href="@{/web/sec/email}">
+								<i class="nav-icon fas fa-envelope"></i>
+								<p>Email</p>
+							</a>
+						</li>
+					</ul>
+				</li>
+
+				<!-- ===================== -->
 				<!-- Settings -->
 				<!-- ===================== -->
 				<li class="nav-item treeview"
-					th:classappend="${pageName == 'Administrator' or pageName == 'Role'} ? 'menu-open' : ''"
-					th:if="${@perm.hasAny(permissions, 'administratorList', 'roleList')}">
+					th:classappend="${pageName == 'Administrator' or pageName == 'Role' or pageName == 'Actuator' or pageName == 'PaymentGatewayOption' or pageName == 'Notification'} ? 'menu-open' : ''"
+					th:if="${@perm.hasAny(permissions, 'administratorList', 'roleList', 'actuatorSettings', 'paymentGatewayOptionSettings', 'notification', 'notificationSettings')}">
 
 					<a class="nav-link" href="#">
 						<i class="nav-icon icon-cog3"></i>
@@ -76,6 +295,42 @@
 							   th:href="@{/web/sec/role}">
 								<i class="nav-icon icon-medal-star"></i>
 								<p>Roles</p>
+							</a>
+						</li>
+
+						<!-- Actuator -->
+						<li class="nav-item"
+							th:if="${@perm.has(permissions, 'actuatorSettings')}">
+
+							<a class="nav-link"
+							   th:classappend="${pageName == 'Actuator'} ? 'active' : ''"
+							   th:href="@{/web/sec/settings/actuator}">
+								<i class="nav-icon fas fa-heartbeat"></i>
+								<p>Actuator</p>
+							</a>
+						</li>
+
+						<!-- Payment Gateway Option -->
+						<li class="nav-item"
+							th:if="${@perm.has(permissions, 'paymentGatewayOptionSettings')}">
+
+							<a class="nav-link"
+							   th:classappend="${pageName == 'PaymentGatewayOption'} ? 'active' : ''"
+							   th:href="@{/web/sec/settings/payment_gateway_option}">
+								<i class="nav-icon fas fa-money-check-alt"></i>
+								<p>Payment Gateway Option</p>
+							</a>
+						</li>
+
+						<!-- Notification -->
+						<li class="nav-item"
+							th:if="${@perm.hasAny(permissions, 'notification', 'notificationSettings')}">
+
+							<a class="nav-link"
+							   th:classappend="${pageName == 'Notification'} ? 'active' : ''"
+							   th:href="@{/web/sec/notification}">
+								<i class="nav-icon fas fa-bell"></i>
+								<p>Notification</p>
 							</a>
 						</li>
 

@@ -2,16 +2,16 @@
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <!-- Page Styles -->
 <div th:fragment="styles" th:remove="tag">
-	<link rel="stylesheet" th:href="@{'/web/static/css/common/bootstrap-select.min.css?v='+${buildNumber}}">
-	<link rel="stylesheet" th:href="@{'/web/static/css/app/administrator/input'+ ${isProduction == true ? '.min.css' : '.css'}+'?v='+${buildNumber}}">
+	<link rel="stylesheet" th:href="@{'/web/static/css/common/bootstrap-select.min.css'}">
+	<link rel="stylesheet" th:href="@{'/web/static/css/app/administrator/administrator-input'+ ${isProduction ? '.min.css' : '.css'}}">
 </div>
 <!-- /Page Styles -->
 
 <!-- Page Scripts -->
 <div th:fragment="scripts" th:remove="tag">
-	<script th:src="@{'/web/static/js/common/bootstrap-select.min.js?v='+${buildNumber}}"></script>
-	<script th:src="@{'/web/static/js/common/jquery.validate.min.js?v='+${buildNumber}}"></script>
-	<script th:src="@{'/web/static/js/app/administrator/input'+ ${isProduction == true ? '.min.js' : '.js'}+'?v='+${buildNumber}}"></script>
+	<script th:src="@{'/web/static/js/common/bootstrap-select.min.js'}"></script>
+	<script th:src="@{'/web/static/js/common/jquery.validate.min.js'}"></script>
+	<script th:src="@{'/web/static/js/app/administrator/administrator-input'+ ${isProduction ? '.min.js' : '.js'}}"></script>
 </div>
 <!-- /Page Scripts -->
 
@@ -41,25 +41,25 @@
 	</section>
 
 	<section class="content">
-		<div class="card card-primary smallPanel">
+		<div class="card card-light smallPanel">
 			<div class="card-header">
 				<h3 class="card-title text-center float-none">Please fill-up Required Informations</h3>
 			</div>
 			<form id="frm-administrator" method="post" role="form" th:action="@{${pageMode.name == 'CREATE' ? '/web/sec/administrator/add' : '/web/sec/administrator/' + administratorDto.id +'/edit' }}" th:object="${administratorDto}">
-				<input id="hdn-administrator-id" th:if="${pageMode.name == 'EDIT'}" th:value="${administratorDto.id}" type="hidden">
+				<input id="hdn-administrator-id" th:field="*{id}" th:if="${pageMode.name == 'EDIT'}" type="hidden">
 
 				<div class="card-body">
 
 					<div class="form-group row">
-						<label class="col-sm-3 col-form-label text-right required" for="adminName">Administrator Name : </label>
-						<div class="col-sm-9">
-							<input class="form-control form-control-sm" id="adminName" name="name" placeholder="Administrator Full Name" th:field="*{name}" type="text"/>
+						<label class="col-sm-12 col-md-3 col-form-label text-right required-right" for="adminName">Administrator Name : </label>
+						<div class="col-sm-12 col-md-9">
+							<input class="form-control form-control-sm" id="adminName" placeholder="Administrator Full Name" th:field="*{name}" type="text"/>
 						</div>
 					</div>
 
 					<div class="form-group row">
-						<label class="col-sm-3 col-form-label text-right required" for="loginId">Login ID : </label>
-						<div class="col-sm-9" th:classappend="${pageMode.name == 'EDIT' } ? 'col-form-label' : ''" th:switch="${pageMode.name}">
+						<label class="col-sm-12 col-md-3 col-form-label text-right required-right" for="loginId">Login ID : </label>
+						<div class="col-sm-12 col-md-9" th:classappend="${pageMode.name == 'EDIT' } ? 'col-form-label' : ''" th:switch="${pageMode.name}">
 							<div th:class="${pageMode.name == 'EDIT'} ? 'd-inline-block' : ''">
 								<input class="form-control form-control-sm" id="loginId" placeholder="Enter Login ID" th:case="'CREATE'" th:field="*{loginId}" type="text"/>
 								<span th:case="'EDIT'" th:text="${administratorDto.loginId}"></span>
@@ -74,29 +74,35 @@
 					</div>
 
 					<div class="form-group row" th:if="${pageMode.name == 'CREATE'}">
-						<label class="col-sm-3 col-form-label text-right required" for="password">Password : </label>
-						<div class="col-sm-9">
-							<input class="form-control form-control-sm" id="password" name="password" placeholder="Enter Password" th:field="*{password}" type="password"/>
+						<label class="col-sm-12 col-md-3 col-form-label text-right required-right" for="password">Password : </label>
+						<div class="col-sm-12 col-md-9">
+							<input class="form-control form-control-sm" id="password" placeholder="Enter Password" th:field="*{password}" type="password"/>
 						</div>
 					</div>
 
 					<div class="form-group row">
-						<label class="col-sm-6 col-md-3 col-form-label text-right required" for="roleIds">Roles : </label>
-						<div class="col-sm-6 col-md-5">
+						<label class="col-sm-12 col-md-3 col-form-label text-right required-right" for="status">Status : </label>
+						<div class="col-sm-12 col-md-5">
+							<select class="form-control input-sm selectpicker show-tick" data-size="5" id="status" th:field="*{status}">
+								<option th:each="status : ${T(com.github.projectx.persistence.entity.rba.Administrator.Status).values()}"
+										th:text="${status.name()}"
+										th:value="${status.name()}">
+								</option>
+							</select>
+						</div>
+					</div>
+
+					<div class="form-group row">
+						<label class="col-sm-12 col-md-3 col-form-label text-right required-right" for="roleIds">Roles : </label>
+						<div class="col-sm-12 col-md-9">
 							<select class="form-control selectpicker show-tick" data-async="true" data-live-search="true" data-size="5" id="roleIds"
 									multiple="multiple"
 									th:attr="data-selected=${#strings.listJoin(administratorDto.roleIds, ',')}"
 									th:field="*{roleIds}" title="Select ...">
 							</select>
 						</div>
-						<label class="col-sm-6 col-md-1 col-form-label text-right required" for="status">Status : </label>
-						<div class="col-sm-6 col-md-3">
-							<select class="form-control selectpicker show-tick" id="status" name="status" th:field="*{status}">
-								<option value="ACTIVE">Active</option>
-								<option value="SUSPENDED">Suspended</option>
-							</select>
-						</div>
 					</div>
+
 				</div>
 
 				<div class="card-footer text-center">
@@ -115,7 +121,7 @@
 	</section>
 
 	<div class="modal fade" id="modal-reset-password" role="dialog" tabindex="-1">
-		<div class="modal-dialog modal-dialog-centered" role="document">
+		<div class="modal-dialog modal-lg modal-dialog-centered" role="document">
 			<div class="modal-content">
 				<div class="modal-header">
 					<h5 class="modal-title">Reset Password</h5>
@@ -124,9 +130,9 @@
 				<div class="modal-body">
 					<form id="frmResetPassword">
 						<div class="form-group row">
-							<label class="col-sm-4 col-form-label required" for="newPassword">Enter New Password :</label>
+							<label class="col-sm-4 col-form-label required-right" for="newPassword">Enter New Password :</label>
 							<div class="col-sm-8">
-								<input class="form-control form-control-sm" id="newPassword" name="newPassword" type="password"/>
+								<input class="form-control form-control-sm" id="newPassword" type="password"/>
 							</div>
 						</div>
 					</form>

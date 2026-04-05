@@ -15,6 +15,8 @@ datasource:
     connection-test-query: SELECT 1
 
 spring:
+  flyway:
+    enabled: false
   jpa:
     open-in-view: false
     hibernate:
@@ -36,7 +38,7 @@ spring:
         jdbc:
           batch_size: 50             # Enables JDBC batching for saveAll / bulk ops
           fetch_size: 50             # Hint for result streaming (Postgres-friendly)
-          time_zone: Asia/Rangoon    # Prevent JVM ↔ DB timezone drift
+          time_zone: Asia/Yangon    # Prevent JVM ↔ DB timezone drift
 
         order_inserts: true          # Groups inserts by entity type
         order_updates: true          # Groups updates by entity type
@@ -89,5 +91,6 @@ spring:
         # -------------------------------
         # DEV diagnostics
         # -------------------------------
-        generate_statistics: true
+        generate_statistics: ${HIBERNATE_GENERATE_STATISTICS:true}
         # Enables Hibernate statistics (N+1 detection, query count)
+
